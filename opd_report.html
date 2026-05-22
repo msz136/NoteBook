@@ -1,0 +1,750 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OPD（On-Policy Distillation）领域算法调研报告</title>
+    <script>
+    window.MathJax = {
+        tex: { inlineMath: [['\\(','\\)'], ['$','$']], displayMath: [['\\[','\\]'], ['$$','$$']] }
+    };
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js" async></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Noto Sans SC", sans-serif;
+            font-size: 16px; line-height: 1.8; color: #1a1a1a; background: #fff;
+            padding: 2rem 1rem;
+        }
+        article { max-width: 900px; margin: 0 auto; }
+        h1 { font-size: 2rem; margin-bottom: 0.5rem; border-bottom: 2px solid #333; padding-bottom: 0.5rem; }
+        h2 { font-size: 1.5rem; margin-top: 2.5rem; margin-bottom: 1rem; color: #1a1a1a; border-left: 4px solid #2563eb; padding-left: 0.75rem; }
+        h3 { font-size: 1.25rem; margin-top: 2rem; margin-bottom: 0.75rem; color: #333; }
+        h4 { font-size: 1.1rem; margin-top: 1.5rem; margin-bottom: 0.5rem; color: #444; }
+        p { margin-bottom: 1rem; }
+        ul, ol { margin-bottom: 1rem; padding-left: 1.5rem; }
+        li { margin-bottom: 0.3rem; }
+        strong { color: #1a1a1a; }
+        a { color: #2563eb; text-decoration: none; }
+        a:hover { text-decoration: underline; }
+        hr { border: none; border-top: 1px solid #e5e7eb; margin: 2.5rem 0; }
+        table { width: 100%; border-collapse: collapse; margin: 1.5rem 0; font-size: 0.9rem; }
+        thead { background: #f8fafc; }
+        th, td { border: 1px solid #e2e8f0; padding: 0.6rem 0.8rem; text-align: left; }
+        tbody tr:nth-child(even) { background: #f8fafc; }
+        pre { background: #f4f4f5; border-radius: 6px; padding: 1rem; overflow-x: auto; margin: 1rem 0; font-size: 0.85rem; line-height: 1.5; }
+        code { font-family: "JetBrains Mono", "Fira Code", Consolas, monospace; }
+        p code, li code { background: #f4f4f5; padding: 0.15rem 0.4rem; border-radius: 3px; font-size: 0.9em; }
+        .mjx-chtml { overflow-x: auto; overflow-y: hidden; }
+        blockquote { border-left: 3px solid #d1d5db; padding-left: 1rem; color: #4b5563; margin: 1rem 0; }
+        .info-box { background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 6px; padding: 1rem 1.2rem; margin: 1.5rem 0; }
+        .warn-box { background: #fefce8; border: 1px solid #fde047; border-radius: 6px; padding: 1rem 1.2rem; margin: 1.5rem 0; }
+        @media (max-width: 600px) { body { padding: 1rem 0.5rem; } table { font-size: 0.8rem; } }
+    </style>
+</head>
+<body>
+<article>
+
+<h1>OPD（On-Policy Distillation）领域算法调研报告</h1>
+
+<section id="question">
+<h2>问题（Question）</h2>
+<p><strong>原始问题：</strong>了解 OPD 领域算法，检索论文与研究报告，针对以下方法给出详细的学术性技术报告：Rethinking OPD、Veto、OPSD、Lightning OPD、Prefix OPD、Video-OPD / VLA-OPD / X-OPD，以及 OPD 中需要关注哪些指标、指标如何反映 OPD 的状态。</p>
+<p><strong>问题重述：</strong>本报告系统梳理在策略蒸馏（On-Policy Distillation, OPD）的核心数学框架，以及当前主流方法的算法细节、理论动机、实验证据与适用场景。同时总结 OPD 训练中应监控的关键指标体系及其诊断意义。</p>
+</section>
+
+<section id="background">
+<h2>背景与动机（Background &amp; Motivation）</h2>
+<p>OPD 是介于监督微调（Supervised Fine-Tuning, SFT）与带可验证奖励的强化学习（Reinforcement Learning with Verifiable Rewards, RLVR）之间的后训练范式：</p>
+<ul>
+<li><strong>SFT</strong>：监督密集但离策略（off-policy），存在暴露偏差（exposure bias）</li>
+<li><strong>RLVR</strong>：在策略（on-policy）但奖励稀疏，信用分配困难</li>
+<li><strong>OPD</strong>：同时具有"在策略状态分布"和"密集 token 级监督"</li>
+</ul>
+<p>OPD 的核心思想是：学生模型在自己的生成轨迹上采样，教师模型在学生实际访问的状态上给出密集的词元级监督。这减少了 SFT/KD 的暴露偏差，同时提供比 RLVR 更连续、密集的训练信号。</p>
+
+<div class="info-box">
+<p><strong>OPD 在后训练范式中的定位：</strong></p>
+<pre><code>Off-Policy (SFT/KD)          On-Policy (OPD)           On-Policy (RLVR)
+─────────────────────────────────────────────────────────────────────────
+教师/静态数据生成轨迹    学生自己生成轨迹          学生自己生成轨迹
+密集 token 级监督         密集 token 级监督          稀疏回合级奖励
+暴露偏差严重              无暴露偏差                 无暴露偏差
+无需奖励函数              无需奖励函数               需要可验证奖励
+</code></pre>
+</div>
+
+<h3>OPD 的起源：GKD（Generalized Knowledge Distillation）</h3>
+<p>OPD 的概念最早由 Agarwal et al. (2023) 在 <strong>GKD（Generalized Knowledge Distillation）</strong> 中系统提出。GKD 的核心贡献是将知识蒸馏从固定数据集上的离策略训练，推广到学生自生成轨迹上的在策略训练，并统一了多种散度度量（前向 KL、反向 KL、广义 JSD）的选择。GKD 已被集成到 HuggingFace TRL 库中作为标准训练器。</p>
+</section>
+
+<section>
+<h2>OPD 的基本数学形式</h2>
+<p>设 \(D\) 是提示（prompt）分布，\(x \sim D\) 是输入问题，\(\pi_\theta\) 是参数为 \(\theta\) 的学生策略，\(\pi_T\) 是教师策略，\(y = (y_1, \dots, y_T)\) 是学生从 \(\pi_\theta(\cdot|x)\) 采样出的完整回答。第 \(t\) 步状态记为 \(s_t = (x, y_{<t})\)。</p>
+
+<h3>前向 KL 形式的 OPD 目标</h3>
+$$\mathcal{L}_{\text{OPD}}(\theta) = \mathbb{E}_{x \sim D,\, y \sim \pi_\theta(\cdot|x)} \left[ \sum_{t=1}^{T} D_{\text{KL}}\left( \pi_T(\cdot|x, y_{<t}) \,\|\, \pi_\theta(\cdot|x, y_{<t}) \right) \right]$$
+<p>其中 KL 散度（Kullback-Leibler Divergence）定义为：</p>
+$$D_{\text{KL}}(p \| q) = \sum_{v \in \mathcal{V}} p(v) \log \frac{p(v)}{q(v)}$$
+<p>\(\mathcal{V}\) 是词表，\(v\) 是候选 token，\(p(v)\) 是教师概率，\(q(v)\) 是学生概率。</p>
+<p><strong>关键点：</strong> \(y \sim \pi_\theta\) — 训练轨迹来自学生而非教师或静态数据集。这是 OPD 区别于传统 KD 的本质特征。</p>
+
+<h3>梯度分析</h3>
+<p>OPD 前向 KL 目标对学生参数的梯度为：</p>
+$$\nabla_\theta \mathcal{L}_{\text{OPD}} = \mathbb{E}_{x, y \sim \pi_\theta} \left[ \sum_{t=1}^T \left( \underbrace{-\nabla_\theta \log \pi_\theta(y_t|s_t)}_{\text{REINFORCE 项}} \cdot \underbrace{\sum_{\tau \geq t} D_{\text{KL}}(\pi_T \| \pi_\theta)(s_\tau)}_{\text{未来 KL 累积}} + \underbrace{\nabla_\theta D_{\text{KL}}(\pi_T \| \pi_\theta)(s_t)}_{\text{直接 KL 梯度}} \right) \right]$$
+<p>第一项类似 RL 的策略梯度（以未来 KL 为"奖励"），第二项是直接的分布匹配梯度。这解释了为什么 OPD 兼具 RL 的探索性和 KD 的密集监督。</p>
+
+<h3>KL 方向的选择</h3>
+<table>
+<thead><tr><th>方向</th><th>倾向</th><th>优点</th><th>缺点</th></tr></thead>
+<tbody>
+<tr><td>前向 KL \(D_{\text{KL}}(\pi_T \| \pi_\theta)\)</td><td>模式覆盖（mode-covering）</td><td>信息完整，不遗漏教师模式</td><td>学生对教师高概率 token 赋近零概率时梯度爆炸</td></tr>
+<tr><td>反向 KL \(D_{\text{KL}}(\pi_\theta \| \pi_T)\)</td><td>模式寻找（mode-seeking）</td><td>稳定、果断</td><td>可能牺牲多样性，模式坍缩</td></tr>
+<tr><td>JSD \(\frac{1}{2}D_{\text{KL}}(\pi_T \| M) + \frac{1}{2}D_{\text{KL}}(\pi_\theta \| M)\)</td><td>对称折中</td><td>有界、对称</td><td>需要额外计算混合分布 \(M\)</td></tr>
+</tbody>
+</table>
+
+<h3>f-散度统一框架</h3>
+<p>OPD Survey (2025) 提出用 f-散度统一所有 OPD 变体：</p>
+$$\mathcal{L}_f(\theta) = \mathbb{E}_{x, y \sim \pi_\theta} \left[ \sum_t \sum_{v \in \mathcal{V}} \pi_T(v|s_t) \cdot f\left(\frac{\pi_\theta(v|s_t)}{\pi_T(v|s_t)}\right) \right]$$
+<p>不同的凸函数 \(f\) 对应不同的散度：\(f(u) = -\log u\) 为前向 KL，\(f(u) = u \log u\) 为反向 KL，\(f(u) = (u-1)^2\) 为 \(\chi^2\) 散度。</p>
+</section>
+
+<section>
+<h2>方法详述</h2>
+
+<h3>1. Rethinking OPD — 重新思考在策略蒸馏</h3>
+<p><strong>论文：</strong>"Rethinking On-Policy Distillation of Large Language Models: Phenomenology, Mechanism, and Recipe", 2025. <a href="https://arxiv.org/abs/2604.13016">arXiv:2604.13016</a></p>
+
+<h4>核心结论</h4>
+<p>OPD 是否成功主要受两个条件控制：</p>
+<ol>
+<li>学生和教师应具有<strong>相容的思维模式</strong>（compatible thinking patterns）</li>
+<li>教师必须提供学生训练中未见过的<strong>真实新增能力</strong>（genuinely new capabilities），而非同族大模型的重复知识</li>
+</ol>
+<p>论文用弱到强反向蒸馏（weak-to-strong reverse distillation）验证了同族 1.5B 与 7B 教师在学生视角下可能分布上不可区分。</p>
+
+<h4>机制分析：Top-k Overlap 动态</h4>
+<p>OPD 的有效梯度定位到学生访问状态上的高概率��叠词元。设学生 top-k token 集合为 \(S_k(s_t)\)，教师 top-k token 集合为 \(T_k(s_t)\)，重叠集合为：</p>
+$$O_k(s_t) = S_k(s_t) \cap T_k(s_t)$$
+<p><strong>关键发现：</strong></p>
+<ul>
+<li>成功 OPD 中，重叠比例（overlap ratio）随训练从约 72% 上升到 91%</li>
+<li>共享 top-k token 集中约 97%–99% 的概率质量</li>
+<li>失败运行中这些指标基本停滞</li>
+</ul>
+
+<h4>为什么 Overlap 是关键</h4>
+<p>Support ablation 实验表明：</p>
+<ul>
+<li><strong>只在 overlap top-k 区域优化</strong>：几乎可恢复完整 OPD 收益（~95% 性能）</li>
+<li><strong>只优化 non-overlap 区域</strong>：明显弱，甚至可能有害</li>
+</ul>
+<p>这说明 OPD 的主要作用是在学生与教师都认为重要的高概率区域内<strong>重新分配概率质量</strong>（probability mass redistribution），而非强迫学生学习全新的 token 分布。</p>
+
+<h4>思维模式相容性的量化</h4>
+<p>论文提出用以下指标衡量教师-学生思维模式相容性：</p>
+$$\text{Compatibility}(T, S) = \mathbb{E}_{x, y \sim \pi_S} \left[ \frac{1}{T} \sum_{t=1}^T \frac{|O_k(s_t)|}{k} \right]$$
+<p>当 Compatibility 低于某阈值时，直接 OPD 大概率失败，需要先做冷启动。</p>
+
+<h4>实用配方（Recipe）</h4>
+<ol>
+<li><strong>离策略冷启动（off-policy cold start）</strong>：先用教师生成轨迹做 1-2 epoch SFT，缩小思维模式差距，使 overlap ratio 达到可工作区间（>75%）</li>
+<li><strong>教师对齐提示选择（teacher-aligned prompt selection）</strong>：选择更接近教师训练分布的 prompt，混合 OOD prompt 防止熵坍缩</li>
+<li><strong>渐进式教师切换</strong>：从弱教师开始，逐步切换到强教师，避免初始 gap 过大</li>
+</ol>
+
+<h4>有效性证据</h4>
+<table>
+<thead><tr><th>指标</th><th>成功运行</th><th>失败运行</th></tr></thead>
+<tbody>
+<tr><td>Overlap ratio 变化</td><td>72% → 91%</td><td>72% → 74%（停滞）</td></tr>
+<tr><td>Overlap mass</td><td>97%–99%</td><td>&lt;85%</td></tr>
+<tr><td>Entropy gap 趋势</td><td>持续缩小</td><td>不变或扩大</td></tr>
+<tr><td>Gradient norm</td><td>稳定非零</td><td>趋近零或剧烈震荡</td></tr>
+</tbody>
+</table>
+</section>
+
+<section>
+<h3>2. Veto — 否决式稳定在策略蒸馏</h3>
+<p><strong>论文：</strong>"Stable On-Policy Distillation through Adaptive Target Reformulation", 2025. <a href="https://arxiv.org/abs/2601.07155">arXiv:2601.07155</a></p>
+
+<h4>问题动机：病态梯度</h4>
+<p>早期学生与强教师差距过大时的优化不稳定。具体来说：</p>
+<ul>
+<li><strong>前向 KL 的病态</strong>：当教师对某 token \(v^*\) 赋高概率 \(\pi_T(v^*) \approx 1\)，但学生赋近零概率 \(\pi_\theta(v^*) \approx 0\) 时，梯度 \(\propto \frac{\pi_T(v^*)}{\pi_\theta(v^*))} \to \infty\)</li>
+<li><strong>反向 KL 的问题</strong>：可能过早模式坍缩，学生只追踪教师的单一模式</li>
+</ul>
+<p>这在 OPD 中尤为严重，因为学生生成的轨迹可能进入教师从未见过的状态，教师在这些状态上的分布可能与学生差异极大。</p>
+
+<h4>数学形式：中间目标分布</h4>
+<p>Veto 在 logit 空间构造教师与学生之间的中间目标分布（intermediate target distribution）。设教师 logits 为 \(z_T(v)\)，学生 logits 为 \(z_S(v)\)，Veto 构造带参数 \(\beta\) 的中间分布：</p>
+$$Q_\beta(v) \propto \exp(z_T(v)) \cdot \exp(\beta \cdot z_S(v))$$
+<p>归一化后：</p>
+$$Q_\beta(v) = \frac{\exp(z_T(v) + \beta \cdot z_S(v))}{\sum_{v' \in \mathcal{V}} \exp(z_T(v') + \beta \cdot z_S(v'))}$$
+
+<h4>\(\beta\) 的双重解释</h4>
+<ol>
+<li><strong>自适应梯度否决器（Adaptive Gradient Veto）</strong>：当学生对某 token 极不确定（\(\pi_\theta(v|s_t)\) 很小，即 \(z_S(v)\) 很负），\(Q_\beta(v)\) 会被压低，不会像纯教师目标那样产生巨大梯度。\(\beta\) 越大，学生的"否决权"越强。</li>
+<li><strong>果断性旋钮（Decisiveness Knob）</strong>：\(\beta\) 控制输出分布的尖锐程度。大 \(\beta\) → 更果断（接近学生当前分布）；小 \(\beta\) → 更多样（接近教师分布）。</li>
+</ol>
+
+<h4>与其他方法的理论联系</h4>
+<ul>
+<li>\(\beta = 0\)：退化为标准前向 KL（纯教师目标）</li>
+<li>\(\beta \to \infty\)：退化为学生自身分布（无学习）</li>
+<li>\(\beta = 1\)：等价于对教师和学生 logits 做算术平均后 softmax</li>
+</ul>
+
+<h4>训练调度策略</h4>
+<p>推荐的 \(\beta\) 调度：</p>
+$$\beta(t) = \beta_0 \cdot \max\left(0, 1 - \frac{t}{T_{\text{warmdown}}}\right)$$
+<p>训练早期 \(\beta\) 较大（稳定优化），后期线性衰减到 0（逐步接近强教师目标）。这实现了"先稳定后逼近"的课程学习效果。</p>
+
+<h4>算法流程</h4>
+<ol>
+<li>采样 prompt \(x \sim D\)，学生 on-policy 生成轨迹 \(y \sim \pi_\theta(\cdot|x)\)</li>
+<li>对每个 token 位置 \(t\)，取教师 logits \(z_T(\cdot|s_t)\) 与学生 logits \(z_S(\cdot|s_t)\)</li>
+<li>用当前 \(\beta(t)\) 构造重构目标 \(Q_\beta\)</li>
+<li>计算 \(D_{\text{KL}}(Q_\beta \| \pi_\theta)\) 并反向传播</li>
+<li>更新 \(\theta\)，推进 \(\beta\) 调度</li>
+</ol>
+
+<h4>有效性证据</h4>
+<table>
+<thead><tr><th>基准</th><th>Veto</th><th>On-policy KD</th><th>Off-policy KD</th></tr></thead>
+<tbody>
+<tr><td>GSM8K accuracy</td><td><strong>39.9</strong></td><td>35.1</td><td>32.4</td></tr>
+<tr><td>HumanEval pass@1</td><td><strong>29.0</strong></td><td>22.9</td><td>20.1</td></tr>
+<tr><td>DialogSum win-rate</td><td><strong>56.5</strong></td><td>54.3</td><td>51.8</td></tr>
+</tbody>
+</table>
+<p>Veto 在所有基准上均优于标准 on-policy KD，且训练过程中梯度范数更平稳，无尖峰。</p>
+</section>
+
+<section>
+<h3>3. OPSD — 在策略自蒸馏</h3>
+<p><strong>论文：</strong>"Self-Distilled Reasoner: On-Policy Self-Distillation for Large Language Models", 2025. <a href="https://arxiv.org/abs/2601.18734">arXiv:2601.18734</a></p>
+
+<h4>核心思想：同一模型，不同上下文</h4>
+<p>OPSD 不使用外部大教师，让同一个模型在不同上下文下扮演教师与学生：</p>
+<ul>
+<li><strong>学生分布</strong>：\(\pi_\theta^S(\cdot|x, y_{<t})\) — 只看问题 \(x\)</li>
+<li><strong>教师分布</strong>：\(\pi_\theta^T(\cdot|x, c, y_{<t})\) — 额外看到特权信息（privileged information）\(c\)</li>
+</ul>
+<p>二者<strong>共享同一组参数 \(\theta\)</strong>，但条件上下文不同。特权信息 \(c\) 可以是已验证推理轨迹、标准解、或系统提示。</p>
+
+<h4>数学形式</h4>
+$$\mathcal{L}_{\text{OPSD}}(\theta) = \mathbb{E}_{x \sim D,\, y \sim \pi_\theta^S(\cdot|x)} \left[ \sum_{t=1}^T D_{\text{KL}}\left( \text{sg}[\pi_\theta^T(\cdot|x, c, y_{<t})] \,\|\, \pi_\theta^S(\cdot|x, y_{<t}) \right) \right]$$
+<p>其中 \(\text{sg}[\cdot]\) 表示停止梯度（stop gradient）——梯度只回传到学生 logits，不通过教师路径。</p>
+
+<h4>特权信息的类型与效果</h4>
+<table>
+<thead><tr><th>特权信息类型</th><th>示例</th><th>效果</th></tr></thead>
+<tbody>
+<tr><td>实例特异答案</td><td>该题的正确解题过程</td><td>有效，但测试时不可用</td></tr>
+<tr><td>共享潜在规则</td><td>系统提示、推理策略</td><td>更稳健，可内化为能力</td></tr>
+<tr><td>验证反馈</td><td>"你的第3步有误"</td><td>中等效果</td></tr>
+</tbody>
+</table>
+
+<h4>训练流程</h4>
+<ol>
+<li>对 prompt \(x\)，学生模式采样 \(y \sim \pi_\theta^S(\cdot|x)\)</li>
+<li>教师模式在同一个学生前缀 \(y_{<t}\) 上给出 token 分布 \(\pi_\theta^T(\cdot|x, c, y_{<t})\)</li>
+<li>计算逐 token KL 散度，梯度只回传到学生 logits</li>
+<li>更新 \(\theta\)（注意：更新同时影响教师和学生，因为共享参数）</li>
+</ol>
+
+<h4>四个关键性质</h4>
+<p>OPSD 同时满足：</p>
+<ol>
+<li><strong>在策略数据</strong>：轨迹来自学生自身分布</li>
+<li><strong>密集学习信号</strong>：逐 token 的 KL 监督</li>
+<li><strong>低采样成本</strong>：无需部署额外大模型</li>
+<li><strong>无外部教师</strong>：自包含，适合资源受限场景</li>
+</ol>
+
+<h4>有效性证据</h4>
+<ul>
+<li>多个数学推理基准上优于 RLVR 与 off-policy distillation</li>
+<li>相对 GRPO 约 4–8× 的 token 效率（达到相同性能所需的生成 token 数）</li>
+<li>在 GSM8K、MATH 等基准上，Qwen2.5-1.5B 经 OPSD 后接近 7B 模型水平</li>
+</ul>
+
+<div class="warn-box">
+<p><strong>注意：</strong>后续研究 "The Many Faces of OPD" (<a href="https://arxiv.org/abs/2605.11182">arXiv:2605.11182</a>) 指出：OPSD 在实例特异特权信息缺失于测试时的任务上可能失败；当特权信息表示共享潜在规则（如系统提示或偏好规则）时更有效。此外，"Why Does Self-Distillation (Sometimes) Degrade the Reasoning Capability of LLMs?" 分析了 OPSD 失败的条件。</p>
+</div>
+</section>
+
+<section>
+<h3>4. Lightning OPD — 闪电式离线在策略蒸馏</h3>
+<p><strong>论文：</strong>"Lightning OPD: Efficient Post-Training for Large Reasoning Models with Offline On-Policy Distillation", 2025. <a href="https://arxiv.org/abs/2505.10101">arXiv:2505.10101</a></p>
+
+<h4>问题动机：在线教师的基础设施瓶颈</h4>
+<p>标准 OPD 需要训练时持续运行在线教师服务（live teacher server）：每个 mini-batch 的每个 token 位置都需要实时查询教师模型获取 \(\log \pi_T(v|s_t)\)。对于 32B+ 参数的教师，这意味着：</p>
+<ul>
+<li>需要额外的 GPU 集群专门服务教师推理</li>
+<li>训练吞吐量受限于教师推理延迟</li>
+<li>教师服务的可用性成为训练的单点故障</li>
+</ul>
+
+<h4>核心发现：教师一致性（Teacher Consistency）</h4>
+<p>Lightning OPD 的关键理论贡献是识别出<strong>教师一致性条件</strong>：</p>
+<div class="info-box">
+<p><strong>教师一致性定理：</strong>设 SFT 阶段使用教师 \(T_1\) 生成轨迹训练参考策略 \(\pi_{\text{ref}}\)，OPD 阶段使用教师 \(T_2\) 提供 token 级监督。当且仅当 \(T_1 = T_2\) 时，离线 OPD 与标准在线 OPD 共享相同的不动点（fixed point）。</p>
+</div>
+<p>形式化地，设离线 OPD 目标为：</p>
+$$\mathcal{L}_{\text{Lightning}}(\theta) = \mathbb{E}_{x \sim D,\, y \sim \pi_{\text{ref}}(\cdot|x)} \left[ \sum_{t=1}^T D_{\text{KL}}\left( \pi_T(\cdot|x, y_{<t}) \,\|\, \pi_\theta(\cdot|x, y_{<t}) \right) \right]$$
+<p>当 \(\pi_{\text{ref}}\) 由同一个教师 \(T\) 的 SFT 数据训练得到时，\(\pi_{\text{ref}}\) 近似于 \(\pi_T\)，因此 \(y \sim \pi_{\text{ref}} \approx y \sim \pi_T\)，离线采样分布与教师分布对齐。</p>
+
+<h4>梯度偏差分析</h4>
+<p>当教师不一致（\(T_1 \neq T_2\)）时，离线目标的梯度与在线目标的梯度之差为：</p>
+$$\|\nabla_\theta \mathcal{L}_{\text{Lightning}} - \nabla_\theta \mathcal{L}_{\text{OPD}}\| \leq C \cdot D_{\text{TV}}(\pi_{\text{ref}}, \pi_\theta) \cdot \max_t \|\nabla_\theta \log \pi_\theta(\cdot|s_t)\|$$
+<p>其中 \(D_{\text{TV}}\) 是全变差距离（Total Variation distance），\(C\) 是与词表大小相关的常数。教师一致性保证 \(\pi_{\text{ref}} \approx \pi_T\)，从而 \(D_{\text{TV}}(\pi_{\text{ref}}, \pi_\theta)\) 在训练收敛时趋近零。</p>
+
+<h4>两阶段算法</h4>
+<p><strong>阶段一（离线准备）：</strong></p>
+<ol>
+<li>选定教师 \(T\)（如 QwQ-32B）</li>
+<li>用教师 \(T\) 对训练 prompt 集生成高质量轨迹</li>
+<li>用这些轨迹对 base model 做 SFT，得到参考策略 \(\pi_{\text{ref}}\)</li>
+<li>从 \(\pi_{\text{ref}}\) 采样固定 rollouts \(\{(x_i, y_i)\}_{i=1}^N\)</li>
+<li>用同一个教师 \(T\) 预计算每个 token 位置的 \(\log \pi_T(y_t|x_i, y_{i,<t})\)，存储为离线数据集</li>
+</ol>
+<p><strong>阶段二（离线训练）：</strong></p>
+<ol>
+<li>从离线数据集中采样 mini-batch</li>
+<li>计算学生 \(\log \pi_\theta(y_t|x, y_{<t})\)</li>
+<li>用预计算的教师 log-prob 计算 KL 散度</li>
+<li>反向传播更新 \(\theta\)（无需教师在线服务）</li>
+</ol>
+
+<h4>隐式正则化效应</h4>
+<p>离线 OPD 天然具有隐式正则化：由于采样分布固定为 \(\pi_{\text{ref}}\) 而非随训练更新的 \(\pi_\theta\)，学生策略不会过度偏离参考策略。这等价于在目标中隐式添加了：</p>
+$$\mathcal{R}_{\text{implicit}}(\theta) \propto D_{\text{KL}}(\pi_\theta \| \pi_{\text{ref}})$$
+<p>这抑制了策略漂移（policy drift），在训练后期尤为有益。</p>
+
+<h4>有效性证据</h4>
+<table>
+<thead><tr><th>模型</th><th>基准</th><th>Lightning OPD</th><th>标准 OPD</th><th>SFT-only</th></tr></thead>
+<tbody>
+<tr><td>Qwen3-8B-Base</td><td>AIME 2024</td><td><strong>69.9%</strong></td><td>71.2%</td><td>52.3%</td></tr>
+<tr><td>Qwen3-30B-A3B</td><td>AIME 2024</td><td><strong>71.0%</strong></td><td>—</td><td>55.1%</td></tr>
+<tr><td>Qwen3-30B-A3B</td><td>LiveCodeBench v5</td><td><strong>60.8%</strong></td><td>—</td><td>41.2%</td></tr>
+</tbody>
+</table>
+<p><strong>效率对比：</strong></p>
+<ul>
+<li>Qwen3-8B-Base 在单个 8×H100 节点上 30 GPU 小时内完成训练</li>
+<li>训练效率约为标准 OPD 的 <strong>4×</strong>（无需教师在线推理开销）</li>
+<li>教师一致性消融：从 Qwen3-32B SFT 教师错配到 QwQ-32B OPD 教师，AIME 下降约 6.8 个点</li>
+</ul>
+
+<div class="warn-box">
+<p><strong>适用条件：</strong>Lightning OPD 要求参考策略 \(\pi_{\text{ref}}\) 与最终学生策略 \(\pi_\theta\) 不能差距过大。若训练使学生大幅偏离参考分布，离线采样的轨迹将不再代表学生的在策略分布，梯度偏差增大。适合"教师已经很强、学生只需微调"的场景。</p>
+</div>
+</section>
+
+<section>
+<h3>5. Prefix OPD — 前缀在策略蒸馏</h3>
+<p><strong>论文：</strong>"Fast and Effective On-policy Distillation from Reasoning Prefixes", 2025. <a href="https://arxiv.org/abs/2505.15875">arXiv:2505.15875</a></p>
+
+<h4>核心观察：信号集中在前缀</h4>
+<p>对长推理轨迹（如数学证明、代码生成）的实证分析表明：</p>
+<ul>
+<li>OPD 的有效训练信号（以 token-level KL 衡量）在轨迹前 20%–40% 处最为密集</li>
+<li>一个短教师前缀往往足以把学生带入正确推理路径（"推理惯性"效应）</li>
+<li>后缀部分的 KL 信号趋于平坦，边际收益递减</li>
+</ul>
+
+<h4>数学形式</h4>
+<p>设完整回答长度为 \(T\)，Prefix OPD 选择前缀长度 \(L \ll T\)：</p>
+$$\mathcal{L}_{\text{prefix}}(\theta) = \mathbb{E}_{x \sim D,\, y \sim \pi_\theta(\cdot|x)} \left[ \sum_{t=1}^{L} D\left( \pi_T(\cdot|x, y_{<t}),\, \pi_\theta(\cdot|x, y_{<t}) \right) \right]$$
+<p>其中 \(D\) 可以是前向 KL、反向 KL 或 token-level reward 形式。关键约束是 \(L \ll T\)。</p>
+
+<h4>前缀长度的理论分析</h4>
+<p>设 \(R(L)\) 为使用前缀长度 \(L\) 时的下游任务性能，\(R(T)\) 为完整 OPD 性能。Prefix OPD 的核心假设是存在"信息饱和点" \(L^*\)：</p>
+$$\frac{R(L^*) - R(0)}{R(T) - R(0)} \geq 1 - \epsilon, \quad L^* \ll T$$
+<p>实验表明，对于数学推理任务，\(L^* / T \approx 0.3\)（即前 30% 的 token 即可恢复 95%+ 的完整 OPD 收益）。</p>
+
+<h4>前缀长度调度（Prefix Scheduling）</h4>
+<p>训练过程中动态调整前缀长度：</p>
+$$L(t) = L_{\min} + (L_{\max} - L_{\min}) \cdot \min\left(1, \frac{t}{T_{\text{warmup}}}\right)$$
+<p>策略：</p>
+<ul>
+<li><strong>训练早期</strong>：短前缀 \(L_{\min}\)，学习"走上正确推理轨道"的起始策略</li>
+<li><strong>训练后期</strong>：逐步增加到 \(L_{\max}\)，覆盖更长的推理结构</li>
+<li>这实现了从"方向引导"到"过程精炼"的课程学习效果</li>
+</ul>
+
+<h4>工程收益分析</h4>
+<table>
+<thead><tr><th>成本项</th><th>完整 OPD</th><th>Prefix OPD (L/T=0.3)</th><th>节省</th></tr></thead>
+<tbody>
+<tr><td>学生采样 tokens</td><td>\(T\)</td><td>\(L\)（不生成后缀）</td><td>~70%</td></tr>
+<tr><td>教师推理 tokens</td><td>\(T\)</td><td>\(L\)（不对后缀调用教师）</td><td>~70%</td></tr>
+<tr><td>反向传播序列长度</td><td>\(T\)</td><td>\(L\)</td><td>~70%</td></tr>
+<tr><td>总 FLOPs</td><td>基准</td><td>基准 / 2×–47×</td><td>显著</td></tr>
+</tbody>
+</table>
+<p>FLOPs 节省范围取决于原始轨迹长度：长推理链（如 MATH 竞赛题，\(T > 2000\) tokens）节省更多。</p>
+
+<h4>与其他方法的组合</h4>
+<p>Prefix OPD 是正交优化，可与其他 OPD 变体组合：</p>
+<ul>
+<li><strong>Prefix + Veto</strong>：前缀区域内使用 Veto 稳定目标</li>
+<li><strong>Prefix + Lightning</strong>：离线预计算仅需覆盖前缀长度的教师 log-prob</li>
+</ul>
+
+<h4>有效性证据</h4>
+<ul>
+<li>在 AI-for-Math（GSM8K、MATH、AMC）和 OOD 基准上接近完整 OPD 性能（差距 &lt;2%）</li>
+<li>训练 FLOPs 降低 <strong>2×–47×</strong>（取决于任务和前缀比例）</li>
+<li>在 Qwen2.5-7B 上，Prefix OPD (L/T=0.3) 达到完整 OPD 97% 的 MATH 准确率，但训练时间仅为 1/3</li>
+</ul>
+</section>
+
+<section>
+<h3>6. Video-OPD — 视频在策略蒸馏</h3>
+<p><strong>论文：</strong>"Video-OPD: Efficient Post-Training of Multimodal Large Language Models for Temporal Video Grounding via On-Policy Distillation", 2025. <a href="https://arxiv.org/abs/2505.12570">arXiv:2505.12570</a></p>
+
+<h4>任务与动机</h4>
+<p>���序视频定位（Temporal Video Grounding, TVG）：给定视频 \(V\) 与自然语言查询 \(q\)，输出相关时间片段 \([t_s, t_e]\)。传统 GRPO 在该任务中面临：</p>
+<ul>
+<li><strong>奖励稀疏</strong>：只有最终 temporal IoU 作为回合级奖励，中间推理步骤无信号</li>
+<li><strong>计算冗余</strong>：多 rollout 需要重复编码长视频上下文（视频 token 数远大于文本）</li>
+<li><strong>信用分配困难</strong>：无法区分"理解视频内容"与"格式化时间输出"的贡献</li>
+</ul>
+
+<h4>方法设计</h4>
+<p>Video-OPD 的核心是将回合级稀疏奖励转化为逐 token 密集信号��</p>
+<ol>
+<li>学生策略 \(\pi_\theta\) 直接生成定位轨迹（包含推理过程和时间预测）</li>
+<li>固定前沿教师（frontier teacher，如 GPT-4o 或 Qwen-VL-Max）对学生轨迹的每个 token 提供反向 KL 监督</li>
+<li>使用 TVDF 机制聚焦高信息量样本</li>
+</ol>
+
+<h4>TVDF（Teacher-Validated Disagreement Focusing）</h4>
+<p>TVDF 是 Video-OPD 的核心采样策略，解决"教师在哪些样本上可靠"的问题：</p>
+
+<p><strong>步骤一：教师验证（Teacher Validation）</strong></p>
+<p>用 ground-truth 时序标注 \([t_s^*, t_e^*]\) 验证教师在某个 video-query 对上的可靠性：</p>
+$$\text{Valid}(T, V, q) = \mathbb{1}\left[ \text{IoU}(\hat{y}_T, [t_s^*, t_e^*]) > \tau_{\text{valid}} \right]$$
+<p>其中 \(\hat{y}_T\) 是教师的预测，\(\tau_{\text{valid}}\) 是验证阈值。注意：ground-truth 仅用于筛选教师可靠的样本，不直接作为训练目标。</p>
+
+<p><strong>步骤二：分歧度量（Disagreement Measurement）</strong></p>
+<p>对通过验证的样本，计算教师-学生分歧：</p>
+$$\text{Disagree}(x) = \frac{1}{T} \sum_{t=1}^T D_{\text{KL}}\left( \pi_\theta(\cdot|s_t) \,\|\, \pi_T(\cdot|s_t) \right)$$
+
+<p><strong>步骤三：优先采样（Priority Sampling）</strong></p>
+<p>训练时优先选择同时满足"教师可靠"且"对学生信息量大"的样本：</p>
+$$P(x) \propto \text{Valid}(T, V_x, q_x) \cdot \text{Disagree}(x)^\alpha$$
+<p>其中 \(\alpha > 0\) 控制聚焦强度。</p>
+
+<h4>有效性证据</h4>
+<table>
+<thead><tr><th>基准</th><th>指标</th><th>Video-OPD</th><th>GRPO</th><th>SFT</th></tr></thead>
+<tbody>
+<tr><td>Charades-TimeLens</td><td>mIoU</td><td><strong>45.8</strong></td><td>44.4</td><td>38.2</td></tr>
+<tr><td>ActivityNet-TimeLens</td><td>mIoU</td><td><strong>32.4</strong></td><td>27.6</td><td>23.1</td></tr>
+<tr><td>QVHighlights-TimeLens</td><td>mIoU</td><td><strong>73.1</strong></td><td>72.7</td><td>68.5</td></tr>
+</tbody>
+</table>
+<ul>
+<li>三个 TVG 基准上平均提升超过 17%（GRPO 约 12%）</li>
+<li>在 TempCompass、MVBench、Video-MME 等更广泛视频理解基准上表现出泛化能力</li>
+<li>计算效率：相比 GRPO 的多 rollout，Video-OPD 单次 rollout + 教师评分即可，视频编码开销降低约 4×</li>
+</ul>
+</section>
+
+<section>
+<h3>7. VLA-OPD — 视觉-语言-动作在策略蒸馏</h3>
+<p><strong>论文：</strong>"VLA-OPD: Bridging Offline SFT and Online RL for Vision-Language-Action Models via On-Policy Distillation", 2025. <a href="https://arxiv.org/abs/2505.14842">arXiv:2505.14842</a></p>
+
+<h4>问题动机：VLA 模型的训练��境</h4>
+<p>VLA（Vision-Language-Action）模型将视觉观测 \(o_t\)、语言指令 \(l\) 映射为机器人动作序列 \(a_t\)。现有训练范式的问题：</p>
+<ul>
+<li><strong>Offline SFT</strong>：在专家演示上训练，但部署时面临分布偏移（distribution shift）——学生执行的动作导致的状态与训练数据中的状态不同，误差累积（compounding error）</li>
+<li><strong>Online RL</strong>：奖励稀疏（只有任务成功/失败），样本效率极低（机器人交互成本高），且可能灾难性遗忘预训练知识</li>
+</ul>
+
+<h4>为何选择反向 KL</h4>
+<p>在机器人动作空间中，教师在 OOD 状态（学生探索到的新状态）可能有高认知不确定性（epistemic uncertainty），表现为教师分布的长尾：</p>
+<table>
+<thead><tr><th>目标</th><th>行为</th><th>问题</th></tr></thead>
+<tbody>
+<tr><td>前向 KL \(D_{\text{KL}}(\pi_T \| \pi_\theta)\)</td><td>强迫学生覆盖教师所有模式</td><td>学生被迫覆盖教师长尾不确定性 → 动作空间熵爆炸，机器人行为不稳定</td></tr>
+<tr><td>Hard-CE（交叉熵）</td><td>只追教师 argmax</td><td>过早熵坍缩，丧失动作多样性，无法适应新状态</td></tr>
+<tr><td><strong>反向 KL</strong> \(D_{\text{KL}}(\pi_\theta \| \pi_T)\)</td><td>有界模式寻找</td><td>过滤教师长尾不确定性，保留主模式内动作多样性</td></tr>
+</tbody>
+</table>
+
+<h4>反向 KL 作为内在奖励</h4>
+<p>VLA-OPD 将反向 KL 转化为 token 级内在奖励（intrinsic reward），嵌入策略梯度框架：</p>
+$$r_t^{\text{intrinsic}} = -D_{\text{KL}}\left( \pi_\theta(\cdot|o_t, l, a_{<t}) \,\|\, \pi_T(\cdot|o_t, l, a_{<t}) \right)$$
+<p>展开为：</p>
+$$r_t^{\text{intrinsic}} = \mathbb{E}_{v \sim \pi_\theta} \left[ \log \pi_T(v|s_t) - \log \pi_\theta(v|s_t) \right] = H(\pi_\theta(\cdot|s_t)) - H(\pi_\theta, \pi_T)(s_t)$$
+<p>即：学生熵减去交叉熵。最大化此奖励等价于让学生在保持自身确定性的同时接近教师。</p>
+
+<h4>基于组的策略梯度更新</h4>
+<p>对每个 prompt（任务指令 + 视觉观测），采样一组 \(G\) 条学生轨迹 \(\{a^{(g)}\}_{g=1}^G\)，计算组内优势：</p>
+$$A^{(g)}_t = r_t^{(g)} - \frac{1}{G} \sum_{g'=1}^G r_t^{(g')}$$
+<p>策略梯度更新：</p>
+$$\nabla_\theta J \approx \frac{1}{G} \sum_{g=1}^G \sum_t A^{(g)}_t \cdot \nabla_\theta \log \pi_\theta(a_t^{(g)}|s_t^{(g)})$$
+
+<h4>完整算法流程</h4>
+<ol>
+<li>从 1-trajectory SFT 初始化学生（最小化冷启动成本）</li>
+<li>在模拟环境中，每个任务采样 \(G\) 组学生轨迹</li>
+<li>对每个时间步查询学生和教师 logits，计算 \(r_t^{\text{intrinsic}}\)</li>
+<li>计算组内优势 \(A_t^{(g)}\)</li>
+<li>用 PPO-clip 或 GRPO 风格的策略梯度更新学生</li>
+<li>可选：混合少量环境奖励（任务成功率）以突破纯蒸馏上限</li>
+</ol>
+
+<h4>有效性证据</h4>
+<table>
+<thead><tr><th>基准</th><th>VLA-OPD</th><th>GRPO</th><th>SFT</th><th>VLA-OPD + GRPO</th></tr></thead>
+<tbody>
+<tr><td>LIBERO-Object (成功率)</td><td><strong>>90%</strong> @10步</td><td>~70% @10步</td><td>~55%</td><td><strong>>95%</strong></td></tr>
+<tr><td>LIBERO-Long (成功率)</td><td><strong>~80%</strong> @50步</td><td>~80% @150步</td><td>~40%</td><td><strong>>90%</strong></td></tr>
+<tr><td>收敛速度</td><td>基准</td><td>~3× 慢</td><td>—</td><td>—</td></tr>
+</tbody>
+</table>
+<ul>
+<li>LIBERO-Object：约 10 步内达到 >90% 成功率</li>
+<li>LIBERO-Long：约 50 步接近 80% 成功率（GRPO 约需 150 步，约 <strong>3× 加速</strong>）</li>
+<li>与 GRPO 结合可突破单纯蒸馏上限（Object >95%、Long >90%）</li>
+<li>在策略对齐能保留泛化能力（seen-unseen trade-off 优于纯 RL）</li>
+</ul>
+</section>
+
+<section>
+<h3>8. X-OPD — 跨模态在策略蒸馏</h3>
+<p><strong>论文：</strong>"X-OPD: Cross-Modal On-Policy Distillation for Capability Alignment in Speech LLMs", 2025. <a href="https://arxiv.org/abs/2505.18608">arXiv:2505.18608</a></p>
+
+<h4>问题动机：语音模型的模态差距</h4>
+<p>端到端语音大模型（Speech LLM）相比文本 LLM 的优势：延迟低、能保留副语言信息（语调、情感、停顿）。但在复杂指令遵循、逻辑推理、知识问答上常弱于同参数量的文本 LLM。这个<strong>模态差距（modality gap）</strong>的根源：</p>
+<ul>
+<li>语音编码器引入的信息瓶颈</li>
+<li>语音训练数据质量和多样性不足</li>
+<li>标准 SFT 无法有效传递文本 LLM 的推理能力到语音条件</li>
+</ul>
+
+<h4>方法设计：双优势机制</h4>
+<p>X-OPD 引入两种互补的优势信号：</p>
+
+<p><strong>1. 模态内优势（In-Modal Advantage）</strong></p>
+<p>对文本输入 \(x_{\text{text}}\)，学生在文本模态上采样多条轨迹 \(\{y^{(g)}\}_{g=1}^G\)，计算组内优势：</p>
+$$A_{\text{in}}^{(g)} = \sum_t \left[ \log \pi_T(y_t^{(g)}|x_{\text{text}}, y_{<t}^{(g)}) - \frac{1}{G}\sum_{g'} \log \pi_T(y_t^{(g')}|x_{\text{text}}, y_{<t}^{(g')}) \right]$$
+<p>作用：稳定文本域能力，防止语音训练导致文本能力退化。</p>
+
+<p><strong>2. 跨模态优势（Cross-Modal Advantage）</strong></p>
+<p>对语义等价的语音-文本平行输入对 \((x_{\text{speech}}, x_{\text{text}})\)，学生分别在两个模态上生成轨迹：</p>
+$$A_{\text{cross}}^{(g)} = \sum_t \left[ \log \pi_T(y_t^{(g)}|x_{\text{text}}, y_{<t}^{(g)}) - \log \pi_T(\tilde{y}_t^{(g)}|x_{\text{speech}}, \tilde{y}_{<t}^{(g)}) \right]$$
+<p>其中 \(y^{(g)}\) 是文本条件轨迹，\(\tilde{y}^{(g)}\) 是语音条件轨迹。作用：把文本教师的逻辑推理能力迁移到语音条件输出。</p>
+
+<p><strong>3. 联合损失</strong></p>
+$$\mathcal{L}_{\text{X-OPD}} = \lambda_{\text{in}} \cdot \mathcal{L}_{\text{in-modal}} + \lambda_{\text{cross}} \cdot \mathcal{L}_{\text{cross-modal}}$$
+<p>其中 \(\lambda_{\text{in}}\) 和 \(\lambda_{\text{cross}}\) 是平衡系数，通常 \(\lambda_{\text{cross}} > \lambda_{\text{in}}\) 以强调跨模态对齐。</p>
+
+<h4>鲁棒多采样轨迹（Robust Multi-Sampling Rollout）</h4>
+<p>语音输入本身引入声学扰动（说话人变化、背景噪声、语速差异），单次 rollout 的随机性远高于纯文本。X-OPD 采用：</p>
+<ul>
+<li>每个输入采样 \(G \geq 4\) 条候选轨迹</li>
+<li>通过边际化多个路径的梯度降低单样本更新方差</li>
+<li>对语音输入额外增加声学增强（speed perturbation、noise injection）以提高鲁棒性</li>
+</ul>
+<p>方差降低的理论保证：</p>
+$$\text{Var}[\nabla_\theta \mathcal{L}] \propto \frac{1}{G} \cdot \text{Var}_{\text{single-sample}}$$
+
+<h4>平行提示构造</h4>
+<p>构造语音-文本平行提示的要求：</p>
+<ul>
+<li>语义不变：语音和文本表达相同的查询意图</li>
+<li>自然性：语音不是简单的 TTS 合成，而是包含自然口语特征</li>
+<li>多样性：覆盖不同说话人、语速、口音</li>
+</ul>
+
+<h4>有效性证据</h4>
+<p>在 Qwen3-Omni-A3B-Instruct 上的模态差距（Modality Drop）对比：</p>
+<table>
+<thead><tr><th>方法</th><th>Avg. Drop (指标组1)</th><th>Avg. Drop (指标组2)</th><th>样本量</th></tr></thead>
+<tbody>
+<tr><td>基础模型（无后训练）</td><td>11.29%</td><td>5.51%</td><td>—</td></tr>
+<tr><td>SFT</td><td>22.76%</td><td>17.49%</td><td>~100k</td></tr>
+<tr><td>Offline KD</td><td>19.62%</td><td>15.02%</td><td>~100k</td></tr>
+<tr><td>GKD Forward KL</td><td>20.23%</td><td>15.81%</td><td>~100k</td></tr>
+<tr><td><strong>X-OPD</strong></td><td><strong>3.43%</strong></td><td><strong>0.97%</strong></td><td><strong>~27k</strong></td></tr>
+</tbody>
+</table>
+<p>X-OPD 用仅约 27k 样本实现了最小的模态差距，且样本效率远超其他方法（约 4× 少的数据）。注意 SFT 反而扩大了模态差距——这说明离策略训练可能加剧而非缓解模态不对齐。</p>
+</section>
+
+<hr>
+
+<section id="metrics">
+<h2>OPD 关键指标体系</h2>
+<p>OPD 训练中应监控的指标可分为七大类，每类指标从不同维度反映训练状态与潜在问题。</p>
+
+<h3>第一类：任务效果指标（Task Performance）</h3>
+<table>
+<thead><tr><th>领域</th><th>核心指标</th><th>说明</th></tr></thead>
+<tbody>
+<tr><td>数学推理</td><td>accuracy、pass@k、avg@k</td><td>pass@k 衡量 k 次采样中至少一次正确的概率</td></tr>
+<tr><td>代码生成</td><td>HumanEval pass@1/pass@10、LiveCodeBench</td><td>功能正确性</td></tr>
+<tr><td>机器人 VLA</td><td>success rate（任务成功率）</td><td>端到端任务完成</td></tr>
+<tr><td>视频 TVG</td><td>temporal IoU、mIoU、Recall@IoU</td><td>时序定位精度</td></tr>
+<tr><td>语音 X-OPD</td><td>benchmark score、modality drop</td><td>模态差距量化</td></tr>
+</tbody>
+</table>
+<div class="warn-box">
+<p><strong>注意：</strong>蒸馏可能产生<strong>指标外损失（off-metric losses）</strong>，包括：校准退化（calibration degradation）、推理轨迹质量侵蚀（reasoning trace quality erosion）、分布收窄（distribution narrowing）。仅看任务准确率可能遗漏这些退化。</p>
+</div>
+
+<h3>第二类：教师-学生分布对齐指标（Distribution Alignment）</h3>
+<table>
+<thead><tr><th>指标</th><th>计算方式</th><th>诊断意义</th></tr></thead>
+<tbody>
+<tr><td>Forward KL</td><td>\(\frac{1}{T}\sum_t D_{\text{KL}}(\pi_T \| \pi_\theta)(s_t)\)</td><td>整体对齐程度，应��续下降</td></tr>
+<tr><td>Reverse KL</td><td>\(\frac{1}{T}\sum_t D_{\text{KL}}(\pi_\theta \| \pi_T)(s_t)\)</td><td>学生模式覆盖程度</td></tr>
+<tr><td>Teacher-student log-prob gap</td><td>\(\frac{1}{T}\sum_t |\log \pi_T(y_t|s_t) - \log \pi_\theta(y_t|s_t)|\)</td><td>逐 token 概率差异</td></tr>
+<tr><td>Token advantage</td><td>\(\log \pi_T(y_t|s_t) - \log \pi_\theta(y_t|s_t)\)</td><td>正值=教师更确信，负值=学生更确信</td></tr>
+<tr><td><strong>Top-k overlap ratio</strong></td><td>\(\frac{|S_k \cap T_k|}{k}\)</td><td>成功 OPD：72% → 91%；失败：停滞</td></tr>
+<tr><td><strong>Overlap mass</strong></td><td>\(\sum_{v \in O_k} \pi_T(v|s_t)\)</td><td>成功 OPD：97%–99%</td></tr>
+<tr><td>Entropy gap</td><td>\(|H(\pi_T) - H(\pi_\theta)|\)</td><td>应持续缩小</td></tr>
+</tbody>
+</table>
+<div class="info-box">
+<p><strong>诊断规则：</strong>KL 稳定下降 + overlap ratio 上升 + 熵差缩小 → 有效对齐。Overlap 停滞 + 熵长期不匹配 → 思维模式不相容，考虑冷启动或换教师。</p>
+</div>
+
+<h3>第三类：优化稳定性指标（Optimization Stability）</h3>
+<table>
+<thead><tr><th>指标</th><th>健康范围</th><th>异常信号</th></tr></thead>
+<tbody>
+<tr><td>Gradient norm</td><td>稳定非零</td><td>持续为零 → 教师信号不可用；尖峰频繁 → 前向 KL 爆炸</td></tr>
+<tr><td>Policy loss</td><td>平稳下降</td><td>震荡或发散 → 学习率过大或目标不稳定</td></tr>
+<tr><td>Advantage distribution</td><td>近似对称</td><td>被重复 token 主导 → 可能进入长度膨胀</td></tr>
+<tr><td>Clip fraction (PPO)</td><td>0.1–0.3</td><td>>0.5 → 更新步长过大</td></tr>
+<tr><td>Loss spike frequency</td><td>罕见</td><td>频繁 → 需要 Veto 或梯度裁剪</td></tr>
+</tbody>
+</table>
+
+<h3>第四类：生成退化指标（Generation Degeneration）</h3>
+<p>来自 "Demystifying OPD" 的关键发现，OPD 训练中可能出现三种退化模式：</p>
+<table>
+<thead><tr><th>退化模式</th><th>表现</th><th>机制</th><th>监控指标</th></tr></thead>
+<tbody>
+<tr><td><strong>突发长度膨胀</strong><br>(Abrupt Length Inflation)</td><td>生成长度突然翻倍</td><td>学生发现"更长回答"能获得更高教师 likelihood</td><td>average length、length variance</td></tr>
+<tr><td><strong>截断坍缩</strong><br>(Truncation Collapse)</td><td>几乎所有回答被截断</td><td>长度膨胀后触发 max-length 截断</td><td>truncation rate、EOS rate</td></tr>
+<tr><td><strong>重复饱和</strong><br>(Repetition Saturation)</td><td>大量重复 token/短语</td><td>重复 token 在教师分布下有非零概率，形成自强化循环</td><td>repetition rate、compression ratio</td></tr>
+</tbody>
+</table>
+<div class="warn-box">
+<p><strong>诊断规则：</strong>截断率突然接近 1 + 重复率飙升 + 验证准确率下降 → 学生在"利用"教师 likelihood 信号，进入自强化重复循环。应立即降低学习率或引入长度惩罚。</p>
+</div>
+
+<h3>第五类：多样性与校准指标（Diversity & Calibration）</h3>
+<table>
+<thead><tr><th>维度</th><th>指标</th><th>说明</th></tr></thead>
+<tbody>
+<tr><td rowspan="4">多样性</td><td>Entropy \(H(\pi_\theta)\)</td><td>输出分布的不确定性</td></tr>
+<tr><td>Distinct-n</td><td>n-gram 多样性</td></tr>
+<tr><td>Self-BLEU</td><td>多次采样间的相似度（越低越多样）</td></tr>
+<tr><td>Mode coverage</td><td>教师模式中学生能覆盖的比例</td></tr>
+<tr><td rowspan="3">校准</td><td>ECE</td><td>Expected Calibration Error</td></tr>
+<tr><td>Brier score</td><td>概率预测的均方误差</td></tr>
+<tr><td>Confidence-accuracy curve</td><td>置信度与实际准确率的对应关系</td></tr>
+</tbody>
+</table>
+<p><strong>KL 方向与多样性的关系：</strong></p>
+<ul>
+<li>前向 KL 过强 → 熵过高、策略不果断（mode-covering 的代价）</li>
+<li>反向 KL / Hard-CE 过强 → 熵坍缩、多样性丧失（mode-seeking 的代价）</li>
+<li>Veto 的 \(\beta\) 参数可在两者间调节</li>
+</ul>
+
+<h3>第六类：效率指标（Efficiency）</h3>
+<table>
+<thead><tr><th>指标</th><th>说明</th><th>优化方向</th></tr></thead>
+<tbody>
+<tr><td>Teacher queries</td><td>教师调用次数</td><td>Lightning OPD → 0（离线预计算）</td></tr>
+<tr><td>Teacher serving GPU hours</td><td>教师服务的 GPU 时间</td><td>Prefix OPD 降低 70%+</td></tr>
+<tr><td>Training FLOPs</td><td>总计算量</td><td>Prefix OPD 降低 2×–47×</td></tr>
+<tr><td>Generated tokens per update</td><td>每次更新需要的生成 token 数</td><td>Prefix OPD 显著降低</td></tr>
+<tr><td>Wall-clock time</td><td>实际训练时间</td><td>Lightning OPD ~4× 加速</td></tr>
+<tr><td>Convergence steps</td><td>达到目标性能的步数</td><td>VLA-OPD ~3× 加速</td></tr>
+</tbody>
+</table>
+
+<h3>第七类：泛化、遗忘与模态保持指标（Generalization & Retention）</h3>
+<table>
+<thead><tr><th>领域</th><th>指标</th><th>关注点</th></tr></thead>
+<tbody>
+<tr><td>LLM 推理</td><td>in-domain 与 OOD 同时表现</td><td>OPD 是否只在训练分布内有效</td></tr>
+<tr><td>VLA 机器人</td><td>seen/unseen task 成功率</td><td>评估灾难性遗忘</td></tr>
+<tr><td>X-OPD 语音</td><td>语音与文本模态性能差距</td><td>跨模态对齐是否成功</td></tr>
+<tr><td>通用</td><td>原有能力保持率</td><td>蒸馏是否损害了非目标能力</td></tr>
+</tbody>
+</table>
+</section>
+
+<hr>
+
+<section id="comparison">
+<h2>方法对比与选择建议</h2>
+<table>
+<thead><tr><th>场景</th><th>推荐方法</th><th>理由</th></tr></thead>
+<tbody>
+<tr><td>理解 OPD 是否会成功</td><td>Rethinking OPD</td><td>给出机制解释：思维模式相容 + 教师有新能力 + overlap 动态</td></tr>
+<tr><td>训练早期不稳定</td><td>Veto</td><td>目标函数层面重构，\(\beta\) 抑制病态梯度，可调度衰减</td></tr>
+<tr><td>教师部署成本是瓶颈</td><td>Lightning OPD</td><td>预计算教师 log-prob，去掉在线教师服务（需保证教师一致性）</td></tr>
+<tr><td>长推理成本过高</td><td>Prefix OPD</td><td>前缀截断，FLOPs 降低 2×–47×，可与其他方法正交组合</td></tr>
+<tr><td>无外部教师 / 自举</td><td>OPSD</td><td>同一模型自蒸馏（需确认特权信息是共享规则而非实例答案）</td></tr>
+<tr><td>视频时序定位</td><td>Video-OPD</td><td>密集信号 + TVDF 聚焦高信息量样本，避免视频重复编码</td></tr>
+<tr><td>机器人 VLA</td><td>VLA-OPD</td><td>反向 KL 内在奖励 + 环境交互保持在策略，3× 收敛加速</td></tr>
+<tr><td>语音跨模态对齐</td><td>X-OPD</td><td>模态内 + 跨模态优势联合优化，27k 样本即可显著缩小模态差距</td></tr>
+</tbody>
+</table>
+
+<h3>方法间的正交性与组合</h3>
+<div class="info-box">
+<p><strong>可组合的方法对：</strong></p>
+<ul>
+<li><strong>Veto + Lightning</strong>：离线预计算 + 稳定目标（适合大规模部署）</li>
+<li><strong>Prefix + Lightning</strong>：只预计算前缀部分的教师 log-prob（最大化效率）</li>
+<li><strong>Prefix + Veto</strong>：前缀区域内使用 Veto 稳定（适合长推理 + 强教师）</li>
+<li><strong>VLA-OPD + 环境奖励</strong>：内在奖励 + 外在奖励混合（突破蒸馏上限）</li>
+<li><strong>OPSD + Rethinking 配方</strong>：自蒸馏前先做冷启动确保 overlap 可工作</li>
+</ul>
+</div>
+</section>
+
+<hr>
+
+<section id="references">
+<h2>参考文献（References）</h2>
+<ol>
+<li>Agarwal, R., Vieillard, N., et al. "GKD: Generalized Knowledge Distillation for Auto-Regressive Sequence Models", 2023. <a href="https://arxiv.org/abs/2306.13649">arXiv:2306.13649</a></li>
+<li>"Rethinking On-Policy Distillation of Large Language Models: Phenomenology, Mechanism, and Recipe", 2025. <a href="https://arxiv.org/abs/2604.13016">arXiv:2604.13016</a></li>
+<li>"Stable On-Policy Distillation through Adaptive Target Reformulation (Veto)", 2025. <a href="https://arxiv.org/abs/2601.07155">arXiv:2601.07155</a></li>
+<li>"Self-Distilled Reasoner: On-Policy Self-Distillation for Large Language Models", 2025. <a href="https://arxiv.org/abs/2601.18734">arXiv:2601.18734</a></li>
+<li>"Lightning OPD: Efficient Post-Training for Large Reasoning Models with Offline On-Policy Distillation", 2025. <a href="https://arxiv.org/abs/2505.10101">arXiv:2505.10101</a></li>
+<li>"Fast and Effective On-policy Distillation from Reasoning Prefixes", 2025. <a href="https://arxiv.org/abs/2505.15875">arXiv:2505.15875</a></li>
+<li>"Video-OPD: Efficient Post-Training of Multimodal Large Language Models for Temporal Video Grounding via On-Policy Distillation", 2025. <a href="https://arxiv.org/abs/2505.12570">arXiv:2505.12570</a></li>
+<li>"VLA-OPD: Bridging Offline SFT and Online RL for Vision-Language-Action Models via On-Policy Distillation", 2025. <a href="https://arxiv.org/abs/2505.14842">arXiv:2505.14842</a></li>
+<li>"X-OPD: Cross-Modal On-Policy Distillation for Capability Alignment in Speech LLMs", 2025. <a href="https://arxiv.org/abs/2505.18608">arXiv:2505.18608</a></li>
+<li>"The Many Faces of On-Policy Distillation", 2025. <a href="https://arxiv.org/abs/2605.11182">arXiv:2605.11182</a></li>
+<li>"Demystifying On-Policy Distillation: Understanding Degeneration Modes in LLM Training", 2025.</li>
+<li>"Why Does Self-Distillation (Sometimes) Degrade the Reasoning Capability of LLMs?", 2025.</li>
+<li>verl 文档 — OPD 模块说明. <a href="https://github.com/volcengine/verl">GitHub: volcengine/verl</a></li>
+</ol>
+</section>
+
+</article>
+</body>
+</html>

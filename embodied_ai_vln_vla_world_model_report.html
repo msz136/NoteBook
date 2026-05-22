@@ -1,0 +1,515 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>具身智能核心技术：VLN、VLA、感知规划系统与世界模型</title>
+    <script>
+    window.MathJax = {
+        tex: { inlineMath: [['\\(','\\)'], ['$','$']], displayMath: [['\\[','\\]'], ['$$','$$']] }
+    };
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js" async></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Noto Sans SC", sans-serif;
+            font-size: 16px; line-height: 1.8; color: #1a1a1a; background: #fff;
+            padding: 2rem 1rem;
+        }
+        article { max-width: 900px; margin: 0 auto; }
+        h1 { font-size: 2rem; margin-bottom: 0.5rem; border-bottom: 2px solid #333; padding-bottom: 0.5rem; }
+        h2 { font-size: 1.5rem; margin-top: 2.5rem; margin-bottom: 1rem; color: #1a1a1a; border-left: 4px solid #2563eb; padding-left: 0.75rem; }
+        h3 { font-size: 1.25rem; margin-top: 2rem; margin-bottom: 0.75rem; color: #333; }
+        h4 { font-size: 1.1rem; margin-top: 1.5rem; margin-bottom: 0.5rem; color: #444; }
+        p { margin-bottom: 1rem; }
+        ul, ol { margin-bottom: 1rem; padding-left: 1.5rem; }
+        li { margin-bottom: 0.3rem; }
+        strong { color: #1a1a1a; }
+        a { color: #2563eb; text-decoration: none; }
+        a:hover { text-decoration: underline; }
+        hr { border: none; border-top: 1px solid #e5e7eb; margin: 2.5rem 0; }
+        table { width: 100%; border-collapse: collapse; margin: 1.5rem 0; font-size: 0.9rem; }
+        thead { background: #f8fafc; }
+        th, td { border: 1px solid #e2e8f0; padding: 0.6rem 0.8rem; text-align: left; }
+        tbody tr:nth-child(even) { background: #f8fafc; }
+        pre { background: #f4f4f5; border-radius: 6px; padding: 1rem; overflow-x: auto; margin: 1rem 0; font-size: 0.85rem; line-height: 1.5; }
+        code { font-family: "JetBrains Mono", "Fira Code", Consolas, monospace; }
+        p code, li code { background: #f4f4f5; padding: 0.15rem 0.4rem; border-radius: 3px; font-size: 0.9em; }
+        .mjx-chtml { overflow-x: auto; overflow-y: hidden; }
+        blockquote { border-left: 3px solid #d1d5db; padding-left: 1rem; color: #4b5563; margin: 1rem 0; }
+        @media (max-width: 600px) { body { padding: 1rem 0.5rem; } table { font-size: 0.8rem; } }
+    </style>
+</head>
+<body>
+<article>
+
+<h1>具身智能核心技术：VLN、VLA、感知规划系统与世界模型</h1>
+
+<section id="question">
+<h2>问题（Question）</h2>
+<p>什么是 VLN/VLA？什么是具身智能（Embodied AI）的感知与规划系统？什么是世界模型（World Model）？对这些核心概念进行深入的专业性阐述。</p>
+</section>
+
+<section id="background">
+<h2>背景与动机（Background &amp; Motivation）</h2>
+<p>具身智能（Embodied AI）是人工智能的一个核心分支，研究如何让智能体（Agent）在物理世界中感知环境、理解语言指令、做出决策并执行动作。与纯粹的语言模型或视觉模型不同，具身智能要求模型具备"闭环"能力——从感知到决策到执行再到反馈，形成完整的交互回路。</p>
+<p>近年来，随着大规模视觉-语言模型（VLM）的成熟，具身智能领域出现了三条关键技术路线：</p>
+<ol>
+<li><strong>视觉-语言导航（VLN）</strong>：让智能体根据自然语言指令在未知环境中导航</li>
+<li><strong>视觉-语言-动作模型（VLA）</strong>：将感知、语言理解与动作生成统一到端到端模型中</li>
+<li><strong>世界模型（World Model）</strong>：构建环境的内部模拟器，支持预测性规划与想象式决策</li>
+</ol>
+<p>这三者共同构成了具身智能系统的核心技术栈，分别对应"去哪里"、"怎么做"和"会发生什么"三个基本问题。</p>
+</section>
+
+<section>
+<h2>一、视觉-语言导航（Vision-Language Navigation, VLN）</h2>
+
+<h3>1.1 定义与问题形式化</h3>
+<p>视觉-语言导航（VLN）是具身智能中的一类核心任务：智能体被放置在一个未见过的三维环境中，接收一段自然语言导航指令（如"走出卧室，左转进入走廊，在第二个门前停下"），需要仅依靠自身的视觉观测来执行导航，最终到达目标位置。</p>
+
+<h4>形式化定义</h4>
+<p>VLN 任务可形式化为一个部分可观测马尔可夫决策过程（POMDP）：</p>
+$$\mathcal{M} = \langle \mathcal{S}, \mathcal{A}, \mathcal{T}, \mathcal{O}, \Omega, R, \gamma \rangle$$
+<p>其中：</p>
+<ul>
+<li>\(\mathcal{S}\)：环境状态空间（智能体位置、朝向、环境布局）</li>
+<li>\(\mathcal{A}\)：动作空间（前进、左转、右转、停止等离散动作，或连续运动指令）</li>
+<li>\(\mathcal{T}: \mathcal{S} \times \mathcal{A} \rightarrow \mathcal{S}\)：状态转移函数</li>
+<li>\(\mathcal{O}\)：观测空间（全景 RGB 图像、深度图等）</li>
+<li>\(\Omega: \mathcal{S} \rightarrow \mathcal{O}\)：观测函数</li>
+<li>\(R\)：奖励函数（通常基于与目标的距离）</li>
+<li>\(\gamma\)：折扣因子</li>
+</ul>
+<p>给定自然语言指令 \(\mathcal{I} = (w_1, w_2, ..., w_n)\)，智能体的策略为：</p>
+$$\pi(a_t | o_{\leq t}, \mathcal{I}) = P(a_t | o_1, o_2, ..., o_t, \mathcal{I})$$
+<p>即在每个时间步 \(t\)，根据历史观测序列和语言指令选择动作。</p>
+
+<h3>1.2 核心基准任务</h3>
+<table>
+<thead><tr><th>基准</th><th>年份</th><th>特点</th><th>指令粒度</th></tr></thead>
+<tbody>
+<tr><td>R2R (Room-to-Room)</td><td>2018</td><td>细粒度逐步指令导航</td><td>详细路径描述</td></tr>
+<tr><td>R4R (Room-for-Room)</td><td>2019</td><td>扩展路径，强调指令忠实度</td><td>详细路径描述</td></tr>
+<tr><td>REVERIE</td><td>2020</td><td>高层目标指令 + 目标物体定位</td><td>粗粒度目标描述</td></tr>
+<tr><td>SOON</td><td>2021</td><td>场景级目标导航</td><td>目标场景描述</td></tr>
+<tr><td>VLN-CE</td><td>2020</td><td>连续环境（非图导航）</td><td>详细路径描述</td></tr>
+</tbody>
+</table>
+<p><strong>R2R（Room-to-Room）</strong> 是最经典的 VLN 基准，由 Anderson et al. (2018) 提出。环境基于 Matterport3D 真实室内扫描数据，包含 90 栋建筑、10,800+ 全景节点。每条路径平均包含 5-7 个导航节点，配有 3 条人工标注的自然语言指令。</p>
+
+<h3>1.3 技术演进</h3>
+
+<h4>第一阶段：序列到序列方法（2018-2020）</h4>
+<p>早期方法采用经典的 Encoder-Decoder 架构：</p>
+<ul>
+<li><strong>语言编码器</strong>：LSTM/BiLSTM 编码指令为隐状态序列 \(\{h_1^L, ..., h_n^L\}\)</li>
+<li><strong>视觉编码器</strong>：CNN（ResNet）提取全景图像特征</li>
+<li><strong>交叉注意力解码器</strong>：在每步通过注意力机制对齐视觉观测与指令片段</li>
+</ul>
+$$\alpha_t^i = \text{softmax}(h_t^D \cdot h_i^L), \quad c_t = \sum_i \alpha_t^i h_i^L$$
+<p>其中 \(h_t^D\) 为解码器隐状态，\(c_t\) 为语言上下文向量。代表工作：Speaker-Follower (Fried et al., 2018)、EnvDrop (Tan et al., 2019)。</p>
+
+<h4>第二阶段：Transformer 与预训练（2020-2023）</h4>
+<p>引入 Vision-Language Transformer 预训练范式：</p>
+<ul>
+<li><strong>PREVALENT</strong> (Hao et al., 2020)：在大规模图像-文本-动作三元组上预训练</li>
+<li><strong>VLN-BERT</strong> (Hong et al., 2021)：将 BERT 适配到导航决策</li>
+<li><strong>HAMT</strong> (Chen et al., 2021)：层次化历史感知多模态 Transformer</li>
+</ul>
+<p>核心思想是利用 Masked Language Modeling (MLM)、Masked Region Modeling (MRM) 和 Action Prediction (AP) 等预训练目标，学习视觉-语言-动作的联合表示。</p>
+
+<h4>第三阶段：基础模型时代（2023-至今）</h4>
+<p>利用大规模基础模型（Foundation Models）的能力：</p>
+<ul>
+<li><strong>NavGPT</strong> (Zhou et al., 2024)：将 LLM 作为导航推理引擎</li>
+<li><strong>MapGPT</strong> (Chen et al., 2024)：LLM + 在线地图构建</li>
+<li><strong>VLN with LLaVA/GPT-4V</strong>：利用多模态大模型进行零样本导航推理</li>
+</ul>
+<p>这一阶段的核心转变是从"训练专用导航模型"转向"利用通用基础模型的推理能力"。</p>
+
+<h3>1.4 关键技术挑战</h3>
+<ol>
+<li><strong>视觉-语言对齐（Grounding）</strong>：将"第二个门"、"蓝色沙发旁边"等语言描述精确对应到视觉观测中的具体区域</li>
+<li><strong>长程依赖建模</strong>：导航路径可能跨越数十步，需要维持对完整指令的记忆</li>
+<li><strong>泛化到未见环境</strong>：训练环境有限（~60 栋建筑），需泛化到完全未见的场景</li>
+<li><strong>指令歧义与容错</strong>：真实指令可能模糊、错误或不完整</li>
+</ol>
+</section>
+
+<section>
+<h2>二、视觉-语言-动作模型（Vision-Language-Action Model, VLA）</h2>
+
+<h3>2.1 定义与核心思想</h3>
+<p>视觉-语言-动作模型（VLA）是一类端到端的多模态模型，直接将视觉观测和语言指令映射为机器人控制动作。与 VLN 不同，VLA 不仅处理导航，更面向通用的机器人操作（Manipulation）任务——抓取、放置、折叠、组装等需要精细运动控制的任务。</p>
+<p>VLA 的核心思想是：<strong>将机器人动作视为一种"语言"</strong>，与自然语言和视觉信息统一在同一个序列建模框架中。</p>
+
+<h4>形式化定义</h4>
+<p>给定视觉观测 \(o_t \in \mathbb{R}^{H \times W \times 3}\)（RGB 图像）和语言指令 \(\mathcal{I}\)（自然语言任务描述），VLA 模型输出连续动作：</p>
+$$a_t = f_\theta(o_t, \mathcal{I}) \in \mathbb{R}^d$$
+<p>其中 \(d\) 为动作维度（通常包含末端执行器的位移 \(\Delta x, \Delta y, \Delta z\)、旋转 \(\Delta \phi, \Delta \theta, \Delta \psi\)、夹���开合等，\(d = 7\) 或更高）。</p>
+
+<h3>2.2 里程碑模型</h3>
+
+<h4>RT-2：动作即 Token（Google DeepMind, 2023）</h4>
+<p>RT-2（Robotics Transformer 2）是 VLA 范式的开创性工作。其核心创新在于<strong>动作 Token 化（Action Tokenization）</strong>：</p>
+<p><strong>架构设计</strong>：</p>
+<ul>
+<li>基于预训练 VLM 骨干（PaLI-X 55B 或 PaLM-E 12B）</li>
+<li>视觉编码器：ViT 将图像编码为视觉 Token</li>
+<li>动作表示：将连续动作离散化为 256 个 bin，每个自由度对应一个 Token</li>
+</ul>
+<p><strong>动作 Token 化过程</strong>：</p>
+$$a_{\text{continuous}} = [x, y, z, \phi, \theta, \psi, g] \in \mathbb{R}^7$$
+<p>每个维度被均匀量化到 \([0, 255]\) 的整数范围：</p>
+$$a_i^{\text{token}} = \text{round}\left(\frac{a_i - a_i^{\min}}{a_i^{\max} - a_i^{\min}} \times 255\right)$$
+<p>这些整数被映射到 VLM 词表中的特殊 Token（如 Token 256-511），使得动作生成与文本生成共享同一个自回归解码过程。</p>
+<p><strong>关键结果</strong>：</p>
+<ul>
+<li>在 Google Robot 上实现 emergent 能力：理解未见过的物体、执行推理性指令</li>
+<li>证明互联网规模的视觉-语言预训练知识可迁移到机器人控制</li>
+</ul>
+
+<h4>OpenVLA：开源 VLA（Kim et al., 2024）</h4>
+<p>OpenVLA 是首个开源的 7B 参数 VLA 模型，在性能上超越了 55B 的 RT-2-X。</p>
+<p><strong>架构</strong>：</p>
+<ul>
+<li>语言骨干：Llama 2 7B</li>
+<li>视觉编码器：DINOv2 + SigLIP 双编码器融合</li>
+<li>训练数据：Open X-Embodiment 数据集（970K 机器人 episode，来自 22 种机器人）</li>
+</ul>
+<p><strong>关键设计</strong>：</p>
+<ul>
+<li>双视觉编码器融合：DINOv2 提供空间几何特征，SigLIP 提供语义对齐特征</li>
+<li>动作分块（Action Chunking）：一次预测多步动作，减少累积误差</li>
+<li>高效微调：支持 LoRA 适配到新任务/新机器人</li>
+</ul>
+<p><strong>性能</strong>：在 29 个评估任务上，7B 的 OpenVLA 绝对成功率超过 55B RT-2-X 达 16.5%。</p>
+
+<h4>π₀：流匹配 VLA（Physical Intelligence, 2024）</h4>
+<p>π₀（pi-zero）由 Physical Intelligence 提出，是目前最先进的通用机器人基础模型之一。其核心创新在于用<strong>流匹配（Flow Matching）</strong>替代离散 Token 化来生成连续动作。</p>
+<p><strong>架构设计</strong>：</p>
+<ul>
+<li>基于预训练 VLM（PaliGemma 3B）作为视觉-语言骨干</li>
+<li>动作头采用流匹配（Flow Matching）生成连续动作序列</li>
+<li>支持动作分块：一次生成未来 \(H\) 步动作（action chunk）</li>
+</ul>
+<p><strong>流匹配动作生成</strong>：与 RT-2 的离散化不同，π₀ 将动作生成建模为从噪声到目标动作的连续流：</p>
+$$\frac{d\mathbf{a}}{dt} = v_\theta(\mathbf{a}_t, t, \mathbf{c}), \quad t \in [0, 1]$$
+<p>其中 \(v_\theta\) 为学习的向量场，\(\mathbf{c}\) 为视觉-语言条件特征。训练目标为：</p>
+$$\mathcal{L} = \mathbb{E}_{t, \mathbf{a}_0, \mathbf{a}_1} \left[ \| v_\theta(\mathbf{a}_t, t, \mathbf{c}) - (\mathbf{a}_1 - \mathbf{a}_0) \|^2 \right]$$
+<p>其中 \(\mathbf{a}_0 \sim \mathcal{N}(0, I)\) 为噪声，\(\mathbf{a}_1\) 为目标动作。</p>
+<p><strong>关键优势</strong>：</p>
+<ul>
+<li>避免离散化带来的精度损失，适合高精度灵巧操作</li>
+<li>支持多模态动作分布（同一情境下多种合理动作）</li>
+<li>在 8 种不同机器人上验证，覆盖折叠衣物、清理桌面、组装等复杂任务</li>
+</ul>
+
+<h3>2.3 VLA 的技术架构对比</h3>
+<table>
+<thead><tr><th>模型</th><th>参数量</th><th>动作表示</th><th>VLM 骨干</th><th>训练数据规模</th></tr></thead>
+<tbody>
+<tr><td>RT-2</td><td>55B</td><td>离散 Token（256 bin）</td><td>PaLI-X / PaLM-E</td><td>Google 内部数据</td></tr>
+<tr><td>RT-2-X</td><td>55B</td><td>离散 Token</td><td>PaLM-E</td><td>Open X-Embodiment</td></tr>
+<tr><td>OpenVLA</td><td>7B</td><td>离散 Token（256 bin）</td><td>Llama 2 + DINOv2 + SigLIP</td><td>970K episodes</td></tr>
+<tr><td>π₀</td><td>~3B</td><td>连续流匹配</td><td>PaliGemma</td><td>多源混合数据</td></tr>
+<tr><td>CogACT</td><td>7B</td><td>连续扩散</td><td>CogVLM</td><td>混合数据</td></tr>
+</tbody>
+</table>
+
+<h3>2.4 VLN 与 VLA 的本质区别</h3>
+<table>
+<thead><tr><th>维度</th><th>VLN</th><th>VLA</th></tr></thead>
+<tbody>
+<tr><td>任务类型</td><td>导航（到达目标位置）</td><td>操作（完成物理交互任务）</td></tr>
+<tr><td>动作空间</td><td>离散（前进/转向/停止）或航点</td><td>连续（末端执行器位姿）</td></tr>
+<tr><td>环境</td><td>主要为室内导航图</td><td>桌面操作、移动操作等</td></tr>
+<tr><td>核心挑战</td><td>语言-路径对齐、空间推理</td><td>精细运动控制、接触物理</td></tr>
+<tr><td>评估指标</td><td>成功率、SPL、nDTW</td><td>任务成功率、动作精度</td></tr>
+</tbody>
+</table>
+</section>
+
+<section>
+<h2>三、具身智能的感知与规划系统</h2>
+
+<h3>3.1 系统架构概览</h3>
+<p>现代具身智能系统通常采用<strong>三层架构</strong>（Three-Layer Framework）：</p>
+<pre><code>┌─────────────────────────────────────────────┐
+│         策略层（Strategy Layer）              │
+│   高层任务���划、目标分解、常识推理            │
+│   代表：LLM/VLM 作为高层规划器               │
+├─────────────────────────────────────────────┤
+│         世界模型层（World Model Layer）        │
+│   环境状态估计、动态预测、因果推理            │
+│   代表：神经网络世界模型、物理模拟器          │
+├─────────────────────────────────────────────┤
+│         感知-动作层（Perception-Action Layer） │
+│   多模态感知、低层运动控制、反应式行为        │
+│   代表：视觉编码器、运动规划器、PID 控制      │
+└─────────────────────────────────────────────┘</code></pre>
+
+<h3>3.2 感知系统（Perception System）</h3>
+<p>感知系统负责将原始传感器数据转化为结构化的环境表示。</p>
+
+<h4>3.2.1 多模态感知融合</h4>
+<p>现代具身智能系统融合多种传感模态：</p>
+<ul>
+<li><strong>视觉（Vision）</strong>：RGB 相机、深度相机（RGB-D）、立体视觉</li>
+<li><strong>本体感觉（Proprioception）</strong>：关节角度、力矩、末端位姿</li>
+<li><strong>触觉（Tactile）</strong>：接触力、滑动检测、纹理感知</li>
+<li><strong>语言（Language）</strong>：自然语言指令、对话上下文</li>
+</ul>
+<p>融合策略包括：</p>
+<ul>
+<li><strong>早期融合（Early Fusion）</strong>：在特征提取阶段拼接多模态输入</li>
+<li><strong>晚期融合（Late Fusion）</strong>：各模态独立编码后在决策层融合</li>
+<li><strong>交叉注意力融合（Cross-Attention Fusion）</strong>：通过 Transformer 的交叉注意力机制动态对齐不同模态</li>
+</ul>
+
+<h4>3.2.2 场景表示（Scene Representation）</h4>
+<p>感知系统的输出需要以某种结构化形式表示环境：</p>
+<p><strong>1. 体素网格（Voxel Grid）</strong>：</p>
+$$V \in \mathbb{R}^{X \times Y \times Z \times C}$$
+<p>将三维空间离散化为规则网格，每个体素存储占据概率和语义标签。</p>
+<p><strong>2. 点云（Point Cloud）</strong>：</p>
+$$P = \{(x_i, y_i, z_i, f_i)\}_{i=1}^N$$
+<p>直接表示三维空间中的采样点及其特征。</p>
+<p><strong>3. 神经辐射场（NeRF）/ 3D Gaussian Splatting</strong>：隐式或显式的连续三维表示，支持新视角合成和几何推理。</p>
+<p><strong>4. 语义地图（Semantic Map）</strong>：</p>
+$$M: (x, y) \rightarrow \{c_1, c_2, ..., c_K\}$$
+<p>二维鸟瞰图，每个位置标注语义类别，广泛用于导航任务。</p>
+<p><strong>5. 场景图（Scene Graph）</strong>：</p>
+$$G = (V, E), \quad V = \{o_1, ..., o_n\}, \quad E = \{r_{ij}\}$$
+<p>以物体为节点、空间关系为边的图结构，支持关系推理。</p>
+
+<h4>3.2.3 开放词汇感知（Open-Vocabulary Perception）</h4>
+<p>传统感知系统只能识别训练时见过的类别。基础模型时代的关键突破是<strong>开放词汇感知</strong>：</p>
+<ul>
+<li><strong>CLIP/SigLIP</strong>：将视觉特征与语言特征对齐到共享嵌入空间</li>
+<li><strong>Grounding DINO / OWL-ViT</strong>：开放词汇目标检测</li>
+<li><strong>SAM（Segment Anything）</strong>：通用分割</li>
+<li><strong>ConceptFusion / LERF</strong>：将语言特征融入三维场景表示</li>
+</ul>
+<p>这使得机器人可以理解任意自然语言描述的物体（如"那个看起来像星巴克杯子的东西"），而非仅限于预定义类别。</p>
+
+<h3>3.3 规划系统（Planning System）</h3>
+<p>规划系统负责将高层目标分解为可执行的动作序列。</p>
+
+<h4>3.3.1 层次化规划（Hierarchical Planning）</h4>
+<p><strong>高层任务规划（Task Planning）</strong>：</p>
+<ul>
+<li>输入：自然语言目标（如"做一杯咖啡"）</li>
+<li>输出：子任务序列（打开柜子 → 取出杯子 → 放到咖啡机下 → 按下按钮）</li>
+<li>方法：LLM 推理、PDDL 规划器、行为树</li>
+</ul>
+<p><strong>中层运动规划（Motion Planning）</strong>：</p>
+<ul>
+<li>输入：子任务目标（如"将杯子从 A 移到 B"）</li>
+<li>输出：末端执行器的轨迹 \(\tau = \{(x_t, y_t, z_t, q_t)\}_{t=0}^T\)</li>
+<li>方法：RRT/RRT*、轨迹优化、学习式规划</li>
+</ul>
+<p><strong>低层控制（Low-Level Control）</strong>：</p>
+<ul>
+<li>输入：期望轨迹/力</li>
+<li>输出：关节力矩或电机指令</li>
+<li>方法：PID 控制、阻抗控制、操作空间控制</li>
+</ul>
+
+<h4>3.3.2 LLM 作为规划器</h4>
+<p>大语言模型在高层任务规划中展现出强大能力：</p>
+<p><strong>SayCan（Google, 2022）</strong>：将 LLM 的语言先验与机器人的能力评估结合：</p>
+$$\pi(a | s, \mathcal{I}) \propto P_{\text{LLM}}(a | \mathcal{I}) \cdot P_{\text{affordance}}(a | s)$$
+<ul>
+<li>\(P_{\text{LLM}}(a | \mathcal{I})\)：LLM 评估动作 \(a\) 对完成指令 \(\mathcal{I}\) 的有用程度</li>
+<li>\(P_{\text{affordance}}(a | s)\)：当前状态下动作 \(a\) 的可行性（由值函数估计）</li>
+</ul>
+<p><strong>Code as Policies（Liang et al., 2023）</strong>：LLM 直接生成可执行的 Python 代码作为策略，调用感知和控制 API。</p>
+<p><strong>Inner Monologue（Huang et al., 2023）</strong>：LLM 在执行过程中持续接收环境反馈（成功/失败、场景描述），进行闭环推理和重规划。</p>
+
+<h4>3.3.3 端到端 vs. 模块化</h4>
+<p><strong>模块化系统（Modular）</strong>：</p>
+<pre><code>感知 → 状态估计 → 规划 → 控制</code></pre>
+<ul>
+<li>优势：可解释性强、各模块可独立优化、易于调试</li>
+<li>劣势：模块间信息损失、误差累积、接口设计困难</li>
+</ul>
+<p><strong>端到端系统（End-to-End）</strong>：</p>
+<pre><code>(观测, 指令) → 神���网络 → 动作</code></pre>
+<ul>
+<li>优势：避免手工设计接口、可利用大规模数据端到端优化</li>
+<li>劣势：可解释性差、数据需求大、泛化边界不清</li>
+</ul>
+<p>当前趋势是<strong>混合架构</strong>：用基础模型（VLM/LLM）做高层推理和规划，用端到端策略做低层控制，兼顾推理能力和运动精度。</p>
+</section>
+
+<section>
+<h2>四、世界模型（World Model）</h2>
+
+<h3>4.1 定义与核心思想</h3>
+<p>世界模型（World Model）是智能体对环境动态的内部表示——一个学习得到的"心智模拟器"，能够预测：给定当前状态和动作，环境将如何演变。</p>
+
+<h4>形式化定义</h4>
+<p>世界模型学习环境的状态转移动态：</p>
+$$\hat{s}_{t+1} = f_\theta(s_t, a_t)$$
+<p>更一般地，在部分可观测环境中，世界模型包含：</p>
+<ol>
+<li><strong>表示模型（Representation Model）</strong>：从观测推断潜在状态 $$z_t = q_\phi(o_{\leq t}, a_{&lt; t})$$</li>
+<li><strong>转移模型（Transition Model）</strong>：预测下一潜在状态 $$\hat{z}_{t+1} = p_\theta(z_t, a_t)$$</li>
+<li><strong>观测模型（Observation Model）</strong>：从潜在状态重建观测 $$\hat{o}_t = d_\psi(z_t)$$</li>
+<li><strong>奖励模型（Reward Model）</strong>：预测奖励 $$\hat{r}_t = r_\xi(z_t, a_t)$$</li>
+</ol>
+<p>世界模型的核心价值在于：<strong>智能体可以在"想象"中规划，而无需与真实环境交互</strong>。这极大地提高了样本效率和安全性。</p>
+
+<h3>4.2 世界模型的主要范式</h3>
+
+<h4>4.2.1 基于重建的世界模型：Dreamer 系列</h4>
+<p><strong>DreamerV3（Hafner et al., 2023）</strong> 是基于重建的世界模型的代表作，在 150+ 多样化任务上以单一配置达到 SOTA。</p>
+<p><strong>架构</strong>：采用循环状态空间模型（RSSM）：</p>
+$$\begin{aligned}
+\text{序列模型:} \quad & h_t = f_\phi(h_{t-1}, z_{t-1}, a_{t-1}) \\
+\text{编码器:} \quad & z_t \sim q_\phi(z_t | h_t, o_t) \\
+\text{动态预测:} \quad & \hat{z}_t \sim p_\phi(\hat{z}_t | h_t) \\
+\text{解码器:} \quad & \hat{o}_t \sim p_\phi(o_t | h_t, z_t) \\
+\text{奖励预测:} \quad & \hat{r}_t \sim p_\phi(r_t | h_t, z_t)
+\end{aligned}$$
+<p>其中 \(h_t\) 为确定性循环状态（GRU），\(z_t\) 为随机潜在状态（离散类别分布）。</p>
+<p><strong>DreamerV3 的关键创新</strong>：</p>
+<ul>
+<li><strong>Symlog 预测</strong>：对目标值取 \(\text{symlog}(x) = \text{sign}(x) \ln(|x| + 1)\) 变换，统一不同量级的预测目标</li>
+<li><strong>离散潜在空间</strong>：\(z_t\) 由 32 个类别变量组成，每个有 32 个类别（\(32 \times 32 = 1024\) 维离散空间）</li>
+<li><strong>免调参设计</strong>：固定超参数在 Atari、DMC、Minecraft 等多样化域上均有效</li>
+</ul>
+<p><strong>训练流程</strong>：</p>
+<ol>
+<li>从真实环境收集数据存入 Replay Buffer</li>
+<li>训练世界模型（重建损失 + KL 散度）</li>
+<li>在世界模型中"想象"（rollout）轨迹</li>
+<li>用想象轨迹训练 Actor-Critic 策略</li>
+</ol>
+
+<h4>4.2.2 基于嵌入预测的世界模型：JEPA</h4>
+<p><strong>联合嵌入预测架构（Joint-Embedding Predictive Architecture, JEPA）</strong> 由 Yann LeCun 提出，代表了一种不同于重建的世界建模哲学。</p>
+<p><strong>核心思想</strong>：不在像素空间重建观测，而在<strong>抽象表示空间</strong>中预测。</p>
+$$\hat{z}_{t+1} = \text{Predictor}(z_t, a_t), \quad z_t = \text{Encoder}(o_t)$$
+<p>训练目标不是最小化像素重建误差，而是最小化表示空间中的预测误差：</p>
+$$\mathcal{L} = \| \hat{z}_{t+1} - \text{sg}[\text{TargetEncoder}(o_{t+1})] \|^2$$
+<p>其中 \(\text{sg}[\cdot]\) 表示停止梯度，Target Encoder 通过 EMA 更新。</p>
+
+<p><strong>JEPA vs. 生成式世界模型</strong>：</p>
+<table>
+<thead><tr><th>维度</th><th>生成式（Dreamer）</th><th>JEPA</th></tr></thead>
+<tbody>
+<tr><td>预测空间</td><td>像素/观测空间</td><td>抽象表示空间</td></tr>
+<tr><td>训练信号</td><td>重建损失</td><td>表示对比/预测损失</td></tr>
+<tr><td>计算开销</td><td>高（需解码器）</td><td>低（无需重建）</td></tr>
+<tr><td>信息保留</td><td>保留所有细节</td><td>仅保留语义相关信息</td></tr>
+<tr><td>适用场景</td><td>需要精确状态估计</td><td>需要高层语义规划</td></tr>
+</tbody>
+</table>
+<p><strong>V-JEPA（Bardes et al., 2024）</strong>：将 JEPA 应用于视频预测，在不使用预训练图像编码器、不使用负样本的情况下，通过预测视频帧的潜在表示学习强大的视觉世界模型。</p>
+
+<h4>4.2.3 基于视频生成的世界模型</h4>
+<p>近年来，视频生成模型（如 Sora、Genie）被重新解读为世界模型。<strong>核心思想</strong>：大规模视频生成模型隐式学习了物理世界的动态规律——物体如何运动、碰撞、变形。</p>
+<p><strong>UniSim（Yang et al., 2024）</strong>：</p>
+<ul>
+<li>训练一个通用视频生成模型作为"万能模拟器"</li>
+<li>输入：当前帧 + 动作（文本/控制信号）</li>
+<li>输出：预测的未来帧序列</li>
+<li>可用于：训练数据增强、策略评估、安全验证</li>
+</ul>
+<p><strong>GigaWorld-0（2025）</strong>：</p>
+<ul>
+<li>统一的世界模型框架，显式设计为具身 AI 的"数据引擎"</li>
+<li>生成多样化的训练场景和交互数据</li>
+<li>解决真实机器人数据稀缺的核心瓶颈</li>
+</ul>
+
+<h3>4.3 世界模型在具身智能中的应用</h3>
+
+<h4>4.3.1 基于模型的强化学习（Model-Based RL）</h4>
+<p>世界模型最直接的应用是作为"虚拟环境"进行策略学习：</p>
+$$\pi^* = \arg\max_\pi \mathbb{E}_{\tau \sim p_\theta(\tau | \pi)} \left[ \sum_{t=0}^T \gamma^t r(s_t, a_t) \right]$$
+<p>智能体在学习到的世界模型 \(p_\theta\) 中 rollout 轨迹 \(\tau\)，优化策略 \(\pi\)，无需与真实环境交互。DreamerV3 在 Atari 100K 基准上（仅允许 100K 步真实交互）大幅超越无模型方法。</p>
+
+<h4>4.3.2 模型预测控制（Model Predictive Control, MPC）</h4>
+$$a_t^* = \arg\max_{a_{t:t+H}} \sum_{k=0}^{H} \gamma^k \hat{r}(f_\theta^{(k)}(s_t, a_{t:t+k}))$$
+<p>在每个时间步，利用世界模型向前展开 \(H\) 步，选择使累积奖励最大的动作序列，执行第一个动作后重新规划。</p>
+
+<h4>4.3.3 安全验证与风险评估</h4>
+<p>世界模型可以在执行前"预演"动作后果：</p>
+<ul>
+<li>预测碰撞风险</li>
+<li>评估动作是否会导致不可逆状态</li>
+<li>在想象中测试多种策略，选择最安全的</li>
+</ul>
+
+<h3>4.4 世界模型的前沿挑战</h3>
+<ol>
+<li><strong>长程预测的误差累积</strong>：多步 rollout 中预测误差指数增长，限制了规划视野</li>
+<li><strong>分布外泛化</strong>：世界模型在训练分布外的状态-动作对上预测不可靠</li>
+<li><strong>物理一致性</strong>：当前模型难以保证预测严格遵守物理定律（能量守恒、刚体约束等）</li>
+<li><strong>计算效率</strong>：高保真世界模型的推理开销可能超过直接与环境交互的成本</li>
+<li><strong>多模态不确定性</strong>：未来状态可能有多种合理演变，需要建模多模态分布</li>
+</ol>
+</section>
+
+<section id="comparison">
+<h2>五、方法对比与选择建议（Comparison &amp; Recommendations）</h2>
+
+<h3>5.1 三大技术路线对比</h3>
+<table>
+<thead><tr><th>维度</th><th>VLN</th><th>VLA</th><th>世界模型</th></tr></thead>
+<tbody>
+<tr><td>核心问题</td><td>去哪里</td><td>怎么做</td><td>会发生什么</td></tr>
+<tr><td>输入</td><td>视觉 + 语言指令</td><td>视觉 + 语言指令</td><td>状态 + 动作</td></tr>
+<tr><td>输出</td><td>导航动作/路径</td><td>连续控制动作</td><td>未来状态预测</td></tr>
+<tr><td>典型任务</td><td>室内导航</td><td>桌面操作、灵巧操作</td><td>策略学习、规划</td></tr>
+<tr><td>数据需求</td><td>中等（导航图 + 指令）</td><td>大（机器人演示数据）</td><td>大（交互轨迹）</td></tr>
+<tr><td>实时性</td><td>高</td><td>高</td><td>中（需 rollout）</td></tr>
+<tr><td>成熟度</td><td>较高</td><td>快速发展中</td><td>快速发展中</td></tr>
+</tbody>
+</table>
+
+<h3>5.2 选择建议</h3>
+<ul>
+<li><strong>导航场景</strong>（服务机器人、仓储物流）：VLN 技术栈 + 语义地图 + LLM 规划器</li>
+<li><strong>操作场景</strong>（工业装配、家务机器人）：VLA 端到端模型（如 OpenVLA/π₀）+ 世界模型辅助规划</li>
+<li><strong>高安全要求场景</strong>（手术机器人、自动驾驶）：世界模型 + MPC，确保动作前可预测后果</li>
+<li><strong>数据稀缺场景</strong>：世界模型作为数据引擎，生成合成训练数据</li>
+</ul>
+
+<h3>5.3 未来趋势</h3>
+<ol>
+<li><strong>统一架构</strong>：VLA + 世界模型的融合，如 π₀ 的流匹配本质上隐含了对动作分布的建模</li>
+<li><strong>基础世界模型</strong>：类似 LLM 的大规模预训练世界模型，可迁移到多种具身任务</li>
+<li><strong>物理 grounding</strong>：将物理定律作为归纳偏置嵌入世界模型</li>
+<li><strong>人机协作</strong>：世界模型支持的意图预测和安全保障</li>
+</ol>
+</section>
+
+<section id="references">
+<h2>参考文献（References）</h2>
+<ol>
+<li>Anderson, P. et al., "Vision-and-Language Navigation: Interpreting visually-grounded navigation instructions in real environments", CVPR 2018. <a href="https://arxiv.org/abs/1711.07280">arXiv</a></li>
+<li>Brohan, A. et al., "RT-2: Vision-Language-Action Models Transfer Web Knowledge to Robotic Control", 2023. <a href="https://arxiv.org/abs/2307.15818">arXiv</a></li>
+<li>Kim, M. J. et al., "OpenVLA: An Open-Source Vision-Language-Action Model", 2024. <a href="https://arxiv.org/abs/2406.09246">arXiv</a></li>
+<li>Black, K. et al., "π₀: A Vision-Language-Action Flow Model for General Robot Control", Physical Intelligence, 2024. <a href="https://arxiv.org/abs/2410.24164">arXiv</a></li>
+<li>Hafner, D. et al., "Mastering Diverse Domains through World Models (DreamerV3)", 2023. <a href="https://arxiv.org/abs/2301.04104">arXiv</a></li>
+<li>LeCun, Y., "A Path Towards Autonomous Machine Intelligence (JEPA)", 2022. <a href="https://openreview.net/pdf?id=BZ5a1r-kVsf">Meta AI</a></li>
+<li>Zhang, Y. et al., "Vision-and-Language Navigation Today and Tomorrow: A Survey in the Era of Foundation Models", TMLR 2024. <a href="https://arxiv.org/html/2407.07035">arXiv</a></li>
+<li>Zhen, H. et al., "A Survey on Vision-Language-Action Models for Embodied AI", 2024. <a href="https://arxiv.org/abs/2405.14093">arXiv</a></li>
+<li>Liu, Q. et al., "A Comprehensive Survey on World Models for Embodied AI", 2024. <a href="https://arxiv.org/html/2510.16732v1">arXiv</a></li>
+<li>Frontiers, "A review of embodied intelligence systems: a three-layer framework integrating multimodal perception, world modeling, and structured strategies", 2025. <a href="https://www.frontiersin.org/articles/10.3389/frobt.2025.1668910">Link</a></li>
+<li>Ahn, M. et al., "Do As I Can, Not As I Say: Grounding Language in Robotic Affordances (SayCan)", 2022. <a href="https://say-can.github.io/">Google Research</a></li>
+<li>Bardes, A. et al., "V-JEPA: Video Joint Embedding Predictive Architecture", Meta AI, 2024.</li>
+<li>Yang, M. et al., "Learning Interactive Real-World Simulators (UniSim)", 2024.</li>
+<li>GigaWorld-0, "World Models as Data Engine to Empower Embodied AI", 2025. <a href="https://arxiv.org/abs/2511.19861">arXiv</a></li>
+</ol>
+</section>
+
+</article>
+</body>
+</html>
