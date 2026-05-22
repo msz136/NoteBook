@@ -4,5 +4,5 @@
 
 ## 报告列表
 
-- [OPD（On-Policy Distillation）领域算法调研报告](opd_report.html)
-- [具身智能：VLN / VLA / 世界模型 / 感知与规划](embodied_ai_vln_vla_world_model_report.html)
+- [OPD（On-Policy Distillation）领域算法调研报告](https://msz136.github.io/NoteBook/opd_report.html)
+- [具身智能：VLN / VLA / 世界模型 / 感知与规划](https://msz136.github.io/NoteBook/embodied_ai_vln_vla_world_model_report.html)
