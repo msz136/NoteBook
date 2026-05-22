@@ -1,0 +1,704 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>世界模型线项目报告 — DreamDojo / Cosmos Predict2.5 / Cosmos Policy</title>
+    <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            font-size: 16px;
+            line-height: 1.8;
+            color: #1a1a1a;
+            background: #fff;
+            padding: 2rem 1rem;
+        }
+        article { max-width: 900px; margin: 0 auto; }
+        h1 { font-size: 2rem; margin-bottom: 0.5rem; border-bottom: 2px solid #333; padding-bottom: 0.5rem; }
+        h2 { font-size: 1.5rem; margin-top: 2.5rem; margin-bottom: 1rem; color: #222; border-left: 4px solid #0066cc; padding-left: 0.75rem; }
+        h3 { font-size: 1.25rem; margin-top: 1.8rem; margin-bottom: 0.8rem; color: #333; }
+        h4 { font-size: 1.1rem; margin-top: 1.2rem; margin-bottom: 0.5rem; color: #444; }
+        p { margin-bottom: 1rem; }
+        ul, ol { margin-bottom: 1rem; padding-left: 1.5rem; }
+        li { margin-bottom: 0.3rem; }
+        pre { background: #f5f5f5; border-radius: 6px; padding: 1rem; overflow-x: auto; margin-bottom: 1rem; font-size: 0.9rem; }
+        code { font-family: "Fira Code", "Consolas", monospace; background: #f0f0f0; padding: 0.15rem 0.4rem; border-radius: 3px; font-size: 0.9em; }
+        pre code { background: none; padding: 0; }
+        table { width: 100%; border-collapse: collapse; margin-bottom: 1.5rem; font-size: 0.95rem; }
+        th, td { border: 1px solid #ddd; padding: 0.6rem 0.8rem; text-align: left; }
+        th { background: #f8f8f8; font-weight: 600; }
+        tr:nth-child(even) { background: #fafafa; }
+        .meta { color: #666; font-size: 0.9rem; margin-bottom: 2rem; }
+        .warning { background: #fff3cd; border-left: 4px solid #ffc107; padding: 0.8rem 1rem; margin: 1rem 0; border-radius: 4px; }
+        .info { background: #e7f3ff; border-left: 4px solid #0066cc; padding: 0.8rem 1rem; margin: 1rem 0; border-radius: 4px; }
+        .success { background: #d4edda; border-left: 4px solid #28a745; padding: 0.8rem 1rem; margin: 1rem 0; border-radius: 4px; }
+        .evidence { background: #f8f0ff; border-left: 4px solid #6f42c1; padding: 0.8rem 1rem; margin: 1rem 0; border-radius: 4px; font-size: 0.9rem; }
+        a { color: #0066cc; text-decoration: none; }
+        a:hover { text-decoration: underline; }
+        @media (max-width: 600px) { body { padding: 1rem 0.5rem; } h1 { font-size: 1.5rem; } table { font-size: 0.85rem; } }
+    </style>
+</head>
+<body>
+<article>
+
+<h1>世界模型线项目报告</h1>
+<p class="meta">项目编号：13_dreamdojo_world_model | 报告日期：2026-05-22 | 数据截止：2026-05-21 远端巡检</p>
+
+<section id="question">
+<h2>问题（Question）</h2>
+<p>团队的"机器人世界模型线"采用了什么核心架构设计与训练算法？其设计思想如何将视频生成模型转化为可执行策略？各子系统之间的算法关系是什么？</p>
+</section>
+
+<section id="background">
+<h2>背景与动机（Background & Motivation）</h2>
+<p>机器人世界模型（Robot World Model）的核心命题是：能否将大规模视频预训练的生成能力转化为机器人策略？传统方法将"感知→规划→控制"分离为独立模块；而世界模型路线试图用一个统一的生成模型同时完成<strong>未来状态预测</strong>（world model）、<strong>动作生成</strong>（policy）和<strong>价值估计</strong>（value function）。</p>
+
+<p>本项目线的核心设计哲学是：<strong>将机器人策略学习重新表述为条件视频生成问题</strong>。具体而言，将动作（action）、本体感知（proprioception）、价值函数回报（value function return）统一编码为视频潜在空间中的"帧"，与视觉观测帧共享同一个扩散模型的去噪过程。这使得一个预训练好的视频生成模型��以通过后训练直接输出机器人动作。</p>
+</section>
+
+<section id="overview">
+<h2>项目总览</h2>
+
+<h3>项目定位</h3>
+<p>本线是一条独立主线，不属于 OpenPI 训练栈或 VERL infra，而是面向"机器人世界模型"的完整研发管线。目标：训练大规模视频生成模型，蒸馏为可实时交互的策略模型，最终部署到真实机器人。</p>
+
+<h3>技术栈演进</h3>
+<table>
+<thead><tr><th>阶段</th><th>时间</th><th>核心系统</th><th>状态</th></tr></thead>
+<tbody>
+<tr><td>入口证据</td><td>2026-04</td><td>DreamDojo（NVIDIA 开源）</td><td>完整代码快照已归档</td></tr>
+<tr><td>当前活跃训练</td><td>2026-05</td><td>Cosmos Predict2.5 / Cosmos Policy RoboCasa finetune</td><td>正在运行</td></tr>
+<tr><td>辅助 Pipeline</td><td>2026-05</td><td>VGG-T-Omega / DA3 / LIBERO 评估</td><td>联调中</td></tr>
+</tbody>
+</table>
+
+<h3>完整任务链</h3>
+<ol>
+<li>Latent Action Model（LAM）训练 — 从视频中提取潜在动作表征</li>
+<li>DreamDojo 预训练 — 大规模人类视频上训练基础世界模型</li>
+<li>DreamDojo 后训练 — 针对特定机器人动作空间适配</li>
+<li>教师到学生蒸馏 — 将大模型蒸馏为实时可交互的学生模型</li>
+<li>离线评估 — 从 checkpoint 采样生成并评估质量</li>
+<li>真机评估 / 交互式推理 — 部署到真实机器人验证</li>
+</ol>
+
+<h3>人员分工</h3>
+<table>
+<thead><tr><th>成员</th><th>职责</th></tr></thead>
+<tbody>
+<tr><td>liyichen</td><td>Cosmos Predict2.5 代码维护、RoboCasa 数据集准备、T5 embeddings 生成</td></tr>
+<tr><td>houzhi</td><td>Cosmos Predict2.5 RoboCasa finetune 训练、VGG-T-Omega action regression</td></tr>
+<tr><td>liujingyuan</td><td>Cosmos Policy LIBERO 评估、VGG-T pipeline 联调</td></tr>
+<tr><td>chiyixiao</td><td>DreamDojo 原始仓库维护、评估脚本适配</td></tr>
+</tbody>
+</table>
+</section>
+
+<section id="architecture">
+<h2>核心架构设计：统一潜在序列表示</h2>
+
+<h3>设计思想：Action-as-Latent-Frame</h3>
+<p>Cosmos Policy 的核心创新在于将机器人策略学习统一到视频扩散模型的框架中。其关键洞察是：<strong>动作、本体感知、价值回报都可以被编码为与图像潜在帧同构的张量</strong>，从而复用视频生成模型的去噪能力来同时预测未来视觉状态和机器人动作。</p>
+
+<p>具体而言，一个训练样本的潜在序列 \( x_0 \in \mathbb{R}^{B \times C' \times T' \times H' \times W'} \) 由以下"帧"组成：</p>
+
+<table>
+<thead><tr><th>帧类型</th><th>内容</th><th>角色</th></tr></thead>
+<tbody>
+<tr><td>Blank frame</td><td>全零占位</td><td>Tokenizer 对齐</td></tr>
+<tr><td>Current proprio</td><td>本体感知向量 → 重复填充至 \(C' \times H' \times W'\)</td><td>条件输入</td></tr>
+<tr><td>Current wrist image</td><td>腕部相机图像（×4 复制）</td><td>条件输入</td></tr>
+<tr><td>Current left/right image</td><td>第三人称左/右相机图像（×4 复制）</td><td>条件输入</td></tr>
+<tr><td>Action chunk</td><td>动作序列 → 展平重复填充至潜在帧体积</td><td><strong>预测目标</strong></td></tr>
+<tr><td>Future proprio</td><td>未来本体感知</td><td>预测目标（world model）</td></tr>
+<tr><td>Future wrist/left/right image</td><td>未来视觉观测</td><td>预测目标（world model）</td></tr>
+<tr><td>Value return</td><td>Monte-Carlo 回报标量 → 广播至潜在帧</td><td>预测目标（value function）</td></tr>
+</tbody>
+</table>
+
+<div class="evidence">
+<strong>代码证据</strong>：<code>cosmos_policy/datasets/robocasa_dataset.py:878-975</code> — <code>__getitem__</code> 方法按上述顺序构建 <code>image_list</code>，每种模态占据固定的 <code>current_sequence_idx</code> 位置，并通过 <code>*_latent_idx</code> 字段传递给模型。
+</div>
+
+<h3>Latent Injection 机制</h3>
+<p>非视觉模态（action、proprio、value）通过 <strong>latent injection</strong> 注入到 VAE 编码后的潜在空间中。核心函数 <code>replace_latent_with_action_chunk</code> 的算法如下：</p>
+
+<ol>
+<li>将 action chunk \( a \in \mathbb{R}^{B \times \text{chunk\_size} \times \text{action\_dim}} \) 展平为 \( \mathbb{R}^{B \times (\text{chunk\_size} \cdot \text{action\_dim})} \)</li>
+<li>重复填充至目标潜在帧体积 \( C' \times H' \times W' \)（如 \(16 \times 28 \times 28 = 12544\) 元素）</li>
+<li>替换 \( x_0[:, :, \text{action\_idx}, :, :] \) 处的潜在帧</li>
+</ol>
+
+<pre><code class="language-python"># cosmos_policy/models/policy_text2world_model.py:64-109
+def replace_latent_with_action_chunk(x0, action_chunk, action_indices):
+    batch_indices = torch.arange(x0.shape[0], device=x0.device)
+    action_image_latent = x0[batch_indices, :, action_indices, :, :]
+    result = torch.zeros_like(action_image_latent)
+    batch_size, latent_channels, latent_h, latent_w = action_image_latent.shape
+    flat_action = action_chunk.reshape(batch_size, -1)
+    num_action_elements = flat_action.shape[1]
+    latent_elements = latent_channels * latent_h * latent_w
+    # 重复填充直到覆盖整个潜在帧体积
+    num_repeats = (latent_elements + num_action_elements - 1) // num_action_elements
+    repeated_action = flat_action.repeat(1, num_repeats)[:, :latent_elements]
+    flat_result = result.reshape(batch_size, -1)
+    flat_result[:, :] = repeated_action
+    new_x0 = x0
+    new_x0[batch_indices, :, action_indices, :, :] = flat_result.reshape(
+        batch_size, latent_channels, latent_h, latent_w)
+    return new_x0
+</code></pre>
+
+<p>这种设计的优势在于：动作信息直接存在于扩散模型的去噪目标 \( x_0 \) 中，模型学习的是"从噪声中恢复包含动作信息的潜在帧"，而非通过额外的 head 预测动作。这使得预训练的视频生成能力可以直接迁移到动作预测任务。</p>
+
+<h3>DiT 骨干网络：MinimalV1LVGDiT</h3>
+<p>骨干网络是一个 Latent Video Generation DiT（潜在视频生成 Diffusion Transformer），关键设计参数：</p>
+
+<table>
+<thead><tr><th>参数</th><th>2B 模型</th><th>设计意图</th></tr></thead>
+<tbody>
+<tr><td>model_channels</td><td>2048</td><td>高维特征表示</td></tr>
+<tr><td>num_blocks</td><td>28</td><td>���度 transformer</td></tr>
+<tr><td>num_heads</td><td>16</td><td>多头注意力</td></tr>
+<tr><td>patch_spatial / patch_temporal</td><td>2 / 1</td><td>空间 2× 下采样，时间不压缩</td></tr>
+<tr><td>pos_emb_cls</td><td>RoPE 3D（可学习）</td><td>3D 旋转位置编码</td></tr>
+<tr><td>in_channels / out_channels</td><td>16</td><td>VAE 潜在通道数</td></tr>
+<tr><td>crossattn_emb_channels</td><td>1024</td><td>T5 文本嵌入维度</td></tr>
+<tr><td>adaln_lora_dim</td><td>256</td><td>AdaLN-LoRA 适配维度</td></tr>
+</tbody>
+</table>
+
+<div class="evidence">
+<strong>代码证据</strong>：<code>04_remote_progress_20260521/evidence/summaries/current_run/config.yaml:238-268</code> — 完整的 <code>MinimalV1LVGDiT</code> 网络配置。
+</div>
+
+<p>关键架构选择：</p>
+<ul>
+<li><strong>RoPE 3D</strong>：对时间、高度、宽度三个维度分别施加旋转位置编码，支持外推（extrapolation ratio: t=1.0, h=3.0, w=3.0）</li>
+<li><strong>AdaLN-LoRA</strong>：使用 Adaptive Layer Normalization 注入时间步信息，并通过 LoRA（rank=32）实现参数高效微调</li>
+<li><strong>Cross-attention projection</strong>：将 T5 文本嵌入（100352 维）投影到 1024 维后与视觉 token 做交叉注意力</li>
+<li><strong>SAC (Selective Activation Checkpointing)</strong>：每 1 个 block 做一次激活检查点，平衡显存与计算</li>
+</ul>
+</section>
+
+<section id="training-algorithm">
+<h2>训练算法：Rectified Flow + Hybrid Sigma + Multi-Objective Loss</h2>
+
+<h3>扩散过程：EDM 框架下的 Rectified Flow</h3>
+<p>模型采用 EDM（Elucidating the Design Space of Diffusion-Based Generative Models, Karras et al. 2022）框架，前向过程定义为：</p>
+
+\[
+x_t = x_0 + \sigma \cdot \epsilon, \quad \epsilon \sim \mathcal{N}(0, I)
+\]
+
+<p>其中 \(\sigma\) 是噪声水平。模型学习去噪函数 \( D_\theta(x_t; \sigma) \) 来预测 \( x_0 \)。EDM 的 preconditioning 将网络输出 \( F_\theta \) 转换为 \( x_0 \) 预测：</p>
+
+\[
+D_\theta(x_t; \sigma) = c_{\text{skip}}(\sigma) \cdot x_t + c_{\text{out}}(\sigma) \cdot F_\theta(c_{\text{in}}(\sigma) \cdot x_t; c_{\text{noise}}(\sigma))
+\]
+
+<div class="evidence">
+<strong>代码证据</strong>：<code>cosmos_policy/models/policy_video2world_model.py:410-455</code> — <code>denoise()</code> 方法实现了完整的 EDM preconditioning 和去���逻辑。
+</div>
+
+<pre><code class="language-python"># policy_video2world_model.py:410-455 (denoise 核心逻辑)
+c_skip, c_out, c_in, c_noise = self.scaling(sigma=sigma_B_1_T_1_1)
+net_state_in = xt_B_C_T_H_W * c_in
+# 条件帧替换：将干净的条件帧注入到噪声输入中
+net_state_in = condition_state * condition_mask + net_state_in * (1 - condition_mask)
+# 调整条件帧的 c_noise（因为条件帧是干净的，sigma ≈ 0.0001）
+c_noise = c_noise_cond * condition_mask_mean + c_noise * (1 - condition_mask_mean)
+# 网络前向传播
+net_output = self.net(x_B_C_T_H_W=net_state_in, timesteps_B_T=c_noise, **condition.to_dict())
+# EDM preconditioning 输出
+x0_pred = c_skip * xt_B_C_T_H_W + c_out * net_output
+</code></pre>
+
+<h3>Hybrid Sigma Distribution：混合噪声水平采样</h3>
+<p>训练时的噪声水平 \(\sigma\) 采样是影响扩散模型质量的关键因素。本项目实现了 <code>HybridEDMSDE</code>，采用混合分布策略：</p>
+
+\[
+\sigma \sim \begin{cases}
+\exp(\mathcal{N}(p_{\text{mean}}, p_{\text{std}}^2)) & \text{with probability } 0.7 \\
+\text{Uniform}(\sigma_{\text{lower}}, \sigma_{\text{upper}}) & \text{with probability } 0.3
+\end{cases}
+\]
+
+<p>其中 \( p_{\text{mean}} = 0.0, p_{\text{std}} = 1.0, \sigma_{\text{lower}} = 1.0, \sigma_{\text{upper}} = 85.0 \)。</p>
+
+<div class="evidence">
+<strong>代码证据</strong>：<code>cosmos_predict2_src/cosmos_policy/modules/hybrid_edm_sde.py:48-92</code> — <code>HybridEDMSDE.sample_t()</code> 实现了 70/30 混合采样。
+</div>
+
+<pre><code class="language-python"># hybrid_edm_sde.py:65-89
+def sample_t(self, batch_size):
+    if self.hybrid_sigma_distribution:
+        samples = torch.zeros(batch_size, device="cuda")
+        distribution_choice = torch.rand(batch_size, device="cuda") < 0.7
+        num_lognormal = distribution_choice.sum().item()
+        num_uniform = batch_size - num_lognormal
+        # 70% 从 log-normal 采样
+        if num_lognormal > 0:
+            cdf_vals = np.random.uniform(size=(num_lognormal))
+            log_sigmas = torch.tensor(
+                [self.gaussian_dist.inv_cdf(v) for v in cdf_vals], device="cuda")
+            samples[distribution_choice] = torch.exp(log_sigmas)
+        # 30% 从 uniform[1.0, 85.0] 采样
+        if num_uniform > 0:
+            samples[~distribution_choice] = torch.empty(
+                num_uniform, device="cuda").uniform_(self.uniform_lower, self.uniform_upper)
+        return samples
+</code></pre>
+
+<p><strong>设计动机</strong>：标准 log-normal 分布倾向于在中等噪声水平集中采样，导致模型在高噪声（全局结构生成）和低噪声（细节精修）区域训练不足。混合分布通过 30% 的均匀采样强制模型在更宽的噪声范围内学习，特别是对视频条件生成中的"从条件帧预测未来帧"场景至关重要。</p>
+
+<p>此外，<code>Video2World</code> 模型还支持额外的 high sigma 策略叠加（5% 概率从 [80, 2000] 均匀采样），进一步增强模型对极高噪声的鲁棒性：</p>
+
+<pre><code class="language-python"># policy_video2world_model.py:783-786 (UNIFORM80_2000 策略)
+mask = torch.rand(sigma_B_1.shape, device=sigma_B_1.device) < self.config.high_sigma_ratio  # 0.05
+new_sigma = torch.rand(sigma_B_1.shape, device=sigma_B_1.device) * 1920 + 80
+sigma_B_1 = torch.where(mask, new_sigma, sigma_B_1)
+</code></pre>
+
+<h3>Multi-Objective Loss：三重预测目标的统一训练</h3>
+<p>Cosmos Policy 的训练损失是一个多目标函数，通过 <strong>mask 机制</strong> 在同一个 batch 内同时训练三种预测能力：</p>
+
+\[
+\mathcal{L} = \mathcal{L}_{\text{policy}} + \mathcal{L}_{\text{world model}} + \mathcal{L}_{\text{value function}}
+\]
+
+<p>每个样本根据其来源（demonstration vs. rollout）和随机采样（<code>p_world_model = 0.5</code>）被分配到不同的预测目标：</p>
+
+<table>
+<thead><tr><th>样本类型</th><th>预测目标</th><th>Loss 作用帧</th></tr></thead>
+<tbody>
+<tr><td>Demonstration（成功演示）</td><td>Policy（动作预测）</td><td>仅 action latent frame</td></tr>
+<tr><td>Rollout + world_model_mask</td><td>World Model（未来状态预测）</td><td>future proprio + future wrist + future images</td></tr>
+<tr><td>Rollout + value_function_mask</td><td>Value Function（回报预测）</td><td>仅 value latent frame</td></tr>
+</tbody>
+</table>
+
+<div class="evidence">
+<strong>代码证据</strong>：<code>cosmos_policy/models/policy_text2world_model.py:443-546</code> — <code>compute_loss_with_epsilon_and_sigma()</code> 中的 mask 构建逻辑。
+</div>
+
+<pre><code class="language-python"># policy_text2world_model.py:443-546 (Loss mask 构建核心)
+# 初始化全 1 mask
+final_mask_B_T = torch.ones((B, T), dtype=torch.long, device=device)
+
+if self.config.mask_loss_for_action_future_state_prediction:
+    mask_B_T = torch.zeros((B, T), dtype=torch.long, device=device)
+    # Demo 样本：仅对 action frame 计算 loss
+    demo_idx = (rollout_data_mask == 0)
+    mask_B_T[demo_batch_indices, action_indices[demo_batch_indices]] = 1
+    # World model 样本：仅对 future state frames 计算 loss
+    world_idx = (rollout_data_mask == 1) & (world_model_sample_mask == 1)
+    mask_B_T[world_batch_indices, future_image_indices[world_batch_indices]] = 1
+    mask_B_T[world_batch_indices, future_wrist_image_indices[world_batch_indices]] = 1
+    mask_B_T[world_batch_indices, future_proprio_indices[world_batch_indices]] = 1
+    # Value function 样本：仅对 value frame 计算 loss
+    value_idx = (rollout_data_mask == 1) & (value_function_sample_mask == 1)
+    mask_B_T[value_batch_indices, value_indices[value_batch_indices]] = 1
+    final_mask_B_T = final_mask_B_T * mask_B_T
+
+# Action loss 加权（multiplier = 16）
+final_mask_B_T[batch_indices, action_indices] *= int(self.config.action_loss_multiplier)
+</code></pre>
+
+<p><strong>Action Loss Multiplier = 16</strong>：当前训练配置将动作预测的 loss 权重放大 16 倍。这反映了一个关键的工程判断——在统一的潜在空间中，动作信号的信息密度远低于图像帧（7D action vs. 12544 维潜在帧），需要显式加权才能让模型充分关注动作预测质量。</p>
+
+<h4>EDM Loss 权重</h4>
+<p>最终的 per-sample loss 为：</p>
+
+\[
+\mathcal{L}_{\text{EDM}} = w(\sigma) \cdot \| x_0 - D_\theta(x_t; \sigma) \|^2 \cdot M
+\]
+
+<p>其中 \( w(\sigma) \) 是 EDM 的 per-sigma loss weight，\( M \) 是上述 multi-objective mask（含 action multiplier）。</p>
+
+<h3>Video Conditioning：Frame Replace 策略</h3>
+<p>模型使用 <strong>Frame Replace</strong> 条件策略：将条件帧（当前观测）直接替换到噪声输入中，而非通过 concatenation 或 cross-attention 注入。</p>
+
+<p>关键设计：</p>
+<ul>
+<li>条件帧使用极低噪声 \(\sigma_{\text{cond}} = 0.0001\)，近似干净信号</li>
+<li>通过 <code>condition_video_input_mask_B_C_T_H_W</code> 控制哪些帧是条件、哪些是预测目标</li>
+<li>去噪后，条件帧位置的预测被强制替换回 ground truth（<code>denoise_replace_gt_frames=True</code>），确保 loss 不在条件帧上计算</li>
+</ul>
+
+<pre><code class="language-python"># policy_video2world_model.py:426-438 (Frame Replace 实现)
+# 将条件帧注入噪声输入
+net_state_in = condition_state * condition_mask + net_state_in * (1 - condition_mask)
+# 条件帧的 c_noise 设为极低值（sigma_cond = 0.0001）
+sigma_cond = torch.ones_like(sigma) * self.config.sigma_conditional
+_, _, _, c_noise_cond = self.scaling(sigma=sigma_cond)
+c_noise = c_noise_cond * condition_mask_mean + c_noise * (1 - condition_mask_mean)
+</code></pre>
+
+<h3>数据采样策略：Demo/Rollout 混合训练</h3>
+<p>训练数据由两部分组成，通过概率采样混合：</p>
+
+<ul>
+<li><strong>Demonstration data</strong>（<code>success_only/</code>）：成功的人类遥操作演示，用于训练 policy（动作预测）</li>
+<li><strong>Rollout data</strong>（<code>all_episodes/</code>）：包含成功和失败的 rollout，用于训练 world model 和 value function</li>
+</ul>
+
+<p>采样概率链：</p>
+\[
+P(\text{demo}) = 0.5, \quad P(\text{rollout}) = 0.5
+\]
+\[
+P(\text{world model} | \text{rollout}) = 0.5, \quad P(\text{value function} | \text{rollout}) = 0.5
+\]
+
+<p>Value function 使用 Monte-Carlo 回报作为监督信号：</p>
+\[
+G_t = \sum_{k=0}^{T-t-1} \gamma^k r_{t+k+1}, \quad \gamma = 0.99
+\]
+
+<p>其中终端奖励 \( r_T = 1 \)（成功）或 \( r_T = 0 \)（失败）。</p>
+
+<div class="evidence">
+<strong>代码证据</strong>：<code>cosmos_policy/datasets/robocasa_dataset.py:815-824</code> — <code>__getitem__</code> 中的 <code>p_world_model</code> 随机分配逻辑。
+</div>
+</section>
+
+<section id="dreamdojo">
+<h2>DreamDojo：预训练与后训练的两阶段设计</h2>
+
+<h3>Latent Action Model（LAM）：从视频中发现动作</h3>
+<p>DreamDojo 的第一步不是直接训练世界模型，而是先训练一个 <strong>Latent Action Model</strong>——从无标注的人类视频中自监督地提取"潜在动作"表征。这解决了大规模人类视频缺乏动作标注的问题。</p>
+
+<p>LAM 的训练数据是纯视频（MP4），代码会递归搜索指定目录下的所有视频文件。训练完成后，LAM 被集成到世界模型中，为预训练阶段提供 proxy action 信号。</p>
+
+<div class="evidence">
+<strong>代码证据</strong>：<code>01_pretraining_and_posttraining/reference_docs/LAM.md</code> — "The code will recursively search the folder and add any detected MP4 videos to the training set."；LAM 权重路径通过 <code>text2world_model_rectified_flow.py</code> 中的 <code>ckpt_path</code> 注入到主模型。
+</div>
+
+<h3>预训练：44k 小时人类视频上的基础世界模型</h3>
+<p>预训练阶段使用三类数据源，按权重混合采样：</p>
+
+<pre><code class="language-yaml"># configs/2b_480_640_pretrain.yaml
+dataloader_train:
+  dataset:
+    dataset_path:
+      - gr1_unified.inhouse_human_only      # GR-1 人形机器人数据
+      - egodex_21                            # 第一人称视频（21k 小时）
+      - dreamdojo_hv_lerobot_20s_final       # DreamDojo 高质量数据
+    dataset_mixing_weights: [1, 2, 10]       # 重点采样 DreamDojo 数据
+    data_split: full
+</code></pre>
+
+<p>预训练的关键设计选择：</p>
+<ul>
+<li><strong>zero_init_action_embedder = True</strong>：预训练时动作嵌入器初始化为零，意味着模型先学习纯视频预测能力，动作信号在后训练阶段才激活</li>
+<li><strong>state_t = 4</strong>（即 \(1 + 12 \div 4\)）：每个样本包含 4 个时间步的潜在状态，对应 12 帧视频经过 temporal compression ratio=4 后的表示</li>
+<li><strong>num_frames = 13</strong>：每个训练样本包含 13 帧视频（1 条件帧 + 12 预测帧）</li>
+</ul>
+
+<h3>后训练：统一动作空间的多机器人适配</h3>
+<p>后训练阶段将预训练好的世界模型适配到具体机器人的动作空间。关键设计是 <strong>384 维统一动作投影层</strong>：</p>
+
+<pre><code class="language-text"># POSTTRAIN.md 中的维度分配
+[0, 29)    → Fourier GR-1
+[29, 58)   → Retargeted GR-1 (Manus gloves)
+[58, 101)  → Unitree G1
+[101, 147) → Bimanual YAM
+[147, 169) → AgiBot
+[169, 220) → Reserved
+[220, 352) → MANO actions (手部)
+[352, 384) → Latent actions (LAM 输出)
+</code></pre>
+
+<p><strong>设计思想</strong>：通过预留统一的 384 维空间，不同机器人的动作可以共享同一个模型权重，只需在后训练时激活对应的维度区间。这使得预训练的视觉理解能力可以跨机器人平台迁移。后训练时 <code>zero_init_action_embedder = False</code>，动作嵌入器开始学习。</p>
+
+<div class="evidence">
+<strong>代码证据</strong>：<code>configs/2b_480_640_gr1.yaml</code> vs <code>configs/2b_480_640_pretrain.yaml</code> — 对比可见后训练将 <code>zero_init_action_embedder</code> 从 <code>true</code> 改为 <code>false</code>，并指定具体机器人数据集。
+</div>
+</section>
+
+<section id="distillation">
+<h2>蒸馏算法：从教师到实时学生</h2>
+
+<h3>设计动机</h3>
+<p>扩散模型的推理需要多步去噪（通常 20-50 步），无法满足机器人实时控制的需求（10 FPS）。DreamDojo 的蒸馏管线将多步教师模型压缩为单步/少步因果学生模型。</p>
+
+<h3>三阶段蒸馏流程</h3>
+
+<h4>Stage 1: Teacher Generation</h4>
+<p>从教师模型在多个噪声级别生成去噪目标，作为学生训练的监督信号：</p>
+
+<pre><code class="language-bash"># launch_teacher_gen.sh 关键参数
+torchrun -m cosmos_predict2._src.predict2.action.inference.inference_gr00t_warmup \
+  --experiment=groot_ac_reason_embeddings_rectified_flow_2b_480_640_gr1 \
+  --ckpt_path checkpoints/model/ \
+  --guidance 0 \
+  --chunk_size 12 \
+  --query_steps 0,9,18,27,34  # 在 5 个噪声级别采样教师输出
+</code></pre>
+
+<p><code>query_steps = [0, 9, 18, 27, 34]</code> 对应 35 步去噪调度中的 5 个均匀间隔点，为学生提供从高噪声到低噪声的完整去噪轨迹。</p>
+
+<h4>Stage 2: Warmup（知识蒸馏）</h4>
+<p>训练因果学生网络对齐教师的去噪输出。学生使用因果架构（causal），只能看到当前和过去的帧，不能看到未来帧——这是实时推理的必要条件。</p>
+
+<h4>Stage 3: Self-Forcing（DMD 蒸馏）</h4>
+<p>Self-Forcing 是蒸馏管线的核心创新。它解决了 autoregressive 生成中的 <strong>exposure bias</strong> 问题：warmup 阶段学生只见过教师生成的干净帧作为历史输入，但推理时必须使用自己生成的（可能有误差的）帧。</p>
+
+<p>Self-Forcing 的训练方式：</p>
+<ol>
+<li>让学生用自己的 autoregressive rollout 生成历史帧</li>
+<li>教师模型对学生的输出计算 score（梯度方向）</li>
+<li>通过 DMD（Distribution Matching Distillation）损失让学生的输出分布匹配教师的输出分布</li>
+</ol>
+
+<pre><code class="language-bash"># launch_self_forcing.sh
+torchrun -m scripts.train \
+  --config=cosmos_predict2/_src/predict2/interactive/configs/config_distill.py \
+  -- experiment=cosmos_predict2p5_2B_action_gr00t_gr1_self_forcing_no_s3
+</code></pre>
+
+<div class="evidence">
+<strong>代码证据</strong>：<code>02_distillation_and_inference/reference_docs/DISTILL.md</code> — "Finetune the student model with its own autoregressive rollouts to improve long-horizon stability, using the teacher model to provide the score during DMD distillation."
+</div>
+
+<h3>推理：10 FPS 实时交互</h3>
+<p>蒸馏后的学生模型支持两种推理模式：</p>
+<ul>
+<li><strong>离线推理</strong>：从预录动作序列生成视频，用于评估</li>
+<li><strong>实时遥操作</strong>：以 10 FPS 接收实时动作输入，自回归生成视频帧，支持超过 1 分钟的稳定交互</li>
+</ul>
+</section>
+
+<section id="cosmos-policy-finetune">
+<h2>Cosmos Policy RoboCasa Finetune：当前活跃训练</h2>
+
+<h3>从 DreamDojo 到 Cosmos Policy 的演进</h3>
+<p>当前活跃训练已从 DreamDojo 的"预训练+后训练"范式演进到 Cosmos Policy 的"统一多目标训练"范式。核心区别：</p>
+
+<table>
+<thead><tr><th>维度</th><th>DreamDojo</th><th>Cosmos Policy</th></tr></thead>
+<tbody>
+<tr><td>训练目标</td><td>视频预测 + 动作条件生成</td><td>Policy + World Model + Value Function 统一</td></tr>
+<tr><td>动作表示</td><td>384 维统一投影 + 潜在动作</td><td>7D 直接动作 → latent injection</td></tr>
+<tr><td>数据来源</td><td>人类视频 + 机器人演示</td><td>成功演示 + 成功/失败 rollout</td></tr>
+<tr><td>Value Function</td><td>无</td><td>Monte-Carlo 回报预测</td></tr>
+<tr><td>条件策略</td><td>Action-conditioned generation</td><td>Frame Replace + mask-based multi-objective</td></tr>
+</tbody>
+</table>
+
+<h3>RoboCasa 数据集</h3>
+<p><code>RoboCasa-Cosmos-Policy</code> 是 Cosmos Policy 专用的 RoboCasa 改造数据集（CC BY 4.0）：</p>
+<ul>
+<li><strong>success_only/</strong>：成功 demonstration，训练 policy</li>
+<li><strong>all_episodes/</strong>：成功+失败 rollout，训练 world model 和 value function</li>
+<li>24 个厨房 manipulation tasks，~50 demos/task，图像 224×224 RGB</li>
+<li>Action：7D（6-DoF EEF + gripper），Proprio：9D（gripper + EEF pos + quaternion）</li>
+<li>改造：分辨率提升至 224²、过滤 no-op、成功截断、JPEG 压缩、确定性重放</li>
+</ul>
+
+<h3>当前训练配置与进度</h3>
+
+<div class="success">
+<strong>状态：正在运行。</strong>截至 2026-05-21 05:29，训练已到 step 4520，loss 在 0.03–0.07 区间波动，~8.3 s/iter。
+</div>
+
+<p>关键超参数（来自 <code>config.yaml</code> 证据）：</p>
+<ul>
+<li>Base checkpoint：Cosmos Predict2.5 2B <code>iter_000023000</code>（视频生成预训练权重）</li>
+<li>Optimizer：FusedAdamW, lr=0.0002, β=(0.9, 0.999), weight_decay=0.1</li>
+<li>Scheduler：LambdaLinear, warmup 1000 steps → 线性衰减至 0.06× lr</li>
+<li>Grad clip：norm=0.1, force_finite=True</li>
+<li>Precision：bfloat16</li>
+<li>Parallelism：FSDP (shard_size=8), static_graph=True</li>
+<li>Batch size：25, chunk_size=32, p_world_model=0.5, action_loss_multiplier=16</li>
+</ul>
+
+<h3>训练重试轨迹与工程经验</h3>
+<p>该训练在 2026-05-18 到 05-20 期间经历了多轮配置调试，���终解决方案是 <code>num_workers=1, pin_memory=False</code>。这反映了大模型训练中 CUDA 内存管理与 DataLoader 多进程之间的常见冲突——当模型已占用大部分 GPU 显存时，pin_memory 的额外 CUDA 分配会触发 invalid argument 错误。</p>
+</section>
+
+<section id="vggt-action">
+<h2>VGG-T-Omega Action Regression：3D 几何先验注入</h2>
+
+<h3>设计思想</h3>
+<p>Cosmos Policy 的一个潜在弱点是：它在 2D 潜在空间中预测动作，缺乏显式的 3D 几何理解。VGG-T-Omega Action Regression 分支试图通过引入预训练的 3D 视觉几何先验来弥补这一不足。</p>
+
+<h3>架构设计</h3>
+<pre><code class="language-python"># scripts/train_vggt_action_regression.py 文档字符串
+"""
+Architecture (mirrors DA3 action regression):
+  - VGGT-Omega Aggregator backbone (frozen) — alternating frame/inter-frame attention
+  - CameraHead trunk (4-layer self-attention) — pretrained from pose estimation
+  - Per-wrist action heads — new, regresses action chunks from camera tokens
+
+Pretrained weight reuse:
+  - aggregator: full pretrained weights (frozen)
+  - trunk_left / trunk_right: initialized from CameraHead.trunk
+  - token_norm / trunk_norm: initialized from CameraHead norms
+
+View layout with num_history=2, num_context_views=1:
+  image shape: (B, 6, 3, H, W)
+  views:       [left_t0, left_t1, right_t0, right_t1, base_t0, base_t1]
+  left  → camera_tokens[:, 0:2] → trunk_left → head_left → action[0:8]
+  right → camera_tokens[:, 2:4] → trunk_right → head_right → action[8:16]
+"""
+</code></pre>
+
+<p>核心设计选择：</p>
+<ul>
+<li><strong>冻结 backbone</strong>：VGGT-Omega 的 aggregator（交替 frame/inter-frame attention）完全冻结，保留其 3D 几何理解能力</li>
+<li><strong>复用 pose estimation 权重</strong>：CameraHead trunk 从 pose estimation 任务初始化，将"估计相机位姿"的能力迁移到"估计末端执行器动作"</li>
+<li><strong>双腕独立 head</strong>：左右腕分别有独立的 action head，各预测 8 维动作 chunk</li>
+<li><strong>历史帧输入</strong>：使用 <code>num_history=2</code> 帧提供时间上下文，使模型能感知运动方向</li>
+</ul>
+
+<div class="evidence">
+<strong>代码证据</strong>：<code>04_remote_progress_20260521/evidence/code/vggt-omega/scripts/train_vggt_action_regression.py:1-80</code> — 完整的架构文档字符串和导入结构。
+</div>
+
+<p><strong>与 Cosmos Policy 的关系</strong>：这条线是 Cosmos Policy 的补充而非替代。Cosmos Policy 在 2D 潜在空间中做端到端的 policy/world model/value 联合训练；VGG-T-Omega 则提供一个基于 3D 几何的 action regression baseline，用于评估 3D 先验对策略质量的贡献。</p>
+</section>
+
+<section id="comparison">
+<h2>方法对比与设计选择分析</h2>
+
+<h3>与传统 VLA 方法的对比</h3>
+<table>
+<thead><tr><th>维度</th><th>传统 VLA（如 OpenVLA）</th><th>Cosmos Policy / DreamDojo</th></tr></thead>
+<tbody>
+<tr><td>动作表示</td><td>离散 token 或回归 head</td><td>潜在帧注入（与视觉同构）</td></tr>
+<tr><td>预训练数据</td><td>图文对 + 机器人数据</td><td>44k 小时人类视频</td></tr>
+<tr><td>世界模型</td><td>无显式世界模型</td><td>统一训练，共享权重</td></tr>
+<tr><td>Value Function</td><td>需要额外模块</td><td>内置于同一扩散模型</td></tr>
+<tr><td>实时性</td><td>自回归 token 生成</td><td>蒸馏后单步生成 10 FPS</td></tr>
+<tr><td>泛化来源</td><td>语言-视觉对齐</td><td>视频动态理解</td></tr>
+</tbody>
+</table>
+
+<h3>关键设计 Trade-off</h3>
+
+<h4>1. Latent Injection vs. Separate Head</h4>
+<p>将动作编码为潜在帧（而非通过独立 MLP head 预测）的优势是复用了扩散模型的全部生成能力，但代价是动作信号被"稀释"在高维潜在空间中（7×32=224 维 action 填充到 12544 维潜在帧），需要 <code>action_loss_multiplier=16</code> 来补偿。</p>
+
+<h4>2. Multi-Objective 统一训练 vs. 分阶段训练</h4>
+<p>Cosmos Policy 选择在同一个 batch 内混合 policy/world model/value function 三种目标。优势是共享表征、减少训练成本；风险是不同目标之间可能存在梯度冲突。当前通过 mask 机制确保每个样本只对一种目标计算 loss，避免了显式的多任务梯度冲突。</p>
+
+<h4>3. Hybrid Sigma Distribution 的必要性</h4>
+<p>标准 log-normal 采样在 \(\sigma \in [0.01, 10]\) 区间集中，但视频条件生成需要模型在极高噪声（\(\sigma > 80\)，对应"从条件帧想象全新未来"）和极低噪声（\(\sigma < 0.01\)，对应"精修细节"）都有良好表现。混合分布 + 额外的 high sigma 策略确保了这一点。</p>
+
+<h4>4. Frame Replace vs. Cross-Attention Conditioning</h4>
+<p>Frame Replace 直接将条件帧"放入"噪声输入中，比 cross-attention 更强地约束了生成结果与条件帧的一致性。这对机器人场景至关重要——生成的未来帧必须与当前观测在物理上连续。</p>
+</section>
+
+<section id="progress">
+<h2>训练进度与评估现状</h2>
+
+<h3>Cosmos Policy RoboCasa Finetune</h3>
+<ul>
+<li>启动时间：2026-05-20 18:54:51</li>
+<li>当前进度：step 4520（截至 2026-05-21 05:29）</li>
+<li>迭代速度：~8.2–8.4 s/iter</li>
+<li>Loss 范围：0.03–0.07（波动中，尚未收敛）</li>
+<li>已保存 checkpoint：iter_001000 到 iter_004000</li>
+<li>GPU 占用：~68 GB / 80 GB（单卡 100% util）</li>
+</ul>
+
+<h3>LIBERO Pipeline 评估</h3>
+<p>三次 LIBERO spatial 测试均为 1 episode / 0 success，处于 smoke test 阶段，不具备统计意义。</p>
+
+<h3>DA3 Pose 评估（500 samples）</h3>
+<table>
+<thead><tr><th>指标</th><th>值</th></tr></thead>
+<tbody>
+<tr><td>Mean Translation Error L2</td><td>0.2567</td></tr>
+<tr><td>Median Rotation Error</td><td>8.23°</td></tr>
+<tr><td>Rotation Error < 15°</td><td>73.6%</td></tr>
+<tr><td>Translation Direction Cosine > 0.5</td><td>11.2%（较弱）</td></tr>
+</tbody>
+</table>
+
+<h3>后续关键检查点</h3>
+<ol>
+<li>观察 loss 在 iter_005000–010000 是否稳定下降或发散</li>
+<li>将 RoboCasa finetune checkpoint 接入 LIBERO 多 episode 评估</li>
+<li>对比 action_loss_multiplier 不同值（如 8, 16, 32）对策略质量的影响</li>
+<li>验证 VGG-T-Omega action regression 是否能提供有效的 3D 几何补充</li>
+</ol>
+</section>
+
+<section id="evaluation">
+<h2>评估体系</h2>
+
+<h3>离线评估</h3>
+<p>从 checkpoint 目录按间隔轮询，对指定 dataset 采样生成并保存结果。支持 <code>--infinite</code> 模式持续监控新 checkpoint。</p>
+<pre><code class="language-bash"># 离线评估（GR-1）
+python examples/action_conditioned.py \
+  --checkpoints-dir .../checkpoints \
+  --experiment dreamdojo_2b_480_640_gr1 \
+  --num-frames 49 --num-samples 100 \
+  --dataset-path datasets/PhysicalAI-Robotics-GR00T-Teleop-GR1/GR1_robot \
+  --data-split test --deterministic-uniform-sampling \
+  --checkpoint-interval 5000 --infinite
+</code></pre>
+
+<h3>真机评估</h3>
+<p>指向真实机器人数据目录，使用 post-train checkpoint，评估结果写到 <code>eval_results</code> 目录。已在 G1 机器人上验证（<code>G1edu-u3_basket_storage_apple</code> 数据集）。</p>
+
+<h3>远端仓库状态（2026-05-21）</h3>
+<table>
+<thead><tr><th>仓库</th><th>最新 Commit</th><th>本地改动</th></tr></thead>
+<tbody>
+<tr><td><code>chiyixiao/DreamDojo</code></td><td><code>02f119b</code> "Add distillation"</td><td>6 处（inference/dataset/config）</td></tr>
+<tr><td><code>liujingyuan/cosmos-policy</code></td><td><code>18a2acc</code></td><td>2 处（libero_utils, run_libero_eval, ~340 行）</td></tr>
+<tr><td><code>liyichen/cosmos-predict2.5</code></td><td><code>441b897</code></td><td>1 处（tokenizer/processor, 7 行）</td></tr>
+<tr><td><code>houzhi/vggt-omega</code></td><td><code>39a0cb8</code> "Initial commit"</td><td>无</td></tr>
+</tbody>
+</table>
+</section>
+
+<section id="risks">
+<h2>风险与后续建议</h2>
+
+<h3>高优先级</h3>
+<ol>
+<li><strong>训练稳定性未验证</strong>：loss 在 0.03–0.07 波动，需观察 iter_005000+ 是否发散</li>
+<li><strong>LIBERO 评估无效</strong>：仅 1 episode smoke test（0/1 success），需扩展到多 episode</li>
+<li><strong>训练产物未进入 policy eval</strong>：RoboCasa finetune checkpoint 尚未接入下游策略评估</li>
+</ol>
+
+<h3>中优先级</h3>
+<ol>
+<li>WandB API key 偶发失败，远端 dashboard 记录可能不完整</li>
+<li>Checkpoint 体量大（单个 ~12.3 GB），长期存储需规划</li>
+<li>DA3 pose translation direction cosine > 0.5 仅 11.2%，方向估计较弱</li>
+</ol>
+
+<h3>建议行动</h3>
+<ol>
+<li>继续观察 <code>iter_005000</code>–<code>iter_010000</code> 是否稳定落盘</li>
+<li>将 finetune 产物接入 LIBERO 多 episode 评估，获得有统计意义的 success rate</li>
+<li>对比 <code>action_loss_multiplier</code> 不同值对策略质量的影响</li>
+<li>评估 VGG-T-Omega action regression 是否能有效提升 3D 感知能力</li>
+<li>修复 WandB API key，确保训练曲线可远程监控</li>
+</ol>
+</section>
+
+<section id="references">
+<h2>参考文献（References）</h2>
+<ol>
+<li>[1] Gao et al., "DreamDojo: A Generalist Robot World Model from Large-Scale Human Videos", 2026. <a href="https://arxiv.org/abs/2602.06949">arXiv:2602.06949</a></li>
+<li>[2] Karras et al., "Elucidating the Design Space of Diffusion-Based Generative Models", NeurIPS 2022. <a href="https://arxiv.org/abs/2206.00364">arXiv:2206.00364</a></li>
+<li>[3] NVIDIA Cosmos Policy / Cosmos Predict2.5. <a href="https://huggingface.co/nvidia/Cosmos-Predict2-2B-Video2World">HuggingFace</a></li>
+<li>[4] DreamDojo 开源仓库. <a href="https://github.com/NVIDIA/DreamDojo">GitHub: NVIDIA/DreamDojo</a></li>
+<li>[5] Nasiriany et al., "RoboCasa: Large-Scale Simulation of Everyday Tasks for Generalist Robots", 2024. <a href="https://arxiv.org/abs/2406.02523">arXiv:2406.02523</a></li>
+<li>[6] 项目代码证据来源：<code>pryer/project/13_dreamdojo_world_model/04_remote_progress_20260521/evidence/code/</code></li>
+<li>[7] 训练配置证据：<code>pryer/project/13_dreamdojo_world_model/04_remote_progress_20260521/evidence/summaries/current_run/config.yaml</code></li>
+</ol>
+</section>
+
+</article>
+</body>
+</html>

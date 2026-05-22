@@ -1,0 +1,840 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>具身智能项目数据处理体系报告</title>
+    <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            font-size: 16px;
+            line-height: 1.8;
+            color: #1a1a1a;
+            background: #fff;
+            padding: 2rem 1rem;
+        }
+        article {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+        h1 { font-size: 2rem; margin-bottom: 0.5rem; border-bottom: 2px solid #333; padding-bottom: 0.5rem; }
+        h2 { font-size: 1.5rem; margin-top: 2.5rem; margin-bottom: 1rem; color: #2c3e50; border-left: 4px solid #3498db; padding-left: 0.8rem; }
+        h3 { font-size: 1.25rem; margin-top: 1.8rem; margin-bottom: 0.8rem; color: #34495e; }
+        h4 { font-size: 1.1rem; margin-top: 1.2rem; margin-bottom: 0.5rem; color: #555; }
+        p { margin-bottom: 1rem; }
+        ul, ol { margin-bottom: 1rem; padding-left: 1.5rem; }
+        li { margin-bottom: 0.3rem; }
+        pre {
+            background: #f5f7fa;
+            border: 1px solid #e1e4e8;
+            border-radius: 6px;
+            padding: 1rem;
+            overflow-x: auto;
+            margin-bottom: 1rem;
+            font-size: 0.9rem;
+            line-height: 1.5;
+        }
+        code {
+            font-family: "Fira Code", "JetBrains Mono", Consolas, monospace;
+            font-size: 0.9em;
+        }
+        :not(pre) > code {
+            background: #f0f2f5;
+            padding: 0.15em 0.4em;
+            border-radius: 3px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 1.5rem;
+            font-size: 0.95rem;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 0.6rem 0.8rem;
+            text-align: left;
+        }
+        th { background: #f8f9fa; font-weight: 600; }
+        tr:nth-child(even) { background: #fafbfc; }
+        .note {
+            background: #e8f4fd;
+            border-left: 4px solid #3498db;
+            padding: 0.8rem 1rem;
+            margin: 1rem 0;
+            border-radius: 0 4px 4px 0;
+        }
+        .warn {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 0.8rem 1rem;
+            margin: 1rem 0;
+            border-radius: 0 4px 4px 0;
+        }
+        .diagram {
+            background: #f9f9f9;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin: 1.5rem 0;
+            font-family: monospace;
+            white-space: pre;
+            line-height: 1.4;
+            overflow-x: auto;
+        }
+        @media (max-width: 768px) {
+            body { padding: 1rem 0.5rem; }
+            pre { font-size: 0.8rem; padding: 0.8rem; }
+            table { font-size: 0.85rem; }
+        }
+    </style>
+</head>
+<body>
+<article>
+
+<h1>具身智能项目数据处理体系报告</h1>
+<p style="color:#666; margin-bottom:2rem;">基于 pryer 项目实际代码与工程实践的深度分析 | 2026-05-22</p>
+
+<section id="question">
+<h2>问题（Question）</h2>
+<p>在一个涉及 VLA（Vision-Language-Action）模型训练、强化学习基础设施、多模态感知与机器人部署的大型具身智能项目中，数据处理体系是如何设计与实现的？其核心思想、方法论、工程架构、数据来源与落地场景是什么？</p>
+</section>
+
+<section id="background">
+<h2>背景与动机（Background & Motivation）</h2>
+<p>本报告基于 <code>pryer</code> 项目——一个包含 20+ 子项目线的具身智能研究平台快照。该项目的核心目标是构建统一的机器人 VLA 模型，将视觉理解、语言指令和动作执行融合在一个序列建模框架中。</p>
+
+<p>在这一目标下，数据处理不是外围辅助工作，而是系统的核心基础设施。原因在于：</p>
+<ul>
+    <li><strong>多源异构</strong>：数据来自人体遥操作（ACE 手部关键点）、机器人传感器（Zarr/H5 格式）、公开数据集（DROID、OXE）、仿真环境（LIBERO）等，格式各异</li>
+    <li><strong>时间对齐要求极高</strong>：VLA 模型需要观测（图像）与动作（关节角）在时间轴上精确对齐，任何偏差都会导致训练信号错误</li>
+    <li><strong>规模化需求</strong>：数万条 episode、数百万帧数据需要高效并行处理</li>
+    <li><strong>统一表示</strong>：不同来源的数据必须转换为统一格式才能混合训练</li>
+</ul>
+</section>
+
+<section id="architecture">
+<h2>数据处理整体架构</h2>
+
+<h3>系统全景</h3>
+<div class="diagram">
+┌─────────────────────────────────────────────────────────────────────┐
+│                        数据来源层 (Data Sources)                      │
+├──────────────┬──────────────┬──────────────┬────────────────────────┤
+│  ACE 人体演示  │  ZY-A2D ��器人 │  公开数据集    │  仿真/评估数据          │
+│  (Parquet)    │  (tar/h5/zarr) │  (RLDS/各式)  │  (LIBERO/SimplerEnv)  │
+└──────┬───────┴──────┬───────┴──────┬───────┴────────────┬───────────┘
+       │              │              │                     │
+       ▼              ▼              ▼                     ▼
+┌─────────────────────────────────────────────────────────────────────┐
+│                     ETL 转换层 (Conversion Pipelines)                 │
+├──────────────┬──────────────┬──────────────┬────────────────────────┤
+│ 11_lnj_data  │ 12_lx_data   │ RLDS Loader  │  直接加载               │
+│ ACE→LeRobot  │ Zarr→LeRobot │ DROID→内存    │  (已是LeRobot格式)      │
+└──────┬───────┴──────┬───────┴──────┬───────┴────────────┬───────────┘
+       │              │              │                     │
+       ▼              ▼              ▼                     ▼
+┌─────────────────────────────────────────────────────────────────────┐
+│                  统一存储层 (LeRobot V3.0 Format)                     │
+│  meta/info.json + meta/episodes/*.parquet + data/*.parquet + videos/ │
+└─────────────────────────────────┬───────────────────────────────────┘
+                                  │
+                                  ▼
+┌─────────────────────────────────────────────────────────────────────┐
+│                     后处理层 (Post-Processing)                        │
+├──────────────────┬──────────────────┬───────────────────────────────┤
+│  Trim (尾部截断)  │  EE/URDF 修正     │  AutoLabel (质量标注)          │
+│  + PTS 时间戳对齐 │  + 坐标系变换      │  + 传感器校准验证              │
+└──────────┬───────┴──────────┬───────┴───────────────┬───────────────┘
+           │                  │                       │
+           ▼                  ▼                       ▼
+┌─────────────────────────────────────────────────────────────────────┐
+│                     训练加载层 (Training Data Loader)                  │
+│  data_constant.py (注册表) → AlignDataset (对齐) → DataLoader (DDP)  │
+└─────────────────────────────────────────────────────────────────────┘
+</div>
+
+<h3>设计思想：数据即训练信号的正确性保证</h3>
+<p>项目的数据处理哲学可以概括为三个核心原则：</p>
+<ol>
+    <li><strong>时间戳是第一公民</strong>：观测-动作对的时间对齐精度直接决定模型学到的因果关系是否正确。项目为此设计了 PTS 反写机制（详见后文）。</li>
+    <li><strong>格式统一优先于性能优化</strong>：所有异构数据源必须先转换为 LeRobot V3.0 格式，再进入训练流水线。这牺牲了一些灵活性，但换来了混合训练的可组合性。</li>
+    <li><strong>逆运动学在数据侧完成</strong>：人体演示数据的 IK 计算在数据转换阶段完成（而非训练时在线计算），确保训练时的数据读取是纯 I/O 操作，不引入计算瓶颈。</li>
+</ol>
+</section>
+
+<section id="data-sources">
+<h2>数据来源与分类</h2>
+
+<p>根据项目代码中的 <code>data_constant.py</code> 注册表和 <code>17_dataset_example</code> 目录的采样记录，数据来源可分为三大类：</p>
+
+<h3>第一类：团队自有演示数据</h3>
+<table>
+    <thead><tr><th>数据集</th><th>格式</th><th>机器人/来源</th><th>任务</th><th>特征</th></tr></thead>
+    <tbody>
+        <tr><td>ACE 人体演示</td><td>Parquet + PNG</td><td>人体手部 (21关键点×3D)</td><td>fold cloth</td><td>双臂 IK、3视角相机</td></tr>
+        <tr><td>ZY-A2D</td><td>tar → H5</td><td>Agilex 双臂</td><td>towel/bag/cube/push</td><td>关节+末端执行器</td></tr>
+        <tr><td>LX 触觉数据</td><td>Zarr/zip</td><td>CobotMagic</td><td>fold cloth</td><td>12×64 触觉阵列</td></tr>
+        <tr><td>FOLD_CLOTH 系列</td><td>LeRobot</td><td>Agilex</td><td>叠衣服</td><td>多日期多操作员版本</td></tr>
+    </tbody>
+</table>
+
+<h3>第二类：公开机器人数据集混合</h3>
+<table>
+    <thead><tr><th>数据集组</th><th>来源</th><th>规模</th></tr></thead>
+    <tbody>
+        <tr><td>DROID</td><td>Google Research (gs://gresearch/robotics/droid/1.0.1)</td><td>大规模多任务</td></tr>
+        <tr><td>OXE (Open X-Embodiment)</td><td>ASU, Berkeley, CMU, DLR, UTokyo 等</td><td>多机构多机器人</td></tr>
+        <tr><td>REAL_OMIN</td><td>10Kh 开放数据集</td><td>烹饪/清洁/叠衣</td></tr>
+        <tr><td>GALAXEA</td><td>Galaxea Open World Dataset</td><td>开放世界操作</td></tr>
+        <tr><td>XVLA_SOFT_FOLD</td><td>跨机器人软物体操作</td><td>软物体叠折</td></tr>
+    </tbody>
+</table>
+
+<h3>第三类：评估与仿真数据</h3>
+<table>
+    <thead><tr><th>数据集</th><th>用途</th><th>格式</th></tr></thead>
+    <tbody>
+        <tr><td>LIBERO (10/goal/object/spatial)</td><td>仿真基准评估</td><td>LeRobot</td></tr>
+        <tr><td>SimplerEnv</td><td>简化环境评估</td><td>在线生成</td></tr>
+        <tr><td>DreamDojo</td><td>世界模型训练/评估</td><td>视频+动作</td></tr>
+    </tbody>
+</table>
+
+<div class="note">
+<strong>证据来源：</strong>数据集注册表位于 <code>project/12_lx_data_pipeline/archives/remote_alignment_20260518/code/lx/pizero_vlabase_src/openpi/training/data_constant.py</code>，VLA 代表性样本验证记录位于 <code>project/17_dataset_example/vla_representative_summary.tsv</code>（13 条目中 8 条成功读取）。
+</div>
+
+<section id="pipeline-ace">
+<h2>核心管线一：ACE 人体演示 → LeRobot</h2>
+
+<h3>设计目标</h3>
+<p>将人类操作员通过 ACE 系统采集的手部关键点数据，转换为机器人可执行的关节角度序列。这是一个从"人体空间"到"机器人空间"的映射问题。</p>
+
+<h3>处理流程</h3>
+<div class="diagram">
+Parquet (手部21关键点×3D + 状态)
+        │
+        ▼
+bilateral_hand_state_from_keypoints()
+  → 双臂末端执行器位姿 (ee_pos[6], ee_rot[6])
+  → 归一化夹爪宽度 (gripper_norm[2])
+        │
+        ▼
+DualArmCamEeIk.ee_cam_to_joints()
+  → Pinocchio IK 求解 → 12-DOF 关节角 (joints[12])
+  → 夹爪宽度 (gripper_w[2])
+        │
+        ▼
+LeRobot V3.0 Dataset
+  ├── videos/: 3视角 (global 512×512, left/right wrist 480×848)
+  ├── data/: state.* + action.* (Parquet)
+  └── meta/: info.json + episodes/
+</div>
+
+<h3>关键代码实现</h3>
+<p>文件：<code>project/11_lnj_data_pipeline/01_ace_to_lerobot/convert_ace_to_lerobot.py</code></p>
+
+<h4>数据 Schema 定义</h4>
+<pre><code class="python">features={
+    "global_image": {"dtype": "video", "shape": (512, 512, 3)},
+    "left_image":   {"dtype": "video", "shape": (480, 848, 3)},
+    "right_image":  {"dtype": "video", "shape": (480, 848, 3)},
+    "state.ee_pos":          {"dtype": "float32", "shape": (6,)},   # 双臂末端位置
+    "state.ee_rot":          {"dtype": "float32", "shape": (6,)},   # 双臂末端旋转
+    "state.gripper_w":       {"dtype": "float32", "shape": (2,)},   # 双臂夹爪宽度
+    "state.joints":          {"dtype": "float32", "shape": (12,)},  # 双臂关节角
+    "state.keypoints_left":  {"dtype": "float32", "shape": (21, 3)},# 左手关键点
+    "state.keypoints_right": {"dtype": "float32", "shape": (21, 3)},# 右手关键点
+    "state.status_left":     {"dtype": "int64", "shape": (21,)},    # 左手状态
+    "state.status_right":    {"dtype": "int64", "shape": (21,)},    # 右手状态
+    "action.joints":         {"dtype": "float32", "shape": (12,)},  # 动作关节角
+    "action.gripper_w":      {"dtype": "float32", "shape": (2,)},   # 动作夹爪
+}</code></pre>
+
+<h4>IK 求解与种子前向传播</h4>
+<pre><code class="python"># 为整个 episode 预计算 IK 种子（避免逐帧求解时的局部最优陷阱）
+seed_left, seed_right = forward_hand_seeds_for_episode(
+    n,
+    lambda i: _json_cell(col_l[i].as_py()),   # 左手关键点
+    lambda i: _json_cell(col_ls[i].as_py()),  # 左手状态
+    lambda i: _json_cell(col_r[i].as_py()),   # 右手关键点
+    lambda i: _json_cell(col_rs[i].as_py()),  # 右手状态
+)
+
+# 逐帧：关键点 → 末端位姿 → IK → 关节角
+ee_pos, ee_rot, gripper_norm = bilateral_hand_state_from_keypoints(
+    left_keypoints, right_keypoints,
+    left_keypoints_status, right_keypoints_status,
+    prev_bilateral=prev_ee_bilateral,
+    forward_left=seed_left, forward_right=seed_right,
+)
+
+joints, q_prev_left, q_prev_right, gripper_w = ik.ee_cam_to_joints(
+    ee_pos, ee_rot, gripper_norm,
+    q0_left=q_prev_left, q0_right=q_prev_right  # 上一帧解作为初始猜测
+)</code></pre>
+
+<h4>设计亮点</h4>
+<ul>
+    <li><strong>种子前向传播</strong>：<code>forward_hand_seeds_for_episode</code> 在处理 episode 前先扫描全部帧，为 IK 求解器提供全局一致的初始猜测，避免关节角跳变</li>
+    <li><strong>状态连续性</strong>：<code>q_prev_left/right</code> 将上一帧的 IK 解作为下一帧的初始值，保证关节轨迹平滑</li>
+    <li><strong>Action = State</strong>：<code>action.joints = joints.copy()</code>，与 Agilex 转换保持一致——当前帧的状态即为当前帧的动作标签</li>
+    <li><strong>FPS=3</strong>：人体演示采样率为 3Hz，远低于机器人控制频率，适合 VLA 模型的粗粒度动作预测</li>
+</ul>
+</section>
+
+<section id="pipeline-zarr">
+<h2>核心管线二：Zarr/触觉数据 → LeRobot</h2>
+
+<h3>设计目标</h3>
+<p>将 CobotMagic 机器人采集的 Zarr 格式传感器数据（含触觉阵列）转换为 LeRobot 格式。该管线的特殊之处在于处理高维触觉传感器数据（12×64 浮点阵列）。</p>
+
+<h3>数据结构</h3>
+<p>文件：<code>project/12_lx_data_pipeline/01_zarr_to_lerobot/convert_zarr_lerobot.py</code></p>
+
+<pre><code class="python"># Zarr 内部结构
+raw_dataset = zarr.open(zarr_zip_path, mode='r')
+data = raw_dataset["data"]                    # 所有传感器数据
+episode_ends = raw_dataset["meta/episode_ends"][:]  # episode 边界标记
+
+# 可用数据通道
+episode_data = {key: data[key][start:end] for key in data.array_keys()}
+# 包含: camera0_rgb, camera0_tactile, robot0_demo_start_pose,
+#       robot0_demo_end_pose, robot0_eef_pos, robot0_eef_rot_axis_angle,
+#       robot0_gripper_width</code></pre>
+
+<h4>输出 Schema</h4>
+<pre><code class="python">features={
+    "right_image":     {"dtype": "video", "shape": (224, 224, 3)},
+    "state.tactile":   {"dtype": "float32", "shape": (12, 64)},  # 触觉传感器阵列
+    "state.start_pose":{"dtype": "float32", "shape": (6,)},      # 演示起始位姿
+    "state.end_pose":  {"dtype": "float32", "shape": (6,)},      # 演示终止位姿
+    "state.ee_pos":    {"dtype": "float32", "shape": (3,)},      # 末端位置 xyz
+    "state.ee_rot":    {"dtype": "float32", "shape": (3,)},      # 末端旋转 axis-angle
+    "state.gripper_w": {"dtype": "float32", "shape": (1,)},      # 夹爪宽度
+}</code></pre>
+
+<h4>帧间隔采样</h4>
+<pre><code class="python"># 支持降采样：从 30Hz 原始数据中按间隔抽取
+indices = list(range(frame_interval, n_states, frame_interval))
+for idx in indices:
+    dataset.add_frame({
+        "right_image": right_img[idx],
+        "state.tactile": tactile[idx].astype(np.float32),
+        "state.ee_pos": ee_pos[idx].astype(np.float32),
+        ...
+    })</code></pre>
+
+<h4>容错设计</h4>
+<pre><code class="python"># Zarr zip 文件可能部分损坏，逐 episode 处理并跳过坏数据
+try:
+    episode_data = {key: data[key][start:end] for key in data.array_keys()}
+except zipfile.BadZipFile as e:
+    print(f"[SKIP] BadZipFile at start={start}, end={end}, err={e}")
+    continue</code></pre>
+
+<h3>设计亮点</h3>
+<ul>
+    <li><strong>触觉数据保留</strong>：12×64 的触觉阵列作为一等特征存储，为未来的触觉-视觉融合模型提供数据基础</li>
+    <li><strong>Episode 边界由元数据驱动</strong>：<code>meta/episode_ends</code> 数组精确标记每个 episode 的结束位置，避免手动切分</li>
+    <li><strong>灵活降采样</strong>：<code>--frame-interval</code> 参数允许从 30Hz 降到任意频率，适配不同模型的输入需求</li>
+</ul>
+</section>
+
+<section id="pipeline-trim">
+<h2>核心管线三：数据集尾部截断与 PTS 时间戳精确对齐</h2>
+
+<h3>问题背景</h3>
+<p>机器人演示数据的末尾通常包含"无效尾巴"——操作员完成任务后的静止或随意动作。这些帧会引入噪声训练信号。简单地截断 Parquet 数据是不够的，因为视频文件的帧时间戳（PTS）在重新编码后会发生漂移，导致数据表中的 <code>timestamp</code> 列与视频帧不再对齐。</p>
+
+<div class="warn">
+<strong>核心挑战：</strong>LeRobot 在查询视频帧时计算 <code>query_ts = from_timestamp + data_timestamp</code>。如果 <code>data_timestamp</code> 与视频中的实际 PTS 不匹配，就会读取到错误的帧，导致观测-动作对错位。
+</div>
+
+<h3>三阶段处理流水线</h3>
+<p>文件：<code>project/12_lx_data_pipeline/02_trim_lerobot_dataset/trim_lerobot_dataset.py</code>（837 行）</p>
+
+<h4>Phase 1：GPU 加速视频裁剪 + ffprobe PTS 探测</h4>
+<pre><code class="python"># 自动探测可用的硬件编码器
+HW_ENCODERS = [
+    "h264_videotoolbox",   # macOS Apple Silicon / Intel
+    "h264_nvenc",          # NVIDIA GPU (CUDA)
+    "h264_vaapi",          # Linux VA-API (Intel/AMD)
+    "h264_qsv",            # Intel Quick Sync Video
+]
+
+def detect_hw_encoder() -> str:
+    """逐个测试硬件编码器可用性，全部失败回退到 libx264"""
+    for enc in HW_ENCODERS:
+        if enc not in available:
+            continue
+        # 实际编码 1 帧测试
+        test_cmd = ["ffmpeg", "-f", "lavfi", "-i", "nullsrc=s=64x64:d=0.1:r=30",
+                    "-frames:v", "1", "-c:v", enc, "-f", "null", "-"]
+        r = subprocess.run(test_cmd, capture_output=True, timeout=15)
+        if r.returncode == 0:
+            return enc
+    return "libx264"  # 软件回退</code></pre>
+
+<pre><code class="python"># 视频裁剪：精确到帧的 output seeking
+cmd = ["ffmpeg", "-i", input_path]
+cmd.extend(["-ss", f"{start:.6f}"])          # 精确起始时间
+cmd.extend(["-t", f"{duration:.6f}"])        # 精确持续时间
+cmd.extend(["-c:v", encoder])                # GPU 编码器
+cmd.extend(["-g", "2"])                      # GOP=2，密集关键帧
+cmd.extend(["-r", str(fps)])                 # 恒定帧率
+cmd.extend(["-video_track_timescale", str(fps * 10000)])  # 高精度时间基</code></pre>
+
+<pre><code class="python"># 从编码后的视频中提取每帧的实际 PTS
+def probe_video_timestamps(video_path: str, fps: int) -> list[float]:
+    """用 ffprobe 读取 MP4 容器中每个视频 packet 的 pts_time"""
+    cmd = ["ffprobe", "-v", "error", "-select_streams", "v:0",
+           "-show_entries", "packet=pts_time", "-of", "csv=p=0",
+           video_path]
+    r = subprocess.run(cmd, capture_output=True, text=True, timeout=600)
+    timestamps = [float(line) for line in r.stdout.strip().split("\n")
+                  if line.strip() and line.strip() != "N/A"]
+    timestamps.sort()  # packet 顺序可能是解码序(DTS)，排序得到呈现序(PTS)
+    return timestamps</code></pre>
+
+<h4>Phase 2：Parquet 数据裁剪 + PTS 反写</h4>
+<pre><code class="python"># 关键：用视频的实际 PTS 反写 timestamp 列
+# LeRobot 查询视频帧时计算 query_ts = from_timestamp + data_timestamp
+# 因此 data_timestamp = 实际PTS - from_timestamp，确保 query_ts 精确命中视频帧
+if ref_vkey and ep_idx in ep_video_actual_ts:
+    actual_pts = ep_video_actual_ts[ep_idx][ref_vkey]
+    from_pts = actual_pts[0]
+    # episode 内相对时间 = 帧的实际PTS - episode首帧PTS
+    new_timestamps = [float(t - from_pts) for t in actual_pts[:new_len]]
+    ep_data["timestamp"] = new_timestamps</code></pre>
+
+<h4>Phase 3：元数据更新</h4>
+<pre><code class="python"># 重新计算全局帧索引偏移
+cumulative = 0
+for _, row in df.iterrows():
+    from_indices.append(cumulative)
+    cumulative += int(row["length"])
+    to_indices.append(cumulative)
+
+# 用 ffprobe 探测到的实际时间戳更新 episodes 元数据
+for vkey in video_keys:
+    video_new_timestamps[vfile_key][ep_idx] = (from_ts_actual, to_ts_actual)
+
+# 重新计算数值特征统计 (min/max/mean/std/quantiles)
+stats[fname] = {
+    "min": np.min(data, axis=0).tolist(),
+    "max": np.max(data, axis=0).tolist(),
+    "mean": np.mean(data, axis=0).tolist(),
+    "std": np.std(data, axis=0).tolist(),
+    "q01": np.quantile(data, 0.01, axis=0).tolist(),
+    "q99": np.quantile(data, 0.99, axis=0).tolist(),
+}</code></pre>
+
+<h3>设计亮点</h3>
+<ul>
+    <li><strong>PTS 反写机制</strong>：这是整个数据处理体系中最精巧的设计。不是假设视频帧均匀分布，而是从实际编码结果中提取真实时间戳，反向写入数据表，从根本上消除时间对齐误差</li>
+    <li><strong>跨平台 GPU 加速</strong>：自动探测 VideoToolbox/NVENC/VAAPI/QSV，在 macOS/Linux/Windows 上都能利用硬件加速</li>
+    <li><strong>多 episode 视频文件处理</strong>��一个 MP4 文件可能包含多个 episode 的视频流，工具正确处理分段裁剪 + concat 拼接</li>
+    <li><strong>验证闭环</strong>：内置 <code>verify_trimmed_dataset()</code> 函数，用 LeRobotDataset API 加载裁剪后的数据集验证完整性</li>
+</ul>
+</section>
+
+<section id="pipeline-h5">
+<h2>核心管线四：大规模 H5 并行转换</h2>
+
+<h3>设计目标</h3>
+<p>ZY-A2D 数据集以 tar 包形式存储，解压后为 H5 文件。由于数据量巨大（数万 episode），需要分片并行处理。</p>
+
+<h3>分片并行架构</h3>
+<p>文件：<code>project/11_lnj_data_pipeline/02_h5_to_lerobot/</code> 系列脚本</p>
+
+<pre><code class="python"># refine_convert_to_lerobot_sharded.py: 分片并行转换
+# 将 episodes 分为 800 个一组的 shard，每个 shard 独立处理
+SHARD_SIZE = 800
+
+# 使用 ProcessPoolExecutor 并行处理
+with ProcessPoolExecutor(max_workers=num_workers) as executor:
+    futures = {
+        executor.submit(convert_shard, shard_episodes, shard_id, output_dir): shard_id
+        for shard_id, shard_episodes in enumerate(shards)
+    }
+
+# 每个 shard 完成后记录 .done 标记文件，支持断点续传
+done_marker = output_dir / f".done_shard_{shard_id}"
+if done_marker.exists():
+    print(f"Shard {shard_id} already done, skipping")
+    continue</code></pre>
+
+<h4>容错与断点续传</h4>
+<ul>
+    <li><strong>.done 标记文件</strong>：每个 shard 处理完成后写入标记，重启时自动跳过已完成的 shard</li>
+    <li><strong>全局 part 索引</strong>：跨 shard 维护全局 episode 编号，确保最终合并时索引连续</li>
+    <li><strong>自动清理</strong>：转换成功后可选删除源 H5 目录，释放磁盘空间</li>
+</ul>
+</section>
+
+<section id="pipeline-postprocess">
+<h2>核心管线五：EE/URDF 坐标修正</h2>
+
+<h3>设计目标</h3>
+<p>某些数据集的末端执行器位姿是在基座坐标系下记录的，但模型训练需要相机坐标系下的表示。此工具在数据转换后进行坐标系变换。</p>
+
+<p>文件：<code>project/11_lnj_data_pipeline/01_ace_to_lerobot/fix_ee_urdf_and_camera_frame_lerobot.py</code>（263 行）</p>
+
+<pre><code class="python"># 从关节角通过 URDF 正运动学重新计算 ee_pos/ee_rot
+# 然后从基座坐标系变换到相机坐标系
+ee_in_base = forward_kinematics(joints, urdf_model)
+ee_in_camera = T_camera_base @ ee_in_base  # 坐标系变换
+
+# 直接更新 Parquet 数据和 stats.json
+# 原地修改，不创建新数据集</code></pre>
+
+<h3>设计思想</h3>
+<p>这体现了"数据修正在数据侧完成"的原则：与其在训练代码中添加坐标变换逻辑（增加训练时复杂度），不如在数据准备阶段一次性修正，让训练代码保持简洁。</p>
+</section>
+
+<section id="autolabel">
+<h2>数据质量保障：AutoLabel 工具链</h2>
+
+<h3>系统概述</h3>
+<p>文件：<code>project/18_autolabel_data_tooling/</code></p>
+<p>AutoLabel 是 SenseBot 项目的数据生产工具链，包含 50+ 种任务类型，覆盖从传感器校准到 3D 检测的完整数据质量保障流程。</p>
+
+<h3>任务调度架构</h3>
+<pre><code class="python"># autolabel_py_md/main.py: 中央任务调度器
+# 使用 petrel_client 访问 S3 兼容对象存储
+from petrel_client.client import Client
+
+# 50+ 任务类型，每个任务有独立的 main.py + run() 函数
+TASK_TYPES = [
+    "parse_data_tag",           # 数据标签解析
+    "generate_meta",            # 元数据生成
+    "pose_preprocess",          # 位姿预处理
+    "sensor_alignment_preprocess",  # 传感器对齐
+    "centerformer",             # 3D 检测
+    "groundingdino3d",          # 开放词汇 3D 检测
+    "mask2former_segmentation", # 语义分割
+    "pvb3d",                    # 行人-车辆-自行车 3D 检测
+    "hand_3d_keypoints",        # 手部 3D 关键点
+    "hamer_hand_keypoints",     # HaMeR 手部关键点
+    "ace_calibration_check",    # ACE 标定验证
+    "dlp_shadow",               # 阴影检测
+    "navigation",               # 导航标注
+    ...
+]</code></pre>
+
+<h3>与数据管线的关系</h3>
+<ul>
+    <li><strong>上游验证</strong>：<code>ace_calibration_check</code> 在 ACE 数据进入转换管线前验证标定质量</li>
+    <li><strong>手部关键点质量</strong>：<code>hand_3d_keypoints</code> 和 <code>hamer_hand_keypoints</code> 提供关键点检测的交叉验证</li>
+    <li><strong>传感器对齐</strong>：<code>sensor_alignment_preprocess</code> 确保多传感器数据的时间同步</li>
+    <li><strong>视频生成</strong>：生成可视化视频用于人工 QA 审查</li>
+</ul>
+</section>
+
+<section id="training-loader">
+<h2>训练时数据加载体系</h2>
+
+<h3>数据集注册表</h3>
+<p>文件：<code>data_constant.py</code></p>
+<p>所有可用数据集以 Python 列表形式注册，按任务/来源分组：</p>
+
+<pre><code class="python"># 数据集组定义示例
+AGILEX_BAISIC_DATA = [
+    "/data/dataset/agilex_towel_clean_lerobot",
+    "/data/dataset/agilex_water_lerobot",
+    "/data/dataset/agilex_cube_lerobot",
+    "/data/dataset/agilex_bag_lerobot",
+    "/data/dataset/agilex_push_lerobot",
+]
+
+LIAOHE_ALOHA_AGILEX = [...]  # 联合双臂数据集
+REAL_OMIN = [...]             # 10Kh 开放数据集
+OXE_ASU_TABLE_TOP = [...]     # Open X-Embodiment 子集
+
+# 训练配置中通过逗号分隔的组名引用
+# data_config.repo_group = "LIAOHE_ALOHA_AGILEX,REAL_OMIN,OXE_ASU_TABLE_TOP"</code></pre>
+
+<h3>数据加载流水线</h3>
+<p>文件：<code>data_loader.py</code></p>
+
+<pre><code class="python">def create_xe_data_loader(data_config, ...):
+    # 1. 解析组名 → 路径列表
+    repo_groups = data_config.repo_group.split(",")
+    all_paths = []
+    for group_name in repo_groups:
+        paths = getattr(data_constant, group_name)
+        all_paths.extend(paths)
+
+    # 2. 加载每个路径为 LeRobotDataset
+    datasets = []
+    for path in all_paths:
+        ds = LeRobotDataset(path, delta_timestamps=action_chunk_config)
+        ds = AlignDataset(ds)      # 坐标对齐
+        ds = FilterDataset(ds)     # 过滤无效帧
+        datasets.append(ds)
+
+    # 3. 合并为 ConcatDatasetWithMeta
+    concat_ds = ConcatDatasetWithMeta(datasets)
+
+    # 4. 创建分布式 DataLoader
+    sampler = DistributedSampler(concat_ds, ...)
+    return DataLoader(concat_ds, sampler=sampler, ...)</code></pre>
+
+<h3>AlignDataset：跨机器人对齐层</h3>
+<p>这是训练加载中最关键的抽象层，负责将不同机器人的数据统一到同一表示空间：</p>
+
+<pre><code class="python">class AlignDataset:
+    """处理不同机器人体型的数据对齐"""
+    def __getitem__(self, idx):
+        sample = self.inner_dataset[idx]
+
+        # 根据数据集来源选择对齐策略
+        if self.robot_type == "Galaxea":
+            ee_pos = sample["state.ee_pos"][:3]
+            ee_rot = quaternion_to_6d(sample["state.ee_rot"])
+        elif self.robot_type == "Agilex":
+            ee_pos = sample["state.ee_pos"][:6]  # 双臂
+            ee_rot = euler_to_6d(sample["state.ee_rot"])
+        elif self.robot_type == "Franka":
+            ...
+
+        # 统一图像尺寸
+        for key in self.image_keys:
+            sample[key] = resize(sample[key], self.target_size)
+
+        # 裁剪异常值
+        sample["state.ee_pos"] = np.clip(ee_pos, -1.0, 1.0)
+
+        # 移除 NaN
+        if np.any(np.isnan(sample["action"])):
+            return None  # FilterDataset 会跳过
+
+        return sample</code></pre>
+
+<h3>训练时数据增强</h3>
+<p>文件：<code>train_acebrain.py</code> 中的 <code>DataCollator</code></p>
+
+<pre><code class="python">class DataCollator:
+    def __call__(self, batch):
+        # 图像预处理：随机裁剪/缩放增强
+        images = sensetime_image_preprocess(batch["images"], augment=self.training)
+
+        # 状态离散化：连续值 → 256 bins
+        state_tokens = torch.bucketize(
+            states,  # [-1, 1] 范围
+            boundaries=torch.linspace(-1, 1, 256)
+        )
+
+        # 动作 token 化：通过 fast_tokenizer 离散化
+        action_tokens = self.fast_tokenizer.encode(actions)
+        # 分为 left_base, right_base, left_cam, right_cam 四部分
+
+        # Flow Matching 时间步采样
+        fm_timesteps = sample_fm_time_fn(batch_size)
+
+        # 构建因果注意力掩码
+        causal_mask = build_vlm_action_mask(
+            image_tokens, state_tokens, action_tokens
+        )
+
+        return {
+            "pixel_values": images,
+            "state_tokens": state_tokens,
+            "action_tokens": action_tokens,
+            "fm_timesteps": fm_timesteps,
+            "attention_mask": causal_mask,
+        }</code></pre>
+</section>
+
+<section id="lerobot-format">
+<h2>统一存储格式：LeRobot V3.0</h2>
+
+<h3>格式结构</h3>
+<p>所有数据管线的输出目标都是 LeRobot V3.0 格式，其目录结构为：</p>
+
+<pre><code>dataset_root/
+├── meta/
+│   ├── info.json              # 全局元信息 (fps, total_frames, features schema)
+│   ├── stats.json             # 特征统计 (min/max/mean/std/quantiles)
+│   ├── tasks.parquet          # 任务描述
+│   └── episodes/
+│       └── chunk-000/
+│           └── file-000.parquet  # episode 元数据 (length, indices, video timestamps)
+├── data/
+│   └── chunk-000/
+│       └── file-000.parquet   # 帧级数据 (state.*, action.*, timestamp, episode_index)
+└── videos/
+    ├── global_image/
+    │   └── chunk-000/
+    │       └── file-000.mp4   # 全局视角视频
+    ├── left_image/
+    │   └── chunk-000/
+    │       └── file-000.mp4   # 左腕视角
+    └── right_image/
+        └── chunk-000/
+            └── file-000.mp4   # 右腕视角</code></pre>
+
+<h3>为什么选择 LeRobot 格式</h3>
+<ul>
+    <li><strong>视频压缩</strong>：图像序列存储为 MP4 视频而非逐帧 PNG/JPEG，存储效率提升 10-50 倍</li>
+    <li><strong>Chunk 分片</strong>：大数据集自动分片（<code>video_files_size_in_mb=8</code>），支持并行读取</li>
+    <li><strong>HuggingFace 生态兼容</strong>：可直接上传到 HuggingFace Hub 共享</li>
+    <li><strong>Delta Timestamps</strong>：支持 action chunking（一次预测未来 N 步动作）的时间偏移查询</li>
+    <li><strong>统计信息内置</strong>：<code>stats.json</code> 提供归一化所需的统计量，无需额外扫描</li>
+</ul>
+</section>
+
+<section id="vlm-data">
+<h2>VLM 协同训练数据</h2>
+
+<h3>设计思想</h3>
+<p>项目采用 VLM+VLA 联合训练策略：在训练机器人动作预测的同时，保持视觉-语言理解能力。这需要额外的 VLM 理解数据。</p>
+
+<h3>VLM 数据注册表</h3>
+<p>文件：<code>project/01_openpi_ace_vla_pretraining/archives/ziyang_extract/EmbodidedVLM_scp/qwenvl/data/dataset_registry.py</code></p>
+
+<table>
+    <thead><tr><th>类别</th><th>数据集</th><th>用途</th></tr></thead>
+    <tbody>
+        <tr><td>空间定位</td><td>ROBOPOINT, GRASP_ANYTHING, PIXMO_POINTS</td><td>物体定位与抓取点预测</td></tr>
+        <tr><td>操作规划</td><td>INSTRUCTVLA_BRIDGE_QA/PLAN/STATE</td><td>操作步骤推理</td></tr>
+        <tr><td>空间推理</td><td>SPACER_151K, SPAR_7M_1PCT</td><td>3D 空间关系理解</td></tr>
+        <tr><td>视频理解</td><td>VIDEORFT_COT, VIDEORFT_RL</td><td>视频推理链</td></tr>
+        <tr><td>机器人 QA</td><td>RoboVQA, RoboBrain, PhysVLM</td><td>机器人场景问答</td></tr>
+        <tr><td>轨迹/可供性</td><td>SHAREROBOT_TRAJECTORY/AFFORDANCE/PLANNING</td><td>轨迹预测与可供性分析</td></tr>
+    </tbody>
+</table>
+
+<p>这些数据存储在 S3 对象存储（<code>s3://houzhi/</code>）上，训练时通过独立的 VLM DataLoader 加载，与 VLA 数据按权重混合：</p>
+
+<pre><code class="python"># 训练配置中的混合策略
+# vlm_only: 仅 VLM 数据（预训练阶段）
+# use_vlm_data + VLA: 加权混合（联合训练阶段）
+# fast_only: 仅动作数据（动���专精阶段）
+
+# 损失权重
+vlm_loss_weight = 1.0
+action_loss_weight = 1.0  # 可独立调节</code></pre>
+</section>
+
+<section id="comparison">
+<h2>方法对比与设计选择</h2>
+
+<h3>数据处理策略对比</h3>
+<table>
+    <thead><tr><th>维度</th><th>本项目方案</th><th>常见替代方案</th><th>选择理由</th></tr></thead>
+    <tbody>
+        <tr>
+            <td>IK 计算时机</td>
+            <td>数据转换时离线计算</td>
+            <td>训练时在线计算</td>
+            <td>避免训练时 CPU 瓶颈；IK 结果可缓存复用</td>
+        </tr>
+        <tr>
+            <td>时间对齐方式</td>
+            <td>PTS 反写（从视频到数据）</td>
+            <td>假设均匀时间戳</td>
+            <td>消除编码器引入的时间漂移</td>
+        </tr>
+        <tr>
+            <td>统一格式</td>
+            <td>LeRobot V3.0</td>
+            <td>各数据集保持原格式</td>
+            <td>混合训练的可组合性；社区生态兼容</td>
+        </tr>
+        <tr>
+            <td>视频存储</td>
+            <td>MP4 + chunk 分片</td>
+            <td>逐帧 JPEG/PNG</td>
+            <td>存储效率；顺序读取性能</td>
+        </tr>
+        <tr>
+            <td>坐标对齐</td>
+            <td>AlignDataset 运行时适配</td>
+            <td>数据预处理时统一</td>
+            <td>保留原始数据；支持多种对齐策略实验</td>
+        </tr>
+        <tr>
+            <td>并行处理</td>
+            <td>分片 + ProcessPoolExecutor + .done 标记</td>
+            <td>单进程顺序处理</td>
+            <td>数万 episode 的处理效率；断点续传</td>
+        </tr>
+    </tbody>
+</table>
+
+<h3>关键设计决策分析</h3>
+
+<h4>决策 1：为什么 Action = State（同帧）？</h4>
+<p>在 ACE 转换中，<code>action.joints = joints.copy()</code>——当前帧的动作标签就是当前帧的状态。这看似冗余，但与 VLA 模型的 action chunking 机制配合：模型预测的是"从当前帧开始的未来 N 步动作序列"，通过 <code>delta_timestamps</code> 在 DataLoader 中自动构建。</p>
+
+<h4>决策 2：为什么 FPS 差异如此大？</h4>
+<ul>
+    <li>ACE 人体演示：<strong>3 Hz</strong>（人体动作缓慢，高频采样冗余）</li>
+    <li>CobotMagic 触觉：<strong>30 Hz</strong>（触觉信号变化快，需要高频采样）</li>
+    <li>训练时通过 <code>frame_interval</code> 统一到目标频率</li>
+</ul>
+
+<h4>决策 3：为什么需要 GPU 视频编码？</h4>
+<p>Trim 工具处理的数据量巨大（数万 episode × 多视角视频）。CPU 软编码是瓶颈：</p>
+<ul>
+    <li>NVENC (NVIDIA)：比 libx264 快 5-10 倍</li>
+    <li>VideoToolbox (Apple)：M 系列芯片的硬件编码器</li>
+    <li>自动探测 + 回退机制确保跨平台可用性</li>
+</ul>
+</section>
+
+<section id="effects">
+<h2>效果与落地场景</h2>
+
+<h3>数据规模</h3>
+<table>
+    <thead><tr><th>指标</th><th>数值</th></tr></thead>
+    <tbody>
+        <tr><td>数据集注册表条目</td><td>88+ VLM/VLN + 13+ VLA</td></tr>
+        <tr><td>VLA 数据集组</td><td>20+ 组（AGILEX, OXE, DROID, FOLD_CLOTH 等）</td></tr>
+        <tr><td>支持的机器人类型</td><td>Agilex, CobotMagic, Franka, Galaxea, Human</td></tr>
+        <tr><td>支持的输入格式</td><td>Parquet, H5, Zarr, tar, RLDS, LeRobot</td></tr>
+        <tr><td>统一输出格式</td><td>LeRobot V3.0</td></tr>
+    </tbody>
+</table>
+
+<h3>落地场景</h3>
+<ol>
+    <li><strong>VLA 预训练</strong>：混合多源数据训练 Qwen3-VL + Action Expert 模型（<code>01_openpi_ace_vla_pretraining</code>）</li>
+    <li><strong>Fast-Token 动作训练</strong>：使用离散化动作 token 的快速训练路径（<code>04_openpi_fast_zhi_training</code>）</li>
+    <li><strong>强化学习微调</strong>：VERL 基础设施使用处理后的数据进行 PPO/GRPO 训练（<code>10_verl_infra</code>）</li>
+    <li><strong>实机部署评估</strong>：LIBERO/ALOHA 评估客户端使用标准化数据格式（<code>07_openpi_eval_and_deployment_clients</code>）</li>
+    <li><strong>世界模型训练</strong>：DreamDojo 使用视频数据训练预测模型（<code>13_dreamdojo_world_model</code>）</li>
+    <li><strong>导航模型</strong>：VLN/VLA 导航模型使用处理后的轨迹数据（<code>20_vln_vla_navigation_models</code>）</li>
+</ol>
+
+<h3>工程效果</h3>
+<ul>
+    <li><strong>PTS 对齐</strong>：消除了因视频重编码导致的观测-动作时间偏移（此前偏移可达 ±2 帧）</li>
+    <li><strong>分片并行</strong>：数万 episode 的 H5→LeRobot 转换从数小时缩短到分钟级</li>
+    <li><strong>GPU 编码加速</strong>：视频处理吞吐量提升 5-10 倍</li>
+    <li><strong>统一格式</strong>：新增数据源只需编写一个转换脚本，即可接入全部训练管线</li>
+</ul>
+</section>
+
+<section id="references">
+<h2>参考文献（References）</h2>
+<ol>
+    <li>LeRobot: HuggingFace 机器人学习数据集标准. <a href="https://github.com/huggingface/lerobot">https://github.com/huggingface/lerobot</a></li>
+    <li>Open X-Embodiment Collaboration, "Open X-Embodiment: Robotic Learning Datasets and RT-X Models", 2023. <a href="https://arxiv.org/abs/2310.08864">arXiv:2310.08864</a></li>
+    <li>Khazatsky et al., "DROID: A Large-Scale In-The-Wild Robot Manipulation Dataset", 2024. <a href="https://arxiv.org/abs/2403.12945">arXiv:2403.12945</a></li>
+    <li>ACE: A Cross-platform Visual-Exoskeletons System for Low-Cost Dexterous Teleoperation. <a href="https://ace-teleop.github.io/">https://ace-teleop.github.io/</a></li>
+    <li>Pinocchio: Fast forward and inverse dynamics for poly-articulated systems. <a href="https://github.com/stack-of-tasks/pinocchio">https://github.com/stack-of-tasks/pinocchio</a></li>
+    <li>Liu et al., "LIBERO: Benchmarking Knowledge Transfer for Lifelong Robot Learning", 2023. <a href="https://arxiv.org/abs/2306.03310">arXiv:2306.03310</a></li>
+    <li>Black et al., "pi-0: A Vision-Language-Action Flow Model for General Robot Control", 2024. <a href="https://arxiv.org/abs/2410.24164">arXiv:2410.24164</a></li>
+    <li>项目源码：<code>pryer/project/</code> 各子目录（11_lnj_data_pipeline, 12_lx_data_pipeline, 17_dataset_example, 18_autolabel_data_tooling）</li>
+</ol>
+</section>
+
+</article>
+</body>
+</html>
