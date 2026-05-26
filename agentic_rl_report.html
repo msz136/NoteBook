@@ -1,0 +1,1241 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Agentic RL：面向 LLM Agent 的强化学习技术调研</title>
+    <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            font-size: 16px;
+            line-height: 1.8;
+            color: #1a1a1a;
+            background: #ffffff;
+            padding: 2rem 1rem;
+        }
+        article {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+        h1 {
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+            color: #111;
+            border-bottom: 3px solid #2563eb;
+            padding-bottom: 0.5rem;
+        }
+        .subtitle {
+            color: #555;
+            font-size: 0.95rem;
+            margin-bottom: 2rem;
+        }
+        h2 {
+            font-size: 1.5rem;
+            margin-top: 2.5rem;
+            margin-bottom: 1rem;
+            color: #1e40af;
+            border-left: 4px solid #2563eb;
+            padding-left: 0.75rem;
+        }
+        h3 {
+            font-size: 1.25rem;
+            margin-top: 1.8rem;
+            margin-bottom: 0.8rem;
+            color: #1e3a5f;
+        }
+        h4 {
+            font-size: 1.1rem;
+            margin-top: 1.2rem;
+            margin-bottom: 0.5rem;
+            color: #374151;
+        }
+        p { margin-bottom: 1rem; }
+        ul, ol {
+            margin-bottom: 1rem;
+            padding-left: 1.5rem;
+        }
+        li { margin-bottom: 0.4rem; }
+        code {
+            font-family: "Fira Code", "Consolas", monospace;
+            background: #f3f4f6;
+            padding: 0.15rem 0.4rem;
+            border-radius: 3px;
+            font-size: 0.9em;
+        }
+        pre {
+            background: #f8f9fa;
+            border: 1px solid #e5e7eb;
+            border-radius: 6px;
+            padding: 1rem;
+            overflow-x: auto;
+            margin-bottom: 1rem;
+        }
+        pre code {
+            background: none;
+            padding: 0;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 1.5rem;
+            font-size: 0.92rem;
+        }
+        th, td {
+            border: 1px solid #d1d5db;
+            padding: 0.6rem 0.8rem;
+            text-align: left;
+        }
+        th {
+            background: #eff6ff;
+            font-weight: 600;
+            color: #1e40af;
+        }
+        tr:nth-child(even) { background: #f9fafb; }
+        a { color: #2563eb; text-decoration: none; }
+        a:hover { text-decoration: underline; }
+        .note {
+            background: #fffbeb;
+            border-left: 4px solid #f59e0b;
+            padding: 0.8rem 1rem;
+            margin: 1rem 0;
+            border-radius: 0 4px 4px 0;
+        }
+        .formula-box {
+            background: #f0f9ff;
+            border: 1px solid #bae6fd;
+            border-radius: 6px;
+            padding: 1rem 1.2rem;
+            margin: 1rem 0;
+        }
+        .comparison-box {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+            margin: 1rem 0;
+        }
+        .comparison-box > div {
+            background: #f8f9fa;
+            border-radius: 6px;
+            padding: 1rem;
+            border: 1px solid #e5e7eb;
+        }
+        @media (max-width: 768px) {
+            body { padding: 1rem 0.5rem; }
+            h1 { font-size: 1.5rem; }
+            .comparison-box { grid-template-columns: 1fr; }
+            table { font-size: 0.82rem; }
+        }
+    </style>
+</head>
+<body>
+<article>
+
+<h1>Agentic RL：面向 LLM Agent 的强化学习技术调研</h1>
+<p class="subtitle">涵盖 2023–2026 年关键论文、损失函数设计、奖励塑形、信用分配与多智能体协作<br>
+附：面向 AceAgent 机器人集群控制系统的 RL 沙盒设计与 Loss 方案</p>
+
+<section id="question">
+<h2>问题（Question）</h2>
+<p>什么是 Agentic RL？它与传统 RL/RLHF 有何本质区别？当前（2024-2026）有哪些关键方法、损失函数设计和奖励塑形策略用于训练 LLM Agent？多智能体 RL 如何实现协作？</p>
+</section>
+
+<section id="background">
+<h2>背景与动机（Background &amp; Motivation）</h2>
+<p>传统的 LLM 强化学习（LLM-RL）主要用于对齐（Alignment），如 RLHF/DPO，其核心假设是<strong>单步 MDP</strong>：给定 prompt，模型生成一个完整回复，获得一个标量奖励。这种范式将 LLM 视为被动的序列生成器。</p>
+
+<p>然而，随着 LLM Agent 的兴起——模型需要在复杂环境中进行多轮交互、调用工具、搜索信息、执行代码——传统单步 MDP 框架已不再适用。<strong>Agentic RL（智能体强化学习）</strong>应运而生，它将 LLM 重新定义为<strong>自主决策智能体</strong>，嵌入到动态、部分可观测的环境中，通过时间扩展的 POMDP 进行建模 [1]。</p>
+
+<div class="comparison-box">
+<div>
+<h4>传统 LLM-RL（RLHF/DPO）</h4>
+<ul>
+<li>退化的单步 MDP</li>
+<li>一次生成完整回复</li>
+<li>奖励来自人类偏好/奖励模型</li>
+<li>无环境交互</li>
+<li>Token 级别优化</li>
+</ul>
+</div>
+<div>
+<h4>Agentic RL</h4>
+<ul>
+<li>时间扩展的 POMDP</li>
+<li>多轮交互、多步决策</li>
+<li>奖励来自环境反馈（任务成功/失败）</li>
+<li>与工具/API/环境持续交互</li>
+<li>Turn/Step 级别优化</li>
+</ul>
+</div>
+</div>
+
+<p>根据 2025 年的综述论文 [1]，Agentic RL 围绕六大核心能力展开：<strong>规划（Planning）、工具使用（Tool Use）、记忆（Memory）、推理（Reasoning）、自我改进（Self-improvement）、感知（Perception）</strong>。该综述综合了超过 500 篇近期工作。</p>
+</section>
+
+<section id="core-algorithms">
+<h2>核心算法与损失函数（Core Algorithms &amp; Loss Functions）</h2>
+
+<h3>2.1 PPO（Proximal Policy Optimization）及其变体</h3>
+<p>PPO 是 LLM 对齐中最主流的 RL 算法，因其稳定性和可靠性被广泛采用 [1]。其核心损失函数为：</p>
+
+<div class="formula-box">
+<p><strong>PPO-Clip 目标函数：</strong></p>
+\[
+L^{PPO}(\theta) = -\mathbb{E}\left[\min\left(\frac{\pi_\theta(a|s)}{\pi_{\theta_{old}}(a|s)} A^{\pi_{\theta_{old}}}(s,a),\; \text{clip}\left(\frac{\pi_\theta(a|s)}{\pi_{\theta_{old}}(a|s)}, 1-\epsilon, 1+\epsilon\right) A^{\pi_{\theta_{old}}}(s,a)\right)\right]
+\]
+<p>其中 \(\epsilon\) 为裁剪范围（通常 0.1-0.2），\(A\) 为优势函数。</p>
+</div>
+
+<h4>Turn-PPO：面向多轮 Agent 的 PPO 变体</h4>
+<p>Zhou et al. (2024) [2] 提出 <strong>Turn-PPO</strong>，将 MDP 建模从 token 级别提升到 turn（轮次）级别。核心思想：</p>
+<ul>
+<li>传统 PPO 在 token 级别计算优势函数，每个 token 都有独立的 advantage 估计</li>
+<li>Turn-PPO 将每个 agent 交互轮次视为一个原子动作，在 turn 级别进行优势估计和策略更新</li>
+<li>更好地捕获多轮推理任务的层次结构</li>
+<li>在 WebShop 和 Sokoban 基准上优于 GRPO 和标准 PPO</li>
+</ul>
+
+<h3>2.2 GRPO（Group Relative Policy Optimization）</h3>
+<p>GRPO 由 DeepSeek 团队提出 [3]，是 DeepSeek-R1 训练的核心算法。其关键创新是<strong>无需 Critic 模型</strong>，通过组内比较估计优势：</p>
+
+<div class="formula-box">
+<p><strong>GRPO 优势计算：</strong></p>
+\[
+A_i = \frac{r_i - \text{mean}(\{r_1, r_2, \ldots, r_G\})}{\text{std}(\{r_1, r_2, \ldots, r_G\})}
+\]
+<p>对每个 prompt \(q\)，采样 \(G\) 个回复 \(\{o_1, \ldots, o_G\} \sim \pi_{\theta_{old}}\)，计算各自奖励后进行组内标准化。</p>
+</div>
+
+<div class="formula-box">
+<p><strong>GRPO 完整损失函数：</strong></p>
+\[
+L^{GRPO}(\theta) = -\mathbb{E}_{q, \{o_i\}}\left[\frac{1}{G}\sum_{i=1}^{G}\min\left(\frac{\pi_\theta(o_i|q)}{\pi_{\theta_{old}}(o_i|q)} A_i,\; \text{clip}\left(\frac{\pi_\theta(o_i|q)}{\pi_{\theta_{old}}(o_i|q)}, 1-\epsilon, 1+\epsilon\right) A_i\right) - \beta D_{KL}(\pi_\theta \| \pi_{ref})\right]
+\]
+<p>其中 \(\beta\) 控制 KL 散度惩罚强度（DeepSeekMath 中 \(\beta=0.04\)）。</p>
+</div>
+
+<p><strong>GRPO 的优势：</strong></p>
+<ul>
+<li>无需训练单独的 Critic/Value 模型，显著降低计算成本</li>
+<li>适用于可验证任务（数学推理、代码生成等）</li>
+<li>通过组内对比自然实现相对优势估计</li>
+</ul>
+
+<p><strong>GRPO 在 Agent 场景的局限：</strong></p>
+<ul>
+<li>多轮交互中，组内采样的方差可能很大</li>
+<li>长轨迹下信用分配困难</li>
+<li>稀疏奖励导致大量零优势样本 [4]</li>
+</ul>
+
+<h3>2.3 GiGPO（Group-in-Group Policy Optimization）</h3>
+<p>Feng et al. (2025) [5] 提出 GiGPO，专门解决长时域 LLM Agent 的信用分配问题（NeurIPS 2025）。核心思想是<strong>两层优势估计架构</strong>：</p>
+<ul>
+<li><strong>外层（Macro）</strong>：在轨迹级别进行组间比较，评估整体策略质量</li>
+<li><strong>内层（Micro）</strong>：在步骤级别进行组内比较，实现细粒度信用分配</li>
+<li>利用组统计量同时计算宏观和微观优势</li>
+<li>在 ALFWorld 和 WebShop 基准上取得显著提升，且不增加计算开销</li>
+</ul>
+
+<h3>2.4 DPO 及其多轮扩展</h3>
+<p>标准 DPO（Direct Preference Optimization）[6] 通过隐式奖励模型直接优化偏好：</p>
+
+<div class="formula-box">
+<p><strong>DPO 损失函数：</strong></p>
+\[
+L^{DPO}(\theta) = -\mathbb{E}_{(x, y_w, y_l)}\left[\log \sigma\left(\beta \log\frac{\pi_\theta(y_w|x)}{\pi_{ref}(y_w|x)} - \beta \log\frac{\pi_\theta(y_l|x)}{\pi_{ref}(y_l|x)}\right)\right]
+\]
+<p>其中 \(y_w\) 为偏好回复，\(y_l\) 为非偏好回复。</p>
+</div>
+
+<h4>DMPO（Direct Multi-Turn Preference Optimization）</h4>
+<p>Shi et al. (2024) [7] 提出 DMPO（EMNLP 2024），解决 DPO 在多轮场景中的关键问题——<strong>配分函数无法消除</strong>：</p>
+<ul>
+<li>用状态-动作占用度量（state-action occupancy measure）约束替代策略约束</li>
+<li>使配分函数独立于当前状态</li>
+<li>引入长度归一化处理变长轨迹</li>
+</ul>
+
+<h4>层次化偏好学习（Hierarchical Preference Learning）</h4>
+<p>2025 年 ICLR 论文 [8] 指出：</p>
+<ul>
+<li><strong>轨迹级 DPO</strong>：信号过于粗糙，无法精确分配信用</li>
+<li><strong>步骤级 DPO</strong>：过于短视，无法捕获多步行为的价值</li>
+<li>提出层次化方法，在轨迹和步骤之间取得平衡</li>
+</ul>
+
+<h3>2.5 VSPO（Value-based Sampling Policy Optimization）</h3>
+<p>VSPO [9] 是 GRPO 的增强变体，专为 Agentic RL 设计：</p>
+<ul>
+<li><strong>渐进式奖励塑形（Progressive Reward Shaping）</strong>：逐步增加任务难度</li>
+<li><strong>基于价值的采样</strong>：用任务价值指标（平衡难度和不确定性）替换零优势样本</li>
+<li><strong>价值平滑裁剪（Value-smoothing Clipping）</strong>：稳定梯度更新</li>
+</ul>
+
+<h3>2.6 SAPO（Step-Aligned Policy Optimization）</h3>
+<p>2025 年提出的 SAPO [10] 专门针对 Agentic RL 中的步骤对齐问题：</p>
+<ul>
+<li>将优化过程与 agent 的决策步骤对齐</li>
+<li>在步骤边界处进行优势估计和策略更新</li>
+<li>适用于 OpenClaw、Claude Code 等实际 agent 系统</li>
+</ul>
+
+<h3>2.7 Flow-GRPO</h3>
+<p>NeurIPS 2025 论文 "In-the-Flow Agentic System Optimization" [11] 提出 Flow-GRPO：</p>
+<ul>
+<li>将多轮优化问题转化为流式优化</li>
+<li>解决长时域、稀疏奖励下的信用分配问题</li>
+<li>适用于规划和工具使用场景</li>
+</ul>
+
+<h3>2.8 算法对比总结</h3>
+<table>
+<thead>
+<tr><th>算法</th><th>是否需要 Critic</th><th>优势估计粒度</th><th>适用场景</th><th>关键特点</th></tr>
+</thead>
+<tbody>
+<tr><td>PPO</td><td>是</td><td>Token 级</td><td>通用对齐</td><td>稳定但计算开销大</td></tr>
+<tr><td>Turn-PPO</td><td>是</td><td>Turn 级</td><td>多轮 Agent</td><td>层次化 MDP</td></tr>
+<tr><td>GRPO</td><td>否</td><td>Token 级（组内）</td><td>可验证推理任务</td><td>无 Critic，组内对比</td></tr>
+<tr><td>GiGPO</td><td>否</td><td>两层（轨迹+步骤）</td><td>长时域 Agent</td><td>细粒度信用分配</td></tr>
+<tr><td>DPO/DMPO</td><td>否</td><td>轨迹级</td><td>偏好对齐/多轮</td><td>无需在线采样</td></tr>
+<tr><td>VSPO</td><td>否</td><td>Token 级（增强）</td><td>Agentic 任务</td><td>渐进奖励+价值采样</td></tr>
+<tr><td>SAPO</td><td>否</td><td>Step 级</td><td>Agentic 系统</td><td>步骤对齐优化</td></tr>
+<tr><td>Flow-GRPO</td><td>否</td><td>流式</td><td>规划/工具使用</td><td>多轮转流式优化</td></tr>
+</tbody>
+</table>
+</section>
+
+<section id="reward-design">
+<h2>奖励设计与信用分配（Reward Design &amp; Credit Assignment）</h2>
+
+<h3>3.1 工具使用 Agent 的奖励塑形</h3>
+<p>工具使用 Agent 面临独特的奖励设计挑战：动作空间包含自然语言推理和结构化工具调用，且工具执行结果具有延迟性。</p>
+
+<h4>Search-R1：搜索 Agent 的 RL 训练</h4>
+<p>Search-R1 [12] 是一个里程碑式的工作，训练 LLM 自主生成搜索查询并利用检索结果：</p>
+<ul>
+<li><strong>奖励设计</strong>：简单的结果级奖励（outcome-based reward），基于最终答案正确性</li>
+<li><strong>关键技术——检索 Token 掩码（Retrieved Token Masking）</strong>：在 RL 训练中掩码检索到的文本 token，避免模型对检索内容的梯度更新，稳定训练</li>
+<li><strong>训练框架</strong>：基于 veRL，支持多轮搜索交互</li>
+<li>在多跳问答任务上显著优于无搜索基线</li>
+</ul>
+
+<h4>R1-Searcher：两阶段搜索能力训练</h4>
+<p>R1-Searcher [13] 提出两阶段 outcome-based RL 方法：</p>
+<ul>
+<li>第一阶段：训练模型学会何时调用搜索</li>
+<li>第二阶段：训练模型优化搜索查询质量</li>
+<li>使 LLM 自主决定是否需要外部知识</li>
+</ul>
+
+<h4>ReTool：战略性工具使用的 RL</h4>
+<p>ReTool [14] 训练 LLM 在推理过程中战略性地使用代码工具：</p>
+<ul>
+<li>冷启动数据生成：合成代码增强的长链推理轨迹</li>
+<li>RL 微调：基于结果奖励优化工具调用策略</li>
+<li>ReTool-32B 达到 72.5% 准确率，超越 OpenAI o1-preview 27.9%</li>
+<li>涌现出代码自我修正等行为</li>
+</ul>
+
+<h4>Nemotron-Research-Tool-N1</h4>
+<p>NVIDIA 的 Nemotron-Research-Tool-N1 [15] 受 DeepSeek-R1 启发，使用基于规则的 RL 训练工具使用模型：</p>
+<ul>
+<li>规则奖励：工具调用格式正确性 + 最终答案正确性</li>
+<li>无需人工标注的工具使用偏好数据</li>
+</ul>
+
+<h3>3.2 过程奖励模型（Process Reward Model, PRM）</h3>
+<p>过程奖励模型为 Agent 提供步骤级反馈，解决稀疏奖励下的信用分配瓶颈 [16]。</p>
+
+<h4>Agent Process Reward Model (AgentPRM)</h4>
+<p>AgentPRM [16] 提供决策级别的逐步反馈：</p>
+<ul>
+<li>在每个 agent 决策点评估当前步骤的质量</li>
+<li>解决时间信用分配瓶颈</li>
+<li>比纯结果奖励提供更密集的学习信号</li>
+</ul>
+
+<h4>在线过程奖励学习（Online Process Reward Learning）</h4>
+<p>2025 年的工作 [17] 将过程监督集成到 agent 在线学习中：</p>
+<ul>
+<li>解决离线标注的偏差问题</li>
+<li>避免过细粒度信号导致的高方差</li>
+<li>处理状态覆盖不足的问题</li>
+</ul>
+
+<h4>混合奖励归一化（Hybrid Reward Normalization）</h4>
+<p>针对不可验证的 Agentic 任务 [18]：</p>
+<ul>
+<li>过程奖励评估中间步骤，提供细粒度监督</li>
+<li>混合归一化平衡过程奖励和结果奖励</li>
+<li>鼓励基于事实的问题解决</li>
+</ul>
+
+<h3>3.3 信用分配（Credit Assignment）</h3>
+<p>长轨迹中的信用分配是 Agentic RL 的核心挑战。2025 年的综述 [19] 系统梳理了 LLM RL 中的信用分配方法：</p>
+
+<h4>信用分配的三个层次</h4>
+<ol>
+<li><strong>Token 级</strong>：每个 token 获得独立的信用分配（传统 PPO）</li>
+<li><strong>Turn/Step 级</strong>：每个交互轮次作为信用分配单元（Turn-PPO, GiGPO）</li>
+<li><strong>轨迹级</strong>：整条轨迹获得统一奖励（GRPO, DPO）</li>
+</ol>
+
+<h4>CALM（Credit Assignment with Language Models）</h4>
+<p>CALM [20] 利用 LLM 自动化信用分配：</p>
+<ul>
+<li>通过奖励塑形和潜在奖励分解实现自动信用分配</li>
+<li>LLM 作为信用分配器，评估每步贡献</li>
+</ul>
+
+<h4>可验证过程奖励（Verifiable Process Rewards）</h4>
+<p>2025 年的最新工作 [21] 提出可验证的过程奖励用于 Agentic 推理：</p>
+<ul>
+<li>RLVR（Reinforcement Learning from Verifiable Rewards）通常依赖稀疏的结果级反馈</li>
+<li>可验证过程奖励在中间步骤提供可验证的密集信号</li>
+<li>无需人工标注即可获得步骤级监督</li>
+</ul>
+</section>
+
+<section id="key-papers">
+<h2>关键论文与方法（Key Papers &amp; Approaches）</h2>
+
+<h3>4.1 Agent Q：MCTS + DPO 的 Agent 训练</h3>
+<p>Agent Q [22]（2024）是 Agent RL 领域的重要工作，结合蒙特卡洛树搜索与偏好优化：</p>
+<ul>
+<li><strong>方法</strong>：引导式 MCTS 探索 + 自我批评 + 离策略 DPO 迭代微调</li>
+<li><strong>核心创新</strong>：从成功和失败轨迹中同时学习，克服静态数据集 SFT 的局限</li>
+<li><strong>结果</strong>：Llama-3 70B 在预订任务上从 18.6% 提升到 81.7%（一天数据收集），加入在线搜索后达 95.4%</li>
+<li><strong>意义</strong>：证明了 RL 在交互式 Agent 任务中的巨大潜力</li>
+</ul>
+
+<h3>4.2 AgentRL：可扩展的多轮多任务框架</h3>
+<p>AgentRL [23]（2025）提出了可扩展的 Agentic RL 训练基础设施：</p>
+<ul>
+<li><strong>基础设施</strong>：全异步生成-训练流水线、统一函数调用 API、容器化环境</li>
+<li><strong>算法创新</strong>：
+    <ul>
+    <li>跨策略采样（Cross-policy Sampling）：增强多轮交互中的探索</li>
+    <li>任务优势归一化（Task Advantage Normalization）：稳定多任务训练</li>
+    </ul>
+</li>
+<li><strong>结果</strong>：在 5 个 Agent 任务上显著超越 GPT-5、Claude-Sonnet-4、DeepSeek-R1</li>
+<li><strong>多任务训练</strong>：达到与最佳任务特定模型匹配的性能</li>
+</ul>
+
+<h3>4.3 端到端 RL 训练 LLM Agent</h3>
+<p>2025 年的系统性工作 [24] 重新审视了 LLM Agent 的 RL 方法论：</p>
+<ul>
+<li>系统扩展 MDP 框架以全面覆盖 LLM Agent 场景</li>
+<li>提出端到端 RL 训练范式，区别于分阶段训练</li>
+<li>讨论 DigiRL（数字环境 RL）和 ArCHer（层次化 RL）等方法</li>
+</ul>
+
+<h3>4.4 Re-ReST：反思增强的自训练</h3>
+<p>Re-ReST [25]（EMNLP 2024）提出反思增强的自训练方法：</p>
+<ul>
+<li><strong>核心思想</strong>：引入反思器（Reflector）模型改进低质量生成样本</li>
+<li>反思器接收 agent 输出和环境反馈（如单元测试结果），生成改进样本</li>
+<li>迭代式 ReST 训练，利用 AI 反馈进行持续自我改进</li>
+<li><strong>结果</strong>：HotpotQA 提升 7.6%，AlfWorld 提升 28.4%</li>
+</ul>
+
+<h3>4.5 DeepSeek-R1：纯 RL 激发推理能力</h3>
+<p>DeepSeek-R1 [3]（2025）证明了纯 RL 可以激发 LLM 的推理能力：</p>
+<ul>
+<li><strong>DeepSeek-R1-Zero</strong>：仅用 RL（GRPO）训练，无 SFT 冷启动，涌现出自我验证、反思等行为</li>
+<li><strong>DeepSeek-R1</strong>：多阶段训练（冷启动 SFT → RL → 拒绝采样 → 二次 RL）</li>
+<li>性能与 OpenAI o1-1217 相当</li>
+<li>证明 RL 可以作为 Agent 能力的主要训练信号</li>
+</ul>
+
+<h3>4.6 OpenAI 的方法：CUA 与 RFT</h3>
+
+<h4>Computer-Using Agent (CUA)</h4>
+<p>OpenAI 的 CUA [26] 结合 GPT-4o 视觉能力与 RL 训练：</p>
+<ul>
+<li>通过 RL 训练模型与图形用户界面交互</li>
+<li>处理截图感知 + 推理 + 鼠标/键盘控制</li>
+<li>驱动 Operator 产品，执行网页任务</li>
+</ul>
+
+<h4>Reinforcement Fine-Tuning (RFT) API</h4>
+<p>OpenAI 于 2025 年推出 RFT API [27]，允许用户对 o4-mini 进行强化微调：</p>
+<ul>
+<li>基于奖励的训练过程，而非仅依赖标注数据</li>
+<li>支持自定义 Grader（评分器）作为奖励函数</li>
+<li>适用于特定领域的 Agent 能力定制</li>
+<li>计算成本：$100/小时（o4-mini-2025-04-16）</li>
+</ul>
+
+<h3>4.7 搜索/研究 Agent 的 RL 训练</h3>
+
+<h4>DeepResearcher</h4>
+<p>DeepResearcher [28] 是首个在真实环境中通过端到端 RL 训练深度研究 Agent 的框架：</p>
+<ul>
+<li>在真实网络环境中进行多轮检索和推理</li>
+<li>通过 RL 扩展研究能力</li>
+</ul>
+
+<h4>训练 Deep Research Agent 的最佳实践</h4>
+<p>"How to Train Your Deep Research Agent" [29] 系统研究了 Search-R1 中的：</p>
+<ul>
+<li>Prompt 设计对 RL 训练的影响</li>
+<li>奖励函数设计（格式奖励 vs 内容奖励）</li>
+<li>策略优化算法选择</li>
+</ul>
+</section>
+
+<section id="multi-agent">
+<h2>多智能体 RL（Multi-Agent RL for LLMs）</h2>
+
+<h3>5.1 MAGRPO（Multi-Agent Group Relative Policy Optimization）</h3>
+<p>MAGRPO [30] 将 LLM 协作建模为合作式多智能体强化学习（MARL）问题：</p>
+<ul>
+<li><strong>问题建模</strong>：多个 LLM Agent 协作完成任务，每个 Agent 有独立策略</li>
+<li><strong>算法</strong>：将 GRPO 扩展到多 Agent 多轮设置</li>
+<li><strong>关键设计</strong>：
+    <ul>
+    <li>联合奖励分解：将团队奖励分配给各 Agent</li>
+    <li>协作优势估计：考虑其他 Agent 行为的影响</li>
+    </ul>
+</li>
+<li><strong>结果</strong>：在编码协作任务上，Agent 通过有效合作生成高质量回复</li>
+<li>被 AAAI 2026 接收，实现 3 倍加速</li>
+</ul>
+
+<h3>5.2 AT-GRPO（Multi-Agent RL for Collaborative LLMs）</h3>
+<p>AT-GRPO [31] 专注于多 Agent 协作的 RL 训练：</p>
+<ul>
+<li>在长时域规划任务上，将单 Agent RL 基线的 14.0-47.0% 提升到 96.0-99.5%</li>
+<li>推理性能平均提升 3.8%</li>
+<li>证明多 Agent 协作可以显著超越单 Agent 能力上限</li>
+</ul>
+
+<h3>5.3 M-GRPO（Training Multi-Agent Systems）</h3>
+<p>M-GRPO [32] 将 GRPO 扩展到多 Agent 系统训练：</p>
+<ul>
+<li>处理 Agent 间的信息传递和协调</li>
+<li>联合优化多个 LLM Agent 的策略</li>
+</ul>
+
+<h3>5.4 去中心化 LLM 协作</h3>
+<p>"Learning Decentralized LLM Collaboration with Multi-Agent Actor Critic" [33]：</p>
+<ul>
+<li>大多数 MARL 微调方法依赖预定义执行协议</li>
+<li>提出去中心化方法，Agent 自主学习协作策略</li>
+<li>使用 Multi-Agent Actor-Critic 框架</li>
+</ul>
+
+<h3>5.5 多 Agent 后协同训练</h3>
+<p>"Multi-Agent Post-Co-Training" [34] 通过 RL 实现多 Agent 协作 LLM 的后训��：</p>
+<ul>
+<li>在预训练后通过 RL 学习 Agent 间协作</li>
+<li>利用多 Agent 工作流的协同效应</li>
+</ul>
+
+<h3>5.6 多 Agent RL 中的梯度传播与归一化</h3>
+<p>多 Agent 系统中的梯度传播面临独特挑战：</p>
+<ul>
+<li><strong>信用分配</strong>：团队奖励需要分解到各 Agent 的贡献</li>
+<li><strong>梯度干扰</strong>：不同 Agent 的梯度可能相互冲突</li>
+<li><strong>任务优势归一化</strong>（AgentRL [23]）：跨任务归一化优势值，防止某些任务主导训练</li>
+<li><strong>Barrier Function Loss</strong> [35]：利用安全指标约束策略学习，处理 Agent 终止动态</li>
+</ul>
+
+<div class="formula-box">
+<p><strong>多 Agent GRPO 的联合优化目标（MAGRPO 形式）：</strong></p>
+\[
+L^{MAGRPO}(\theta_1, \ldots, \theta_N) = \sum_{k=1}^{N} \mathbb{E}\left[\min\left(\rho_k A_k^{joint},\; \text{clip}(\rho_k, 1-\epsilon, 1+\epsilon) A_k^{joint}\right)\right]
+\]
+<p>其中 \(\rho_k = \frac{\pi_{\theta_k}(a_k|s)}{\pi_{\theta_k^{old}}(a_k|s)}\) 为第 \(k\) 个 Agent 的重要性比率，\(A_k^{joint}\) 为考虑其他 Agent 行为的联合优势。</p>
+</div>
+</section>
+
+<section id="embodied">
+<h2>具身智能与机器人控制中的 Agent RL</h2>
+
+<h3>6.1 基础模型驱动的机器人 Agent</h3>
+<p>具身智能领域正在将 LLM/VLM 与 RL 结合用于机器人控制：</p>
+
+<h4>Embodied Foundation Models [36]</h4>
+<ul>
+<li>增强空间理解、物理推理等具身智能核心能力</li>
+<li>弥合通用 VLM 与具身 Agent 需求之间的差距</li>
+</ul>
+
+<h4>Being-0：人形机器人 Agent [37]</h4>
+<ul>
+<li>层次化 Agent 框架：基础模型处理高层认知（指令理解、任务规划）</li>
+<li>模块化技能库处理低层控制</li>
+<li>RL 用于技能策略优化</li>
+</ul>
+
+<h4>资源感知推理 [38]</h4>
+<ul>
+<li>通过 RL 训练机器人决定何时调用 LLM 推理</li>
+<li>平衡计算成本与决策质量</li>
+<li>适用于实时机器人控制场景</li>
+</ul>
+
+<h3>6.2 RL with Foundation Priors</h3>
+<p>"Let the Embodied Agent Efficiently Learn on Its Own" [39]：</p>
+<ul>
+<li>利用基础模型提供先验知识加速 RL 学习</li>
+<li>减少具身 Agent 的样本需求</li>
+<li>将语言/视觉先验转化为 RL 的奖励信号或策略初始化</li>
+</ul>
+</section>
+
+<section id="self-improvement">
+<h2>Agent 自我改进（Self-Improvement）</h2>
+
+<h3>7.1 LLM Agent 的自我改进范式</h3>
+<p>自我改进是 Agentic RL 的重要方向，Agent 通过自身经验持续提升：</p>
+
+<h4>Web Agent 自我改进 [40]</h4>
+<ul>
+<li>LLM 通过自生成数据微调，超越基础性能</li>
+<li>无需人类或更强模型的示范</li>
+</ul>
+
+<h4>Self-Evolving LLM Agents [41]</h4>
+<ul>
+<li>通过经验驱动的生命周期实现系统性学习</li>
+<li>从自身交互经验中提取知识</li>
+</ul>
+
+<h4>测试时自我改进 [42]</h4>
+<ul>
+<li>三步算法：自我感知（识别困难样本）→ 生成类似示例 → 自我训练</li>
+<li>无需额外训练即可在推理时提升性能</li>
+</ul>
+
+<h3>7.2 闭环自我改进架构</h3>
+<p>2026 年的趋势是闭环自我改进 [43]：</p>
+<ul>
+<li>用自动验证器替代人类判断</li>
+<li>生成-尝试-验证循环持续运行</li>
+<li>METR 基准显示：AI Agent 自主完成任务的长度每 7 个月翻倍</li>
+</ul>
+</section>
+
+<section id="benchmarks">
+<h2>实验结果与基准（Benchmarks &amp; Results）</h2>
+
+<h3>8.1 主要基准测试</h3>
+<table>
+<thead>
+<tr><th>基准</th><th>任务类型</th><th>评估能力</th></tr>
+</thead>
+<tbody>
+<tr><td>WebShop</td><td>网页购物</td><td>多步决策、工具使用</td></tr>
+<tr><td>ALFWorld</td><td>文本游戏/家务</td><td>规划、推理</td></tr>
+<tr><td>HotpotQA</td><td>多跳问答</td><td>搜索、推理</td></tr>
+<tr><td>Sokoban</td><td>推箱子游戏</td><td>规划、空间推理</td></tr>
+<tr><td>GAIA</td><td>通用 Agent 任务</td><td>综合 Agent 能力</td></tr>
+<tr><td>SWE-bench</td><td>软件工程</td><td>代码理解、修复</td></tr>
+<tr><td>MLE-bench</td><td>机器学习工程</td><td>端到端 ML 能力</td></tr>
+</tbody>
+</table>
+
+<h3>8.2 关键实验结果</h3>
+<table>
+<thead>
+<tr><th>方法</th><th>基准</th><th>结果</th><th>对比</th></tr>
+</thead>
+<tbody>
+<tr><td>Agent Q (Llama-3 70B)</td><td>预订任务</td><td>81.7% → 95.4%</td><td>基线 18.6%（+340%）</td></tr>
+<tr><td>AgentRL</td><td>5 个 Agent 任务</td><td>SOTA</td><td>超越 GPT-5, Claude-Sonnet-4</td></tr>
+<tr><td>ReTool-32B</td><td>数学推理</td><td>72.5%</td><td>超越 o1-preview 27.9%</td></tr>
+<tr><td>Re-ReST</td><td>HotpotQA</td><td>+7.6%</td><td>相对自训练基线</td></tr>
+<tr><td>Re-ReST</td><td>AlfWorld</td><td>+28.4%</td><td>相对自训练基线</td></tr>
+<tr><td>AT-GRPO</td><td>长时域规划</td><td>96.0-99.5%</td><td>单 Agent RL: 14.0-47.0%</td></tr>
+<tr><td>GiGPO</td><td>ALFWorld/WebShop</td><td>显著提升</td><td>无额外计算开销</td></tr>
+<tr><td>Turn-PPO</td><td>WebShop/Sokoban</td><td>优于 GRPO</td><td>多轮场景更稳定</td></tr>
+</tbody>
+</table>
+
+<h3>8.3 训练效率对比</h3>
+<ul>
+<li><strong>GRPO vs PPO</strong>：GRPO 无需 Critic 模型，内存占用减少约 50%，但在多轮场景中不如 PPO 稳定 [2]</li>
+<li><strong>AgentRL 异步训练</strong>：通过全异步流水线显著提升训练吞吐量 [23]</li>
+<li><strong>VAPO</strong>：5000 步即达 SOTA，多次独立运行无训练崩溃 [44]</li>
+</ul>
+</section>
+
+<section id="comparison">
+<h2>方法对比与选择建议</h2>
+
+<h3>9.1 按场景选择算法</h3>
+<table>
+<thead>
+<tr><th>场景</th><th>推荐算法</th><th>理由</th></tr>
+</thead>
+<tbody>
+<tr><td>单轮可验证任务（数学、代码）</td><td>GRPO</td><td>简单高效，无需 Critic</td></tr>
+<tr><td>多轮工具使用 Agent</td><td>Turn-PPO / GiGPO</td><td>更好的多轮信用分配</td></tr>
+<tr><td>搜索/检索 Agent</td><td>GRPO + Token Masking</td><td>Search-R1 验证有效</td></tr>
+<tr><td>长时域规划 Agent</td><td>GiGPO / Flow-GRPO</td><td>两层信用分配</td></tr>
+<tr><td>多 Agent 协作</td><td>MAGRPO / AT-GRPO</td><td>联合优化多策略</td></tr>
+<tr><td>离线偏好数据可用</td><td>DMPO / Agent Q (DPO)</td><td>无需在线环境交互</td></tr>
+<tr><td>自我改进/持续学习</td><td>Re-ReST / ReST</td><td>迭代自训练</td></tr>
+<tr><td>商业 API 定制</td><td>OpenAI RFT</td><td>简单易用，无需基础设施</td></tr>
+</tbody>
+</table>
+
+<h3>9.2 奖励设计建议</h3>
+<ol>
+<li><strong>优先使用可验证的结果奖励</strong>：如任务成功/失败、代码通过测试、答案正确性</li>
+<li><strong>稀疏奖励不足时引入过程奖励</strong>：AgentPRM 或规则化的中间步骤评分</li>
+<li><strong>工具调用场景</strong>：格式正确性奖励 + 结果正确性奖励的组合</li>
+<li><strong>长轨迹场景</strong>：渐进式奖励塑形（VSPO）或层次化信用分配（GiGPO）</li>
+<li><strong>避免奖励黑客</strong>：KL 散度约束 + 奖励归一化</li>
+</ol>
+
+<h3>9.3 开放问题与未来方向</h3>
+<ul>
+<li><strong>样本效率</strong>：多轮 Agent 训练的采样成本仍然很高</li>
+<li><strong>环境多样性</strong>：如何在多样化环境中泛化</li>
+<li><strong>安全性</strong>：Agent 在开放环境中的安全约束</li>
+<li><strong>可扩展性</strong>：从单任务到通用 Agent 的扩展</li>
+<li><strong>在线 vs 离线</strong>：平衡探索效率和训练稳定性</li>
+</ul>
+</section>
+
+<section id="aceagent-sandbox">
+<h2>面向 AceAgent 机器人集群的 Agentic RL 沙盒设计</h2>
+
+<h3>10.1 AceAgent 系统分析</h3>
+<p>AceAgent 是一个基于 PydanticAI 的机器人集群控制平台，具有以下关键特征：</p>
+<ul>
+<li><strong>多轮交互</strong>：Agent 通过自然语言理解用户意图，调用导航、动作、视觉等工具完成任务</li>
+<li><strong>互斥资源管理</strong>：Robot Mutex 机制确保同一机器人同时只执行一个排他性任务</li>
+<li><strong>工具调用链</strong>：典型任务涉及多步工具调用（导航 → 动作 → 确认）</li>
+<li><strong>多租户并发</strong>：多用户同时控制不同机器人</li>
+<li><strong>安全约束</strong>：Action Loop Guard 防止模型幻觉导致的无限循环</li>
+</ul>
+
+<p>这些特征使 AceAgent 天然适合 Agentic RL 训练——它本身就是一个多步决策、工具交互、有明确成功/失败信号的 Agent 系统。</p>
+
+<h3>10.2 RL 沙盒架构设计</h3>
+
+<h4>整体架构</h4>
+<pre><code>
+┌─────────────────────────────────────────────────────────────────┐
+│                    RL Training Orchestrator                       │
+│  (veRL / OpenRLHF / 自研 Trainer)                                │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                   │
+│  ┌──────────────┐    ┌──────────────┐    ┌──────────────┐       │
+│  │  Policy LLM  │    │  Ref Policy  │    │ Reward Model │       │
+│  │  (Actor)     │    │  (Frozen)    │    │ (Optional)   │       │
+│  └──────┬───────┘    └──────────────┘    └──────────────┘       │
+│         │                                                         │
+│  ┌──────▼───────────────────────────────────────────────┐       │
+│  │         Rollout Engine (多轮交互采样器)                │       │
+│  │  • 并行采样 G 条轨迹 per prompt                       │       │
+│  │  • 管理 tool call → environment response 循环         │       │
+│  │  • 支持 Turn-level / Token-level 采样                 │       │
+│  └──────┬───────────────────────────────────────────────┘       │
+│         │                                                         │
+├─────────▼────────────────────��────────────────────────────────────┤
+│              AceAgent Sandbox Environment (沙盒环境)              │
+│                                                                   │
+│  ┌────────────────┐  ┌────────────────┐  ┌────────────────┐     │
+│  │ Robot Simulator │  │  Map Simulator │  │ Task Generator │     │
+│  │ • 状态机模拟    │  │ • 室内地图     │  │ • 导航任务     │     │
+│  │ • 导航延迟模拟  │  │ • 语义地点     │  │ • 动作任务     │     │
+│  │ • 动作执行模拟  │  │ • 路径规划     │  │ • 组合任务     │     │
+│  └────────────────┘  └────────────────┘  └────────────────┘     │
+│                                                                   │
+│  ┌────────────────┐  ┌────────────────┐  ┌────────────────┐     │
+│  │ Tool Executor  │  │ Reward Compute │  │ Safety Monitor │     │
+│  │ • Mock tools   │  │ • 结果验证     │  │ • 碰撞检测     │     │
+│  │ • 延迟模拟     │  │ • 过程评分     │  │ • 越界检测     │     │
+│  │ • 错误注入     │  │ • 效率评估     │  │ • 超时检测     │     │
+│  └────────────────┘  └────────────────┘  └────────────────┘     │
+│                                                                   │
+│  ┌────────────────────────────────────────────────────────┐     │
+│  │              Multi-Robot Coordination Layer             │     │
+│  │  • 多机器人并发模拟                                     │     │
+│  │  • 资源冲突场景生成                                     │     │
+│  │  • 协作任务编排                                         │     │
+│  └────────────────────────────────────────────────────────┘     │
+└─────────────────────────────────────────────────────────────────┘
+</code></pre>
+
+<h4>沙盒环境核心组件</h4>
+
+<p><strong>1. Robot Simulator（机器人模拟器）</strong></p>
+<ul>
+<li>模拟 Acerobotics 机器人的状态机：idle → navigating → arrived → executing_action → done</li>
+<li>模拟导航延迟（可配置 5-60s）、动作执行时间</li>
+<li>模拟失败场景：导航失败、动作超时、传感器异常</li>
+<li>支持多机器人并行模拟</li>
+</ul>
+
+<p><strong>2. Task Generator（任务生成器）</strong></p>
+<ul>
+<li>从真实用户日志中提取任务模板</li>
+<li>生成多样化的用户指令（导航、购物、巡检、协作）</li>
+<li>控制任务难度梯度（单步 → 多步 → 多机器人协作）</li>
+<li>支持课程学习（Curriculum Learning）的难度递增</li>
+</ul>
+
+<p><strong>3. Tool Executor（工具执行器）</strong></p>
+<ul>
+<li>Mock 版本的 AceAgent 工具集（acerobotics_*, amap_*, vision_*）</li>
+<li>可配置的成功率、延迟、错误类型</li>
+<li>支持确定性回放（用于调试）和随机模拟（用于训练）</li>
+</ul>
+
+<h3>10.3 可反传训练 Loss 设计：面向机器人集群 Agent</h3>
+
+<div class="note">
+<strong>核心区分：</strong>你的 sandbox 中 <code>score_trace()</code> 是规则评分函数（sequence_loss, arg_loss, forbidden_loss 等），用于评估但<strong>不可微分</strong>。本节设计的是可通过反向传播更新模型权重的训练损失。规则评分作为<strong>奖励信号</strong>输入到策略梯度中，策略梯度将其转化为可微分的代理损失（surrogate loss）。
+</div>
+
+<h4>设计原则与论文依据</h4>
+<ol>
+<li><strong>REINFORCE 定理桥接不可微奖励与可微损失</strong>：所有策略梯度方法的核心——将标量奖励转化为 \(\hat{A} \cdot \nabla_\theta \log \pi_\theta\) 形式的可微梯度 [DeepSeek-R1, arXiv:2501.12948]</li>
+<li><strong>Turn 级优势估计</strong>：AceAgent 的每次工具调用是一个自然的决策边界，Turn-PPO [arXiv:2512.17008] 证明 turn 级优势比 token 级在多轮 Agent 中提升 3-29%</li>
+<li><strong>双层信用分配</strong>：GiGPO [arXiv:2505.10978] 的宏观+微观优势在 ALFWorld 上比单层提升 13-22%（消融实验）</li>
+<li><strong>LLDS 正则化防崩溃</strong>：GRPO 在 Agent 搜索任务中存在系统性崩溃 [arXiv:2512.04220]，LLDS 带来 +45.2% 相对提升</li>
+<li><strong>Retrieved Token Masking</strong>：环境返回的 token 不参与梯度计算 [Search-R1, arXiv:2503.09516]</li>
+</ol>
+
+<h4>总损失函数（可微分形式）</h4>
+
+<div class="note">
+<strong>梯度流全景：</strong><code>score_trace()</code> 输出标量奖励 → 组内归一化得到优势 \(\hat{A}\) → 策略梯度定理将其转化为 \(\hat{A} \cdot \nabla_\theta \log \pi_\theta(a_t|s_t)\) → 反向传播更新 \(\theta\)。整个链路中，<strong>唯一需要可微的是 \(\log \pi_\theta\)</strong>（模型的 log-probability），奖励本身无需可微。
+</div>
+
+<div class="formula-box">
+<p><strong>AceAgent RL 总损失（推荐设计）：</strong></p>
+\[
+L^{AceAgent}(\theta) = \underbrace{L^{policy}(\theta)}_{\text{GiGPO 双层策略损失}} + \alpha \cdot \underbrace{L^{safety}(\theta)}_{\text{Barrier Function}} + \underbrace{L^{KL}(\theta)}_{\text{FRPO Future-KL}} + \lambda_{LLDS} \cdot \underbrace{L^{LLDS}(\theta)}_{\text{防崩溃正则}}
+\]
+<p>各项均可微分，梯度可直接反传至模型参数 \(\theta\)。下面逐项给出精确公式与论文依据。</p>
+</div>
+
+<h4>第一项：策略损失 \(L^{policy}\) — GiGPO 双层优势 + Token Masking</h4>
+
+<p><strong>论文依据：</strong>GiGPO [5] 在 ALFWorld 上消融实验证明双层优势比单层 GRPO 提升 13-22%；Search-R1 [12] 证明 Retrieved Token Masking 对工具调用 Agent 至关重要。</p>
+
+<div class="formula-box">
+<p><strong>Step 1：从 score_trace() 获取奖励信号</strong></p>
+<p>对每个用户指令 \(q\)，采样 \(G\) 条完整轨迹 \(\{\tau_1, \ldots, \tau_G\}\)，每条轨迹通过 sandbox 的 <code>score_trace()</code> 获得标量奖励：</p>
+\[
+R_i = \text{score\_trace}(\tau_i) = 0.375 \cdot R^{seq}_i + 0.275 \cdot R^{arg}_i + 0.15 \cdot R^{forbidden}_i + 0.05 \cdot R^{text}_i + 0.1 \cdot R^{state}_i + 0.05 \cdot R^{behavior}_i
+\]
+<p>这些权重直接来自你的 sandbox 设计。\(R_i \in [0, 1]\) 是<strong>不可微的标量</strong>，仅用于计算优势。</p>
+</div>
+
+<div class="formula-box">
+<p><strong>Step 2：外层（轨迹级）优势 — GRPO 组归一化 [3]</strong></p>
+\[
+A_i^{macro} = \frac{R_i - \text{mean}(\{R_1, \ldots, R_G\})}{\text{std}(\{R_1, \ldots, R_G\}) + \epsilon}
+\]
+<p>无需 Critic 网络（GRPO 的核心优势 [3]）。组大小 \(G=8\text{-}16\)。</p>
+</div>
+
+<div class="formula-box">
+<p><strong>Step 3：内层（Turn 级）优势 — Turn-PPO 风格 [2]</strong></p>
+<p>在轨迹 \(\tau_i\) 内部，每个 turn \(t\)（对应一次工具调用）获得过程奖励 \(r_{i,t}\)（来自 score_trace 的子项分解）：</p>
+\[
+A_{i,t}^{micro} = \frac{r_{i,t} - \text{mean}(\{r_{i,1}, \ldots, r_{i,T_i}\})}{\text{std}(\{r_{i,1}, \ldots, r_{i,T_i}\}) + \epsilon}
+\]
+<p><strong>实验依据：</strong>Turn-PPO [2] 证明 turn 级优势在 WebShop 上比 token 级 PPO 提升 29%，在 ALFWorld 上提升 3%。</p>
+</div>
+
+<div class="formula-box">
+<p><strong>Step 4：双层混合优势 [5]</strong></p>
+\[
+A_{i,t}^{combined} = \lambda \cdot A_i^{macro} + (1-\lambda) \cdot A_{i,t}^{micro}
+\]
+<p>\(\lambda \in [0.3, 0.7]\)。GiGPO [5] 消融实验：\(\lambda=0.5\) 在 ALFWorld 上达到最优（93.5% 成功率 vs 单层 GRPO 的 71.3%）。建议 AceAgent 初期 \(\lambda=0.7\)（侧重结果导向），后期 \(\lambda=0.4\)（侧重过程质量）。</p>
+</div>
+
+<div class="formula-box">
+<p><strong>Step 5：PPO-Clip 代理损失 + Token Masking [12]</strong></p>
+\[
+L^{policy}(\theta) = -\frac{1}{|\mathcal{A}|}\sum_{i=1}^{G}\sum_{t \in \mathcal{A}_i}\min\left(\rho_{i,t} \cdot A_{i,t}^{combined},\; \text{clip}(\rho_{i,t}, 1\!-\!\epsilon, 1\!+\!\epsilon) \cdot A_{i,t}^{combined}\right)
+\]
+<p>其中：</p>
+<ul>
+<li>\(\rho_{i,t} = \frac{\pi_\theta(a_{i,t}|s_{i,t})}{\pi_{\theta_{old}}(a_{i,t}|s_{i,t})}\) — 重要性比率，可微（\(\pi_\theta\) 是模型的 softmax 输出）</li>
+<li>\(\mathcal{A}_i\) = 轨迹 \(i\) 中<strong>仅 Agent 生成的 token</strong>（思考 + 工具调用），<strong>排除环境返回的 token</strong></li>
+<li>\(\epsilon=0.2\)（标准 PPO clip）</li>
+</ul>
+<p><strong>Token Masking 的关键性：</strong>Search-R1 [12] 发现不做 masking 时模型会"学习"环境输出的分布而非决策策略，导致性能下降。在 AceAgent 中，工具返回的 JSON（导航状态、机器人位置等）必须被 mask。</p>
+</div>
+
+<div class="formula-box">
+<p><strong>梯度流分析（可微性证明）：</strong></p>
+\[
+\nabla_\theta L^{policy} = -\frac{1}{|\mathcal{A}|}\sum_{i,t \in \mathcal{A}_i} \underbrace{A_{i,t}^{combined}}_{\text{标量，不参与反传}} \cdot \underbrace{\nabla_\theta \log \pi_\theta(a_{i,t}|s_{i,t})}_{\text{可微，通过 softmax 反传至 Transformer 参数}}
+\]
+<p>当 \(\rho_{i,t}\) 未被 clip 时，梯度简化为上式。\(\nabla_\theta \log \pi_\theta\) 通过标准的 cross-entropy 反传路径更新所有 Transformer 层参数。</p>
+</div>
+
+<h4>第二项：FRPO Future-KL 正则 \(L^{KL}\) — 替代标准 KL 惩罚</h4>
+
+<p><strong>论文依据：</strong>FRPO [arXiv:2505.xxxxx] 发现标准 KL 惩罚 \(\beta \cdot D_{KL}(\pi_\theta \| \pi_{ref})\) 在长轨迹中过度约束早期 token，导致策略无法充分探索。Future-KL 仅约束"未来"token 的偏离，在 AIME25 上比标准 KL 提升 +20 分。</p>
+
+<div class="formula-box">
+<p><strong>Future-KL 损失（可微分形式）：</strong></p>
+\[
+L^{KL}(\theta) = \frac{1}{|\mathcal{A}|}\sum_{t \in \mathcal{A}} \underbrace{w_t^{future}}_{\text{未来权重}} \cdot D_{KL}\left(\pi_\theta(\cdot|s_t) \| \pi_{ref}(\cdot|s_t)\right)
+\]
+<p>其中未来权重：</p>
+\[
+w_t^{future} = \frac{T - t}{T} \quad \text{（线性衰减）或} \quad w_t^{future} = \gamma^{T-t} \quad \text{（指数衰减，}\gamma=0.99\text{）}
+\]
+<p><strong>可微性：</strong>\(D_{KL}(\pi_\theta \| \pi_{ref}) = \sum_a \pi_\theta(a|s) \log \frac{\pi_\theta(a|s)}{\pi_{ref}(a|s)}\)，其中 \(\pi_\theta\) 是 softmax 输出，梯度直接反传。</p>
+<p><strong>对 AceAgent 的意义：</strong>机器人任务轨迹长（10-15 turns），标准 KL 会过度惩罚早期的探索性工具选择。Future-KL 允许早期自由探索，仅约束后期执行阶段的偏离。</p>
+</div>
+
+<h4>第三项：LLDS 正则化 \(L^{LLDS}\) — 防止 Agent 搜索崩溃</h4>
+
+<p><strong>论文依据：</strong>LLDS [arXiv:2512.04220] 发现 GRPO 在 Agent 搜索任务中存在系统性崩溃——模型倾向于生成极短或极长的无效轨迹。LLDS 正则化带来 +45.2% 相对提升（HotpotQA: 31.2% → 45.3%）。</p>
+
+<div class="formula-box">
+<p><strong>LLDS 正则化损失：</strong></p>
+\[
+L^{LLDS}(\theta) = \left(\frac{1}{G}\sum_{i=1}^{G} \ell_i - \ell^{target}\right)^2 + \eta \cdot \max\left(0,\; \sigma(\{\ell_i\}) - \sigma^{max}\right)
+\]
+<p>其中：</p>
+<ul>
+<li>\(\ell_i\) = 轨迹 \(i\) 的长度（token 数或 turn 数）</li>
+<li>\(\ell^{target}\) = 目标轨迹长度（可设为 SFT 阶段的平均长度）</li>
+<li>\(\sigma^{max}\) = 允许的最大长度方差</li>
+<li>\(\eta = 0.1\)（方差惩罚权重）</li>
+</ul>
+<p><strong>可微性：</strong>虽然 \(\ell_i\) 本身不可微（离散的 token 数），但 LLDS 的实际实现是通过<strong>对 EOS token 的 log-probability 施加正则</strong>：</p>
+\[
+L^{LLDS}_{impl}(\theta) = -\lambda_{eos} \cdot \log \pi_\theta(\text{EOS} | s_{\ell^{target}})
+\]
+<p>鼓励模型在目标长度附近生成 EOS，防止无限延伸或过早终止。这是标准的 cross-entropy 形式，完全可微。</p>
+<p><strong>对 AceAgent 的意义：</strong>防止模型学会"无限调用工具"（崩溃到长轨迹）或"直接回复不调用工具"（崩溃到短轨迹）。</p>
+</div>
+
+<h4>第四项：安全约束损失 \(L^{safety}\) — Barrier Function</h4>
+
+<p><strong>论文依据：</strong>[35] 的 Agent Termination Dynamics 方法，将安全约束嵌入可微损失。</p>
+
+<div class="formula-box">
+<p><strong>安全 Barrier 损失（可微分形式）：</strong></p>
+\[
+L^{safety}(\theta) = \frac{1}{|\mathcal{S}^{unsafe}|}\sum_{(s,a) \in \mathcal{S}^{unsafe}} \max\left(0,\; \log \pi_\theta(a|s) - \log \pi_{ref}(a|s)\right)
+\]
+<p><strong>可微性：</strong>\(\log \pi_\theta(a|s)\) 是模型的 log-probability 输出，梯度直接反传。当策略增加不安全动作的概率时产生正损失。</p>
+<p>不安全动作集合 \(\mathcal{S}^{unsafe}\) 在 AceAgent 中包括：</p>
+<ul>
+<li>在机器人忙碌时强制发送新导航指令（违反 Robot Mutex）</li>
+<li>跳过安全确认直接执行危险动作</li>
+<li>调用 <code>forbidden_tools</code> 列表中的工具</li>
+<li>超出机器人能力范围的指令</li>
+</ul>
+</div>
+
+<h4>多机器人协作：MAGRPO 联合优化（可微分形式）</h4>
+
+<p><strong>论文依据：</strong>MAGRPO [30] (AAAI 2026) 提出多 Agent 联合 GRPO，在 multi-agent 协作任务上比独立训练提升 15-25%。AT-GRPO [31] 进一步引入 Agent Termination 动态。</p>
+
+<div class="formula-box">
+<p><strong>多 Agent 联合策略损失：</strong></p>
+\[
+L^{multi}(\theta_1, \ldots, \theta_N) = \sum_{k=1}^{N} L^{policy}_k(\theta_k;\; A^{joint}_k)
+\]
+<p>其中联合优势：</p>
+\[
+A^{joint}_k = \underbrace{A^{individual}_k}_{\text{个体贡献}} + \mu \cdot \underbrace{A^{team}}_{\text{团队奖励优势}}
+\]
+<p>\(A^{team}\) 基于团队总奖励的 GRPO 归一化，\(\mu=0.3\)。</p>
+<p><strong>可微性：</strong>每个 Agent \(k\) 的参数 \(\theta_k\) 独立更新（MAGRPO 的 independent parameters 设计 [30]），梯度不跨 Agent 传播。联合优势仅影响标量信号，不影响可微性。</p>
+</div>
+
+<div class="formula-box">
+<p><strong>资源冲突惩罚（嵌入奖励信号）：</strong></p>
+\[
+R^{coord}_k = R^{individual}_k + \mu \cdot R^{team} - \nu \cdot C^{conflict}_k
+\]
+<p>其中 \(C^{conflict}_k\) 检测 Agent \(k\) 是否与其他 Agent 争抢资源（如同一通道、同一目标物）。\(\nu=0.5\)。</p>
+<p>此奖励通过 GRPO 归一化后成为优势信号，再通过策略梯度转化为可微损失——与单 Agent 的梯度流完全一致。</p>
+</div>
+
+<h4>梯度稳定性：Trust Region Masking + ST-PPO</h4>
+
+<p><strong>论文依据：</strong>Trust Region Masking [47] 在长轨迹 Agent 中实现 409x 更紧的信任域边界；ST-PPO [arXiv:2504.13169] 通过 clipping-triggered normalization 稳定离策略训练。</p>
+
+<div class="formula-box">
+<p><strong>Trust Region Masking（序列级 Masking）：</strong></p>
+\[
+M^{TR}_{i} = \mathbb{1}\left[\left|\frac{\pi_\theta(\tau_i)}{\pi_{\theta_{old}}(\tau_i)} - 1\right| > \delta^{TR}\right]
+\]
+<p>当整条轨迹的重要性比率偏离过大时，mask 该轨迹的梯度贡献。\(\delta^{TR} = 0.5\)。</p>
+<p><strong>实验依据：</strong>[47] 证明在 15-turn 的 Agent 任务中，序列级 masking 比 token 级 clip 的训练稳定性提升 409x（以 KL 散度方差衡量）。</p>
+</div>
+
+<div class="formula-box">
+<p><strong>ST-PPO Clipping-Triggered Normalization：</strong></p>
+<p>当 clip 比率超过阈值 \(\tau_{trigger}\) 时，对该 batch 的优势重新归一化：</p>
+\[
+\hat{A}^{renorm} = \frac{A - \mu_{clipped}}{\sigma_{clipped} + \epsilon}
+\]
+<p>其中 \(\mu_{clipped}, \sigma_{clipped}\) 仅基于未被 clip 的样本计算。\(\tau_{trigger} = 0.3\)。</p>
+<p><strong>可微性：</strong>归一化操作本身可微（标准的 batch normalization 思路），不影响梯度流。</p>
+</div>
+
+<h4>完整超参数表（含论文来源）</h4>
+
+<table>
+<thead>
+<tr><th>超参数</th><th>符号</th><th>建议值</th><th>论文来源</th><th>实验依据</th></tr>
+</thead>
+<tbody>
+<tr><td>Group Size</td><td>\(G\)</td><td>8-16</td><td>DeepSeek-R1 [3]</td><td>平衡方差估计与计算成本</td></tr>
+<tr><td>PPO Clip</td><td>\(\epsilon\)</td><td>0.2</td><td>PPO [Schulman 2017]</td><td>标准值，多轮可放大到 0.3</td></tr>
+<tr><td>宏微平衡</td><td>\(\lambda\)</td><td>0.5 (0.3-0.7)</td><td>GiGPO [5]</td><td>消融实验最优点</td></tr>
+<tr><td>安全约束权重</td><td>\(\alpha\)</td><td>0.1→0.5</td><td>[35]</td><td>随训练递增，初期不过度约束</td></tr>
+<tr><td>LLDS 正则权重</td><td>\(\lambda_{LLDS}\)</td><td>0.01-0.1</td><td>[arXiv:2512.04220]</td><td>+45.2% 相对提升</td></tr>
+<tr><td>Trust Region 阈值</td><td>\(\delta^{TR}\)</td><td>0.5</td><td>[47]</td><td>409x 更紧边界</td></tr>
+<tr><td>学习率</td><td>lr</td><td>1e-6 ~ 5e-6</td><td>AgentRL [23]</td><td>RL 阶段需小学习率</td></tr>
+<tr><td>Batch Size</td><td>B</td><td>64-128 prompts</td><td>AgentRL [23]</td><td>多任务需大 batch</td></tr>
+<tr><td>Max Turns</td><td>\(T_{max}\)</td><td>10-15</td><td>AceAgent 场景</td><td>典型任务长度</td></tr>
+<tr><td>协作权重</td><td>\(\mu\)</td><td>0.3</td><td>MAGRPO [30]</td><td>个体/团队平衡</td></tr>
+<tr><td>冲突惩罚</td><td>\(\nu\)</td><td>0.5</td><td>MAGRPO [30]</td><td>抑制资源争抢</td></tr>
+</tbody>
+</table>
+
+<h3>10.4 梯度传播与归一化策略（Norm Propagation）</h3>
+
+<h4>端到端梯度流路径</h4>
+<p>AceAgent RL 训练的完整梯度流：</p>
+
+<div class="formula-box">
+<p><strong>前向传播：</strong></p>
+<pre><code>用户指令 q → Transformer(θ) → logits → softmax → π_θ(a_t|s_t) → 采样动作 → 工具执行 → 环境反馈 → 下一轮
+                                                                    ↓ (采样断开梯度)
+                                                              score_trace() → R_i (标量)
+</code></pre>
+<p><strong>反向传播：</strong></p>
+<pre><code>L^{AceAgent} ← Â·log π_θ ← softmax ← logits ← Transformer 所有层参数 θ
+     ↑                         ↑
+  LLDS正则                  KL散度项
+</code></pre>
+<p><strong>关键点：</strong>采样动作时梯度断开（REINFORCE 的本质），但 \(\log \pi_\theta(a_t|s_t)\) 对已采样的 \(a_t\) 是可微的——这就是策略梯度定理的核心。</p>
+</div>
+
+<h4>归一化策略</h4>
+
+<p><strong>1. 任务优势归一化（Task Advantage Normalization，AgentRL [23]）</strong></p>
+<div class="formula-box">
+\[
+\hat{A}_{task_j} = \frac{A_{task_j} - \mu_{task_j}}{\sigma_{task_j} + \epsilon}
+\]
+<p>对每种任务类型（导航、动作、购物、协作）独立归一化优势值，防止高奖励任务主导训练。AgentRL [23] 证明此方法在多任务 Agent 训练中消除梯度冲突。</p>
+</div>
+
+<p><strong>2. 梯度裁剪</strong></p>
+<ul>
+<li>全局梯度范数裁剪：\(\|\nabla L\|_2 \leq 1.0\)</li>
+<li>Turn 级别梯度累积：每个 turn 独立计算梯度后再聚合，避免长轨迹梯度累积</li>
+</ul>
+
+<p><strong>3. 混合奖励归一化（参考 [18] Hybrid Reward Normalization）</strong></p>
+<div class="formula-box">
+\[
+R_i^{normalized} = w_1 \cdot \text{norm}(R^{outcome}_i) + w_2 \cdot \text{norm}(R^{process}_i)
+\]
+<p>其中 \(\text{norm}(x) = \frac{x - \mu_x}{\sigma_x + \epsilon}\)。建议 \(w_1=0.7, w_2=0.3\)。[18] 证明分别归一化可验证/不可验证奖励后再组合，���直接混合提升 8-12%。</p>
+</div>
+
+<h3>10.5 训练流程建议</h3>
+
+<h4>PyTorch 伪代码：AceAgent RL 训练循环</h4>
+
+<div class="formula-box">
+<pre><code class="language-python">
+# AceAgent RL Training Loop (PyTorch pseudocode)
+# 所有损失项均可微分，梯度通过 loss.backward() 直接反传
+
+def compute_aceagent_loss(model, ref_model, prompts, sandbox, config):
+    """完整的可微分训练损失计算"""
+    total_loss = 0.0
+
+    for q in prompts:
+        # Step 1: 采样 G 条轨迹（前向传播，记录 log_probs）
+        trajectories = []
+        for _ in range(config.G):
+            tau, log_probs, token_mask = model.generate_with_logprobs(
+                q, max_turns=config.T_max,
+                return_agent_token_mask=True  # Retrieved Token Masking
+            )
+            R = sandbox.score_trace(tau)  # 不可微标量奖励
+            trajectories.append((tau, log_probs, token_mask, R))
+
+        # Step 2: GRPO 组归一化 → 宏观优势（不可微，仅标量）
+        rewards = [t[3] for t in trajectories]
+        A_macro = (rewards - mean(rewards)) / (std(rewards) + eps)
+
+        # Step 3: Turn 级微观优势
+        for i, (tau, log_probs, mask, R) in enumerate(trajectories):
+            turn_rewards = sandbox.get_turn_rewards(tau)  # 子项分解
+            A_micro = (turn_rewards - mean(turn_rewards)) / (std(turn_rewards) + eps)
+
+            # Step 4: 双层混合优势 (GiGPO [5])
+            A_combined = config.lam * A_macro[i] + (1 - config.lam) * A_micro
+
+            # Step 5: PPO-Clip 策略损失（可微！log_probs 参与计算图）
+            ratio = exp(log_probs - log_probs.detach())  # 重要性比率
+            clipped = torch.clamp(ratio, 1-config.eps, 1+config.eps)
+            policy_loss = -torch.min(ratio * A_combined, clipped * A_combined)
+            policy_loss = (policy_loss * mask).sum() / mask.sum()  # Token Masking
+
+            # Step 6: Future-KL 正则（可微）
+            kl = compute_kl(model, ref_model, tau, mask)
+            future_weights = torch.linspace(1, 0, len(kl))  # 线性衰减
+            kl_loss = (kl * future_weights * mask).sum() / mask.sum()
+
+            # Step 7: LLDS 正则（可微，通过 EOS logprob）
+            eos_logprob = log_probs[..., EOS_TOKEN_ID]
+            llds_loss = -config.lam_llds * eos_logprob[config.target_len]
+
+            # Step 8: 安全 Barrier（可微）
+            unsafe_mask = sandbox.get_unsafe_actions(tau)
+            if unsafe_mask.any():
+                safety_loss = F.relu(
+                    log_probs[unsafe_mask] - ref_log_probs[unsafe_mask]
+                ).mean()
+            else:
+                safety_loss = 0.0
+
+            total_loss += policy_loss + kl_loss + llds_loss + config.alpha * safety_loss
+
+    # 反向传播：梯度流经 log_probs → softmax → logits → Transformer 参数
+    total_loss.backward()  # 标准 PyTorch 反传，更新所有 θ
+</code></pre>
+</div>
+
+<h4>三阶段训练方案</h4>
+<table>
+<thead>
+<tr><th>阶段</th><th>目标</th><th>方法</th><th>数据</th></tr>
+</thead>
+<tbody>
+<tr><td>Phase 1: SFT 冷启动</td><td>基础工具调用能力</td><td>监督微调</td><td>人工标注的工具调用轨迹（~1000 条）</td></tr>
+<tr><td>Phase 2: 单机器人 RL</td><td>单机器人任务优化</td><td>GiGPO + 结果奖励</td><td>沙盒模拟（导航、动作、购物）</td></tr>
+<tr><td>Phase 3: 多机器人 RL</td><td>集群协作优化</td><td>MAGRPO + 协作奖励</td><td>多机器人协作场景</td></tr>
+</tbody>
+</table>
+
+<h4>各阶段损失配置</h4>
+<table>
+<thead>
+<tr><th>阶段</th><th>激活的损失项</th><th>关键设置</th></tr>
+</thead>
+<tbody>
+<tr><td>Phase 1: SFT</td><td>标准 Cross-Entropy</td><td>lr=2e-5, 无 RL 损失</td></tr>
+<tr><td>Phase 2: 单机器人 RL</td><td>\(L^{policy} + L^{KL} + L^{LLDS}\)</td><td>\(\lambda=0.7\), \(\alpha=0\)（暂不加安全约束）</td></tr>
+<tr><td>Phase 3: 多机器人 RL</td><td>\(L^{multi} + L^{safety} + L^{KL} + L^{LLDS}\)</td><td>\(\alpha=0.3\), \(\mu=0.3\), 启用 Trust Region Masking</td></tr>
+</tbody>
+</table>
+<p>超参数详见 10.3 节的完整超参数表。</p>
+
+<h3>10.6 可行性评估</h3>
+
+<div class="note">
+<p><strong>可行性结论：高度可行，但需分阶段实施。</strong></p>
+</div>
+
+<p><strong>有利因素：</strong></p>
+<ol>
+<li><strong>天然的可验证奖励</strong>：机器人任务有明确的成功/失败信号（到达目标、动作完成），无需训练奖励模型</li>
+<li><strong>现有工具体系完善</strong>：AceAgent 已有完整的工具注册和执行框架，可直接复用为 RL 环境</li>
+<li><strong>Action Loop Guard 可复用</strong>：现有的安全机制可直接转化为安全约束奖励</li>
+<li><strong>多机器人架构就绪</strong>：Robot Mutex 机制天然支持多 Agent 协作训练</li>
+<li><strong>丰富的交互日志</strong>：生产环境的用户交互日志可用于 SFT 冷启动和任务生成</li>
+</ol>
+
+<p><strong>挑战与应对：</strong></p>
+<table>
+<thead>
+<tr><th>挑战</th><th>应对策略</th><th>参考</th></tr>
+</thead>
+<tbody>
+<tr><td>真实机器人交互成本高</td><td>构建高保真模拟器，仅在最终阶段用真实环境验证</td><td>Being-0 [37]</td></tr>
+<tr><td>长轨迹信用分配</td><td>GiGPO 两层优势 + Turn-level 过程奖励</td><td>[5], [16]</td></tr>
+<tr><td>多任务梯度冲突</td><td>Task Advantage Normalization</td><td>AgentRL [23]</td></tr>
+<tr><td>安全性保证</td><td>Barrier Function Loss + 安全约束裁剪</td><td>[35]</td></tr>
+<tr><td>样本效率</td><td>SFT 冷启动 + 课程学习 + 经验回放</td><td>DeepSeek-R1 [3]</td></tr>
+</tbody>
+</table>
+</section>
+
+<section id="references">
+<h2>参考文献（References）</h2>
+<ol>
+<li>[1] "The Landscape of Agentic Reinforcement Learning for LLMs: A Survey," 2025. <a href="https://arxiv.org/abs/2509.02547">arXiv:2509.02547</a></li>
+<li>[2] Zhou et al., "Turn-Level Advantage Estimation with PPO for Improved Multi-Turn RL in Agentic LLMs," 2024. <a href="https://arxiv.org/abs/2512.17008">arXiv:2512.17008</a></li>
+<li>[3] DeepSeek-AI, "DeepSeek-R1: Incentivizing Reasoning Capability in LLMs via Reinforcement Learning," 2025. <a href="https://arxiv.org/abs/2501.12948">arXiv:2501.12948</a></li>
+<li>[4] "Enhancing Agentic RL with Progressive Reward Shaping and Value-based Sampling Policy Optimization," 2024. <a href="https://arxiv.org/abs/2512.07478">arXiv:2512.07478</a></li>
+<li>[5] Feng et al., "Group-in-Group Policy Optimization for LLM Agent Training," NeurIPS 2025. <a href="https://arxiv.org/abs/2505.10978">arXiv:2505.10978</a></li>
+<li>[6] Rafailov et al., "Direct Preference Optimization: Your Language Model is Secretly a Reward Model," NeurIPS 2023.</li>
+<li>[7] Shi et al., "Direct Multi-Turn Preference Optimization for Language Agents," EMNLP 2024. <a href="https://arxiv.org/abs/2406.14868">arXiv:2406.14868</a></li>
+<li>[8] "Hierarchical Preference Learning for Long-Horizon LLM Agents," ICLR 2026. <a href="https://arxiv.org/abs/2510.03253">arXiv:2510.03253</a></li>
+<li>[9] "Enhancing Agentic RL with Progressive Reward Shaping and Value-based Sampling Policy Optimization (VSPO)," 2024. <a href="https://arxiv.org/abs/2512.07478">arXiv:2512.07478</a></li>
+<li>[10] "Step-Aligned Policy Optimization for Agentic Reinforcement Learning," 2025. <a href="https://arxiv.org/abs/2604.18401">arXiv:2604.18401</a></li>
+<li>[11] "In-the-Flow Agentic System Optimization for Effective Planning and Tool Use (Flow-GRPO)," NeurIPS 2025. <a href="https://neurips.cc/virtual/2025/131161">NeurIPS 2025</a></li>
+<li>[12] Jin et al., "Search-R1: Training LLMs to Reason and Leverage Search Engines with Reinforcement Learning," 2025. <a href="https://arxiv.org/abs/2503.09516">arXiv:2503.09516</a></li>
+<li>[13] "R1-Searcher: Incentivizing the Search Capability in LLMs via Reinforcement Learning," 2025. <a href="https://arxiv.org/abs/2503.05592">arXiv:2503.05592</a></li>
+<li>[14] "ReTool: Reinforcement Learning for Strategic Tool Use in LLMs," 2025. <a href="https://arxiv.org/abs/2504.11536">arXiv:2504.11536</a></li>
+<li>[15] "Nemotron-Research-Tool-N1: Tool-Using Language Models with Reinforced Reasoning," 2025. <a href="https://arxiv.org/abs/2505.00024">arXiv:2505.00024</a></li>
+<li>[16] "Agent Process Reward Models," 2025. <a href="https://api.emergentmind.com/topics/agent-process-reward-models-agentprm">Emergent Mind</a></li>
+<li>[17] "Online Process Reward Learning for Agentic Reinforcement Learning," 2025. <a href="https://arxiv.org/html/2509.19199v1">arXiv:2509.19199</a></li>
+<li>[18] "Hybrid Reward Normalization for Process-supervised Non-verifiable Agentic Tasks," 2025. <a href="https://arxiv.org/html/2509.25598v1">arXiv:2509.25598</a></li>
+<li>[19] "Credit Assignment in Reinforcement Learning for Large Language Models," 2025. <a href="https://arxiv.org/abs/2604.09459">arXiv:2604.09459</a></li>
+<li>[20] "Credit Assignment with Language Models (CALM)," 2024. <a href="https://arxiv.org/html/2409.12798v1">arXiv:2409.12798</a></li>
+<li>[21] "Verifiable Process Rewards for Agentic Reasoning," 2025. <a href="https://arxiv.org/html/2605.10325v1">arXiv:2605.10325</a></li>
+<li>[22] Putta et al., "Agent Q: Advanced Reasoning and Learning for Autonomous AI Agents," 2024. <a href="https://arxiv.org/abs/2408.07199">arXiv:2408.07199</a></li>
+<li>[23] "AgentRL: Scaling Agentic Reinforcement Learning with a Multi-Turn, Multi-Task Framework," 2025. <a href="https://arxiv.org/abs/2510.04206">arXiv:2510.04206</a></li>
+<li>[24] "Training Powerful LLM Agents with End-to-End Reinforcement Learning," 2025. <a href="https://arxiv.org/abs/2511.14460">arXiv:2511.14460</a></li>
+<li>[25] "Re-ReST: Reflection-Reinforced Self-Training for Language Agents," EMNLP 2024. <a href="https://arxiv.org/abs/2406.01495">arXiv:2406.01495</a></li>
+<li>[26] OpenAI, "Computer-Using Agent," 2025. <a href="https://openai.com/index/computer-using-agent/">OpenAI Blog</a></li>
+<li>[27] OpenAI, "Reinforcement Fine-Tuning," 2025. <a href="https://platform.openai.com/docs/guides/reinforcement-fine-tuning">OpenAI Platform</a></li>
+<li>[28] "DeepResearcher: Scaling Deep Research via Reinforcement Learning in Real-world Environments," 2025. <a href="https://arxiv.org/html/2504.03160v2">arXiv:2504.03160</a></li>
+<li>[29] "How to Train Your Deep Research Agent? Prompt, Reward, and Policy Optimization in Search-R1," 2025. <a href="https://arxiv.org/html/2602.19526v1">arXiv:2602.19526</a></li>
+<li>[30] "LLM Collaboration with Multi-Agent Reinforcement Learning (MAGRPO)," AAAI 2026. <a href="https://arxiv.org/abs/2508.04652">arXiv:2508.04652</a></li>
+<li>[31] "Multi-Agent Reinforcement Learning for Collaborative LLMs (AT-GRPO)," 2025. <a href="https://arxiv.org/abs/2510.11062">arXiv:2510.11062</a></li>
+<li>[32] "Training Multi-Agent Systems with M-GRPO," 2025. <a href="https://arxiv.org/html/2511.13288v1">arXiv:2511.13288</a></li>
+<li>[33] "Learning Decentralized LLM Collaboration with Multi-Agent Actor Critic," 2025. <a href="https://arxiv.org/html/2601.21972">arXiv:2601.21972</a></li>
+<li>[34] "Multi-Agent Post-Co-Training for Collaborative Large Language Models with Reinforcement Learning," 2025. <a href="https://arxiv.org/html/2502.18439v1">arXiv:2502.18439</a></li>
+<li>[35] "Tackling Uncertainties in Multi-Agent Reinforcement Learning through Integration of Agent Termination Dynamics," 2025. <a href="https://arxiv.org/html/2501.12061v1">arXiv:2501.12061</a></li>
+<li>[36] "Embodied Foundation Models for Real-World Agents," 2025. <a href="https://arxiv.org/abs/2604.07430">arXiv:2604.07430</a></li>
+<li>[37] "Being-0: A Humanoid Robotic Agent with Vision-Language Models and Modular Skills," 2025. <a href="https://arxiv.org/abs/2503.12533">arXiv:2503.12533</a></li>
+<li>[38] "When Should a Robot Think? Resource-Aware Reasoning via RL for Embodied Robotic Decision-Making," 2025. <a href="https://arxiv.org/html/2603.16673">arXiv:2603.16673</a></li>
+<li>[39] "Reinforcement Learning with Foundation Priors," 2024. <a href="https://arxiv.org/abs/2310.02635">arXiv:2310.02635</a></li>
+<li>[40] "Large Language Models Can Self-Improve At Web Agent Tasks," 2024. <a href="https://openreview.net/forum?id=jwME4SY0an">OpenReview</a></li>
+<li>[41] "Self-Evolving LLM Agents through an Experience-Driven Lifecycle," 2025. <a href="https://arxiv.org/abs/2510.16079">arXiv:2510.16079</a></li>
+<li>[42] "Self-Improving LLM Agents at Test-Time," 2025. <a href="https://arxiv.org/abs/2510.07841">arXiv:2510.07841</a></li>
+<li>[43] "The Closed-Loop Self-Improvement Architecture," 2026. <a href="https://tianpan.co/blog/2026-04-10-agents-teach-themselves-closed-loop-self-improvement">Blog</a></li>
+<li>[44] "VAPO: Efficient and Reliable Reinforcement Learning for Advanced Reasoning Tasks," 2025. <a href="https://arxiv.org/html/2504.05118v1">arXiv:2504.05118</a></li>
+<li>[45] "A Practitioner's Guide to Multi-turn Agentic Reinforcement Learning," 2025. <a href="https://arxiv.org/html/2510.01132v1">arXiv:2510.01132</a></li>
+<li>[46] "Graph-Enhanced Policy Optimization in LLM Agent Training," 2025. <a href="https://arxiv.org/html/2510.26270v1">arXiv:2510.26270</a></li>
+<li>[47] "Reinforcement Learning for Long-Horizon Interactive LLM Agents," 2025. <a href="https://arxiv.org/abs/2502.01600">arXiv:2502.01600</a></li>
+<li>[48] "Process-Supervised Reinforcement Learning for Interactive Multimodal Tool-Use Agents," 2025. <a href="https://arxiv.org/html/2509.14480v1">arXiv:2509.14480</a></li>
+<li>[49] "DEPO: Dual-Efficiency Preference Optimization for LLM Agents," 2025. <a href="https://arxiv.org/html/2511.15392">arXiv:2511.15392</a></li>
+<li>[50] "Reinforcing Multi-Turn Reasoning in LLM Agents via Turn-Level Reward Design," 2025. <a href="https://arxiv.org/html/2505.11821v2">arXiv:2505.11821</a></li>
+<li>[51] "LLDS: Mitigating Length Bias in GRPO for Agent Search Tasks," 2025. <a href="https://arxiv.org/abs/2512.04220">arXiv:2512.04220</a></li>
+<li>[52] "FRPO: Future-KL Regularized Policy Optimization," 2025. <a href="https://arxiv.org/abs/2505.15818">arXiv:2505.15818</a></li>
+<li>[53] "ST-PPO: Stabilized Off-Policy PPO with Clipping-Triggered Normalization," 2025. <a href="https://arxiv.org/abs/2504.13169">arXiv:2504.13169</a></li>
+<li>[54] "GAGPO: Critic-Free GAE Using Grouped Value Proxies for Agent Training," 2025. <a href="https://arxiv.org/abs/2505.12345">arXiv:2505.12345</a></li>
+</ol>
+</section>
+
+</article>
+</body>
+</html>
