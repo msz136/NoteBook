@@ -1298,8 +1298,314 @@ Qwen2.5 LLM 主干
 </div>
 </section>
 
+<section id="deployment">
+<h2>八、实际落地与部署评估证据</h2>
+<p>本节聚焦项目中<strong>真实落地的工程实现</strong>，而非开源参考代码。以下证据均来自仓库中的部署脚本、评估结果、ROS2 节点、ONNX 导出配置和真机数据。</p>
+
+<h3>8.1 SenseBot 机器人系统：完整 ROS2 生产栈</h3>
+<p><span class="src-tag">19_sensebot_robotics_system/congq_sensebot/</span></p>
+
+<h4>落地证据：ROS2 生产级启动文件</h4>
+<p>仓库中存在完整的 ROS2 launch 文件，将感知、定位、规划、控制四个节点编排为一个可部署的机器人系统：</p>
+<pre><code class="language-python"># sensebot.launch.py — 生产级主启动文件
+# 路径: congq_sensebot/launch/sensebot.launch.py
+def generate_launch_description():
+    return LaunchDescription([
+        Node(package='statemachine',  executable='statemachine_node'),  # 任务状态机
+        Node(package='perception',    executable='perception_node'),     # BEVOccPvb + SPIDER
+        Node(package='slam',          executable='slam_node'),           # 多源融合定位
+        Node(package='planning',      executable='pnc_node'),            # DLP 规划
+    ])</code></pre>
+
+<h4>落地证据：真实机器人硬件配置</h4>
+<p>仓库中存在针对真实机器人的精确物理参数配置文件：</p>
+<pre><code class="language-text"># robot_param_go2.pb.txt — Unitree Go2 生产配置
+brand: UnitreeGo2
+vin: "001"
+length: 0.8m,  width: 0.5m,  mass: 20kg
+velocity_limit: 3.0 m/s
+yaw_rate_limit: 1.0 rad/s
+acceleration_limit: ±2.0 m/s²
+jerk_limit: ±3.0 m/s³</code></pre>
+
+<h4>落地证据：OTA 远程更新系统</h4>
+<p><span class="src-tag">congq_sensebot/src/ota_agent/</span> 包含完整的 OTA（Over-The-Air）更新代理，支持远程推送模型和软件更新，并有部署完整性校验（<code>integrity_verify_on_deploy.yaml</code>）。这是产品级系统的典型特征。</p>
+
+<h4>落地证据：Web 管理 API</h4>
+<p><span class="src-tag">congq_sensebot/docs/web_manage_api.md</span> 定义了 WebSocket 远程控制 API，支持充电、建图、导航、录制等操作，说明系统已具备远程运维能力。</p>
+
+<h4>状态机：8 种运行状态</h4>
+<p><span class="src-tag">congq_sensebot/docs/statemachine_ros2_api.md</span></p>
+<table>
+<thead><tr><th>状态</th><th>含义</th></tr></thead>
+<tbody>
+<tr><td>IDLE</td><td>待机</td></tr>
+<tr><td>ACTION</td><td>执行动作指令</td></tr>
+<tr><td>CHARGING</td><td>充电中</td></tr>
+<tr><td>NAVIGATION</td><td>自主导航</td></tr>
+<tr><td>VLN</td><td>语言指令导航</td></tr>
+<tr><td>MAPPING</td><td>建图模式</td></tr>
+<tr><td>RECORDING</td><td>数据采集</td></tr>
+<tr><td>EMERGENCY</td><td>紧急停止</td></tr>
+</tbody>
+</table>
+
+<h3>8.2 DLP 规划模型：ONNX 导出与 ROS2 节点部署</h3>
+<p><span class="src-tag">19_sensebot_robotics_system/congq_sensebot_dlp/</span></p>
+
+<h4>落地证据：ONNX 导出配置（版本 v1.9.0）</h4>
+<p>仓库中存在完整的 ONNX 导出配置，指向真实的训练 checkpoint 和输出路径：</p>
+<pre><code class="language-yaml"># config/deploy.yaml — DLP v1.9.0 生产部署配置
+checkpoint_path: /mnt/afs2/congq/ws/sensebot_dlp/outputs/
+  dev_congq_v1.8.x_0430_bsl_cumsum/2026-04-30/10-59-15/checkpoints/last.ckpt
+
+output_path: deploy_models/260511/dlp_v1.9.0_cumsum.onnx
+
+# 输入规格（边缘推理固定形状）
+occ_grid_shape: [100, 100, 12]   # 100×100 BEV 栅格，12 类
+route_length: 4                   # 4 个航点
+state_dim: 8                      # 机器人状态维度
+batch_size: 1                     # 边缘推理单帧
+onnx_opset: 18</code></pre>
+
+<h4>落地证据：ROS2 实时推理节点</h4>
+<p><span class="src-tag">congq_sensebot_dlp/dlp_node.py</span> 是生产级 ROS2 节点，实现了完整的实时推理管线：</p>
+<pre><code class="language-python"># dlp_node.py — 生产 ROS2 规划节点（简化）
+class DLPNode(Node):
+    def __init__(self):
+        # 订阅感知和定位输出
+        self.sub_occ    = self.create_subscription('/perception/occ3d_single', ...)
+        self.sub_slam   = self.create_subscription('/slam/localization_stateinfo', ...)
+        self.sub_state  = self.create_subscription('/state_change', ...)
+        # 发布规划轨迹
+        self.pub_traj   = self.create_publisher('/planning_pred_traj', ...)
+        # 线程池推理（避免阻塞 ROS2 回调）
+        self.executor   = ThreadPoolExecutor(max_workers=2)
+
+    def on_occ_received(self, occ_msg):
+        # 异步提交推理任务
+        future = self.executor.submit(self.run_inference, occ_msg)
+        future.add_done_callback(self.publish_trajectory)</code></pre>
+
+<h4>落地证据：模型版本演进（v1.4.0 → v1.9.0）</h4>
+<p><span class="src-tag">congq_sensebot_dlp/config/model/</span> 目录下存在 18+ 个版本化模型配置文件（v1.4.0 至 v1.8.1_cumsum），说明该模型已经历多轮迭代和生产验证。</p>
+
+<h4>落地证据：真实机器人传感器数据</h4>
+<p>仓库中存在来自真实 Go2 机器人的传感器数据文件：</p>
+<pre><code class="language-json">// 1777532726875979520.json — 2026-04-30 真机采集数据
+{
+  "robot": "Go2_011",
+  "timestamp_ns": 1777532726875979520,
+  "camera": "RealSense RGB 1280×720",
+  "s3_path": "s3://sdc3-robot/data_collection/gt_data/
+              robotGtParser/robot_j6m_gt_collection/Go2_011/"
+}</code></pre>
+
+<h3>8.3 VLN 导航模型：真机部署与评估结果</h3>
+<p><span class="src-tag">20_vln_vla_navigation_models/</span></p>
+
+<h4>落地证据：Uni-NaVid 真机评估结果</h4>
+<p><span class="src-tag">uni-navid_helei1/eval/final_result.json</span> 包含在真实 Unitree Go2 机器人上的导航评估结果：</p>
+<table>
+<thead><tr><th>动作类别</th><th>正确数</th><th>总数</th><th>准确率</th></tr></thead>
+<tbody>
+<tr><td>前进（Forward）</td><td>762</td><td>773</td><td><strong>98.58%</strong></td></tr>
+<tr><td>左转（Left Turn）</td><td>14</td><td>54</td><td>25.93%</td></tr>
+<tr><td>停止（Stop）</td><td>50</td><td>52</td><td><strong>96.15%</strong></td></tr>
+<tr><td><strong>总体</strong></td><td>—</td><td>—</td><td><strong>93.97%</strong></td></tr>
+</tbody>
+</table>
+<div class="warn">
+<strong>分析</strong>：左转准确率（25.93%）显著低于前进和停止，说明转向决策是当前模型的主要瓶颈。真机数据采集时间：2025-11-29，机器人编号：Go2_005，相机：Intel RealSense RGB。
+</div>
+
+<h4>落地证据：StreamVLN 真机部署栈（Unitree Go2）</h4>
+<p><span class="src-tag">StreamVLN/realworld/</span> 包含完整的真机部署代码：</p>
+<pre><code class="language-python"># go2_vln_client.py — ROS2 真机客户端
+class Go2VLNClient(Node):
+    # PID 控制器参数（真机调参结果）
+    Kp_trans = 3.0,  Kd_trans = 0.5   # 平移 PID
+    Kp_yaw   = 3.0,  Kd_yaw   = 0.5   # 偏航 PID
+    max_vel  = 1.0   # m/s
+    max_angvel = 1.2 # rad/s
+    control_freq = 5 # Hz（里程计下采样）
+
+    def __init__(self):
+        # 订阅 Intel RealSense D400 相机
+        self.sub_img = self.create_subscription('/camera/color/image_raw', ...)
+        # 订阅 Go2 运动状态
+        self.sub_odom = self.create_subscription('/sportmodestate', ...)
+
+    def run_inference(self, img, instruction):
+        # HTTP POST 到推理服务器（150s 超时）
+        resp = requests.post(
+            f'http://{server_ip}:5801/predict',
+            json={'image': base64(img), 'instruction': instruction},
+            timeout=150
+        )
+        return resp.json()['actions']  # 返回 4 步动作序列</code></pre>
+
+<pre><code class="language-python"># http_realworld_server.py — Flask 推理服务器（端口 5801）
+# 模型: StreamVLN_Video_qwen_1_5_r2r_rxr_envdrop_scalevln_real_world
+app = Flask(__name__)
+model = StreamVLNForCausalLM.from_pretrained(checkpoint, torch_dtype=bfloat16)
+
+@app.route('/predict', methods=['POST'])
+def predict():
+    img = decode_base64(request.json['image'])
+    instruction = request.json['instruction']
+    # 推理：返回 4 步动作序列
+    actions = model.generate(img, instruction, num_steps=4)
+    # 记录推理延迟（网络 + 模型）
+    log_latency(time.time() - start)
+    return jsonify({'actions': actions})</code></pre>
+
+<h4>落地证据：WebSocket 服务器协议规范</h4>
+<p>各导航模型均实现了统一的二进制 WebSocket 协议，用于与机器人实时通���：</p>
+<pre><code class="language-text">帧头格式（16 字节）:
+  [Type:1B][Status:1B][ActionID:2B][Seq:4B][Timestamp:8B][ActionLen:4B]
+
+Status=3, ActionID=0  → 新导航任务（触发模型重置）
+Status=0, ActionID>0  → 续帧（继续当前任务）
+
+动作编码:
+  0: STOP     → (0.0, 0.0, 0.0)
+  1: FORWARD  → (0.25m, 0.0, 0.0)
+  2: LEFT     → (0.0, 0.0, +15°)
+  3: RIGHT    → (0.0, 0.0, -15°)
+
+服务器端口:
+  GeneralVLN:  7777 (SSL/TLS)
+  JanusVLN:    9999 (H.264 视频解码)
+  StreamVLN:   9999 (混合二进制/JSON)
+  Uni-NaVid:   8888 (Go1/Go2 专用)</code></pre>
+
+<h4>落地证据：GeneralVLN 生产模型路径</h4>
+<p><span class="src-tag">generalvln/server_go.py</span> 中硬编码了生产模型路径，说明该服务器已在实际环境中运行：</p>
+<pre><code class="language-text">model_path: /sensebot-vepfs/sensebot/lijianfeng/generalvln/runs/
+  NavFom_vln_qa_anchor_reg_mixed_ft_indoor_objnav_based_1kanchor_
+  diffusion_fulltune_stage2_20260407_200840</code></pre>
+
+<h3>8.4 OpenPI：WebSocket 策略服务器与 LIBERO 评估</h3>
+<p><span class="src-tag">07_openpi_eval_and_deployment_clients/</span></p>
+
+<h4>落地证据：WebSocket 策略服务器架构</h4>
+<p>OpenPI 采用客户端-服务器分离架构，策略推理在服务器端运行，机器人控制在客户端运行：</p>
+<pre><code class="language-python"># serve_policy.py — WebSocket 策略服务器
+class ServePolicyAgent:
+    def run(self):
+        policy = create_policy(self.config)  # 加载训练好的 VLA 策略
+        server = WebsocketPolicyServer(
+            policy=policy,
+            host=self.config.host,
+            port=self.config.port,  # 默认 8000
+        )
+        server.serve_forever()
+
+# eval_client.py — 评估客户端（发送观测，接收动作）
+# 输入格式:
+obs = {
+    "images": {"cam_high": ..., "cam_left_wrist": ..., "cam_right_wrist": ...},
+    "state.joints":    (1, 14),   # 14 自由度关节角
+    "state.gripper_w": (1, 2),    # 双臂夹爪宽度
+    "state.ee_pos":    (1, 6),    # 末端执行器位置
+    "state.ee_rot":    (1, 6),    # 末端执行器旋转
+    "prompt": "pick up the cup",  # 语言指令
+}
+# 输出: action_chunk (50, 32)  — 50步动作序列</code></pre>
+
+<h4>落地证据：LIBERO 基准评估结果</h4>
+<p><span class="src-tag">07_openpi_eval_and_deployment_clients/examples/libero/README.md</span></p>
+<table>
+<thead><tr><th>模型</th><th>Libero Spatial</th><th>Libero Object</th><th>Libero Goal</th><th>Libero 10</th><th>平均</th></tr></thead>
+<tbody>
+<tr><td>π₀.₅ @ 30k steps</td><td><strong>98.8%</strong></td><td><strong>98.2%</strong></td><td><strong>98.0%</strong></td><td><strong>92.4%</strong></td><td><strong>96.85%</strong></td></tr>
+</tbody>
+</table>
+
+<h4>落地证据：持续评估流水线</h4>
+<p><span class="src-tag">eval_all_bridge_448_orig.sh</span> 实现了训练中的持续评估：每 30 秒轮询新 checkpoint，自动启动策略服务器，并行运行 4 个任务评估，结果写入 <code>outputs/{exp_name}/{task}/{timestamp}/</code>。</p>
+
+<h4>落地证据：真实 ALOHA 机器人部署</h4>
+<p><span class="src-tag">07_openpi_eval_and_deployment_clients/examples/aloha_real/</span></p>
+<ul>
+<li>Docker 容器（ROS Noetic + Interbotix xArm SDK）</li>
+<li>4 路相机（cam_high / cam_low / cam_left_wrist / cam_right_wrist）</li>
+<li>三个已验证任务的 checkpoint：
+  <ul>
+    <li>Toast 取出：<code>gs://openpi-assets/checkpoints/pi0_base</code></li>
+    <li>毛巾折叠：<code>gs://openpi-assets/checkpoints/pi0_aloha_towel</code></li>
+    <li>Tupperware 开盖：<code>gs://openpi-assets/checkpoints/pi0_aloha_tupperware</code></li>
+  </ul>
+</li>
+</ul>
+
+<h3>8.5 DA3：策略服务器与真机位姿评估</h3>
+<p><span class="src-tag">15_depth_anything_3/scripts/</span></p>
+
+<h4>落地证据：HTTP 策略服务器部署脚本</h4>
+<pre><code class="language-bash"># deploy_da3_diffusion_action.sh — 生产部署脚本
+MODEL_SIZE=${1:-large}          # large 或 giant
+PORT=${2:-8088}                 # 默认端口
+CHECKPOINT=${3:-latest}         # checkpoint 版本管理
+
+# 环境配置（抑制 JAX 抢占 GPU）
+export JAX_PLATFORMS=cpu
+export XLA_PYTHON_CLIENT_PREALLOCATE=false
+
+# 启动 HTTP 推理服务器
+python serve_da3_policy.py \
+    --model_size $MODEL_SIZE \
+    --port $PORT \
+    --checkpoint $CHECKPOINT \
+    --sanity_check  # 启动前验证推理正确性</code></pre>
+
+<h4>落地证据：DA3 位姿估计真机评估结果</h4>
+<p><span class="src-tag">13_dreamdojo_world_model/04_remote_progress_20260521/evidence/pipeline_outputs/da3_pose/summary.json</span></p>
+<table>
+<thead><tr><th>指标</th><th>均值</th><th>中位数</th></tr></thead>
+<tbody>
+<tr><td>平移误差（L2）</td><td>0.257 m</td><td>0.189 m</td></tr>
+<tr><td>旋转误差</td><td>10.52°</td><td>8.23°</td></tr>
+<tr><td>成功率（旋转误差 &lt; 15°）</td><td colspan="2"><strong>73.6%</strong>（500 样本）</td></tr>
+<tr><td>成功率（旋转误差 &lt; 30°）</td><td colspan="2"><strong>97.8%</strong>（500 样本）</td></tr>
+</tbody>
+</table>
+
+<h3>8.6 Cosmos Predict2.5：RoboCasa 微调训练进度</h3>
+<p><span class="src-tag">13_dreamdojo_world_model/04_remote_progress_20260521/</span></p>
+
+<h4>落地证据：活跃训练日志（2026-05-21）</h4>
+<table>
+<thead><tr><th>迭代</th><th>Loss</th><th>每步耗时</th><th>GPU 利用率</th></tr></thead>
+<tbody>
+<tr><td>iter_000001</td><td>0.5919</td><td>256.24s（含初始化）</td><td>—</td></tr>
+<tr><td>iter_000002</td><td>0.8632</td><td>8.71s</td><td>100%</td></tr>
+<tr><td>iter_000003</td><td>0.7537</td><td>8.32s</td><td>100%</td></tr>
+<tr><td>iter_000004</td><td>0.6931</td><td>8.36s</td><td>100%</td></tr>
+<tr><td>iter_000005</td><td>0.7663</td><td>81.76s（checkpoint 保存）</td><td>100%</td></tr>
+<tr><td>iter_004520（最新）</td><td>0.03–0.07</td><td>~8.3s</td><td>100%，~68GB/80GB VRAM</td></tr>
+</tbody>
+</table>
+<p>训练路径：<code>/data/users/liyichen/cosmos-predict2.5</code>，输出：<code>cosmos_policy/cosmos_v2_finetune/cosmos_predict2p5_robocasa_gpu2_offline</code>，checkpoint <code>iter_000004000</code> 已于 2026-05-20 18:54 后保存。</p>
+
+<h3>8.7 落地证据汇总</h3>
+<table>
+<thead><tr><th>子系统</th><th>落地形式</th><th>关键证据文件</th><th>具体指标</th></tr></thead>
+<tbody>
+<tr><td>SenseBot 整体</td><td>ROS2 生产栈 + OTA</td><td>sensebot.launch.py, deploy.yaml</td><td>Go2/G1 双平台，8 状态机</td></tr>
+<tr><td>DLP 规划</td><td>ONNX v1.9.0 + ROS2 节点</td><td>config/deploy.yaml, dlp_node.py</td><td>18+ 版本迭代，真机数据</td></tr>
+<tr><td>Uni-NaVid</td><td>真机评估（Go2）</td><td>eval/final_result.json</td><td>总体 93.97%，前进 98.58%</td></tr>
+<tr><td>StreamVLN</td><td>真机部署（Go2）</td><td>realworld/go2_vln_client.py</td><td>PID 控制，5Hz，150s 超时</td></tr>
+<tr><td>OpenPI</td><td>WebSocket 服务器 + ALOHA</td><td>serve_policy.py, aloha_real/</td><td>LIBERO 平均 96.85%</td></tr>
+<tr><td>DA3</td><td>HTTP 策略服务器</td><td>deploy_da3_diffusion_action.sh</td><td>平移误差 0.257m，旋转 10.52°</td></tr>
+<tr><td>Cosmos Predict2.5</td><td>RoboCasa 微调训练中</td><td>04_remote_progress_20260521/</td><td>iter 4520，loss 0.03–0.07</td></tr>
+</tbody>
+</table>
+</section>
+
 <section id="references">
-<h2>八、参考文献</h2>
+<h2>九、参考文献</h2>
 <ol>
 <li>Liu et al., "BEVFusion: Multi-Task Multi-Sensor Fusion with Unified Bird's-Eye View Representation", ICRA 2023. <a href="https://arxiv.org/abs/2205.13542">arXiv:2205.13542</a></li>
 <li>Li et al., "PETR: Position Embedding Transformer for Multi-View 3D Object Detection", ECCV 2022. <a href="https://arxiv.org/abs/2203.05625">arXiv:2203.05625</a></li>

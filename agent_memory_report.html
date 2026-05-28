@@ -1,0 +1,1488 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Agent Memory：LLM 智能体记忆系统技术调研与项目实现分析</title>
+    <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            font-size: 16px;
+            line-height: 1.8;
+            color: #1a1a1a;
+            background: #ffffff;
+            padding: 2rem 1rem;
+        }
+        article {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+        h1 {
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+            color: #111;
+            border-bottom: 3px solid #2563eb;
+            padding-bottom: 0.5rem;
+        }
+        .subtitle {
+            color: #555;
+            font-size: 0.95rem;
+            margin-bottom: 2rem;
+        }
+        h2 {
+            font-size: 1.5rem;
+            margin-top: 2.5rem;
+            margin-bottom: 1rem;
+            color: #1e40af;
+            border-left: 4px solid #2563eb;
+            padding-left: 0.75rem;
+        }
+        h3 {
+            font-size: 1.25rem;
+            margin-top: 1.8rem;
+            margin-bottom: 0.8rem;
+            color: #1e3a5f;
+        }
+        h4 {
+            font-size: 1.1rem;
+            margin-top: 1.2rem;
+            margin-bottom: 0.5rem;
+            color: #374151;
+        }
+        p { margin-bottom: 1rem; }
+        ul, ol {
+            margin-bottom: 1rem;
+            padding-left: 1.5rem;
+        }
+        li { margin-bottom: 0.4rem; }
+        code {
+            font-family: "Fira Code", "Consolas", monospace;
+            background: #f3f4f6;
+            padding: 0.15rem 0.4rem;
+            border-radius: 3px;
+            font-size: 0.9em;
+        }
+        pre {
+            background: #f8f9fa;
+            border: 1px solid #e5e7eb;
+            border-radius: 6px;
+            padding: 1rem;
+            overflow-x: auto;
+            margin-bottom: 1rem;
+        }
+        pre code {
+            background: none;
+            padding: 0;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 1.5rem;
+            font-size: 0.92rem;
+        }
+        th, td {
+            border: 1px solid #d1d5db;
+            padding: 0.6rem 0.8rem;
+            text-align: left;
+        }
+        th {
+            background: #eff6ff;
+            font-weight: 600;
+            color: #1e40af;
+        }
+        tr:nth-child(even) { background: #f9fafb; }
+        a { color: #2563eb; text-decoration: none; }
+        a:hover { text-decoration: underline; }
+        .note {
+            background: #fffbeb;
+            border-left: 4px solid #f59e0b;
+            padding: 0.8rem 1rem;
+            margin: 1rem 0;
+            border-radius: 0 4px 4px 0;
+        }
+        .formula-box {
+            background: #f0f9ff;
+            border: 1px solid #bae6fd;
+            border-radius: 6px;
+            padding: 1rem 1.2rem;
+            margin: 1rem 0;
+        }
+        .project-box {
+            background: #f0fdf4;
+            border: 1px solid #86efac;
+            border-radius: 6px;
+            padding: 1rem 1.2rem;
+            margin: 1rem 0;
+        }
+        .arch-diagram {
+            background: #faf5ff;
+            border: 1px solid #d8b4fe;
+            border-radius: 6px;
+            padding: 1rem 1.2rem;
+            margin: 1rem 0;
+            font-family: "Fira Code", monospace;
+            font-size: 0.85rem;
+            white-space: pre;
+            overflow-x: auto;
+        }
+        @media (max-width: 768px) {
+            body { padding: 1rem 0.5rem; }
+            h1 { font-size: 1.5rem; }
+            table { font-size: 0.82rem; }
+        }
+    </style>
+</head>
+<body>
+<article>
+
+<h1>Agent Memory：LLM 智能体记忆系统技术调研与项目实现分析</h1>
+<p class="subtitle">Part I: Agent Memory 学术前沿综述（2023–2026）— Generative Agents、MemGPT、CoALA、HippoRAG、A-MEM、Memory³、ENGRAM、All-Mem<br>
+Part II: 项目技术分析 — Qiuchen (VimRAG/Remembr/SLIME)、JanusVLN、Uni-NaVid<br>
+聚焦算法设计、原理推导、伪代码与实现片段、评估效果</p>
+
+<!-- SECTION_QUESTION -->
+
+<section id="question">
+<h2>问题（Question）</h2>
+<p>LLM/VLM 智能体如何构建有效的记忆系统，使其能够在长期交互中积累经验、检索相关知识、并动态更新认知？不同记忆架构（工作记忆、长期记忆、情景记忆、语义记忆、程序记忆）各有何优劣？RAG 式、参数化、混合式记忆方案如何选择？具身智能场景下的空间-时序记忆有何特殊需求？</p>
+<p>本报告从两个维度展开：</p>
+<ol>
+<li><strong>学术前沿：</strong>Agent Memory 领域核心论文与方法分类（MemGPT、HippoRAG、A-MEM、CoALA 等）</li>
+<li><strong>项目实现：</strong>三个具身导航/视觉记忆项目（Qiuchen/VimRAG、JanusVLN、Uni-NaVid）的算法设计、代码实现与评估效果</li>
+</ol>
+</section>
+
+<section id="background">
+<h2>背景与动机（Background &amp; Motivation）</h2>
+<p>大语言模型（LLM）的上下文窗口有限，无法天然支持跨会话的长期记忆。随着 LLM Agent 在复杂任务中的应用日益广泛——从多轮对话、代码生成到具身导航——记忆系统成为决定 Agent 能力上限的关键模块。</p>
+
+<h3>认知科学基础</h3>
+<p>人类认知科学将记忆分为多种类型，这一分类为 Agent 记忆系统设计提供了重要的理论框架：</p>
+<ul>
+<li><strong>工作记忆（Working Memory）：</strong>前额叶皮层负责的短期信息保持，容量约 7±2 个组块（chunk）。对应 Agent 的上下文窗口。</li>
+<li><strong>情景记忆（Episodic Memory）：</strong>海马体编码的具体经历与事件，带有时间-空间标签。对应 Agent 的交互轨迹记录。</li>
+<li><strong>语义记忆（Semantic Memory）：</strong>新皮层存储的抽象知识与概念。对应 Agent 的知识库/知识图谱。</li>
+<li><strong>程序记忆（Procedural Memory）：</strong>基底神经节编码的技能与操作流程。对应 Agent 的工具使用模板/SOP。</li>
+</ul>
+<p>2023 年以来，Agent Memory 领域涌现大量工作，从 Stanford 的 Generative Agents 开创性地引入记忆流（Memory Stream）+ 反思（Reflection）机制，到 MemGPT 将操作系统虚拟内存概念引入 LLM，再到 HippoRAG 借鉴海马体索引理论构建知识图谱增强的 RAG，该领域正在快速发展。</p>
+
+<h3>具身智能中的记忆挑战</h3>
+<p>具身导航（Embodied Navigation）场景对记忆系统提出了额外要求：</p>
+<ul>
+<li><strong>时空关联：</strong>记忆不仅有语义内容，还需绑定 3D 位置坐标和时间戳</li>
+<li><strong>多模态融合：</strong>视觉帧、深度图、语言指令需要统一表示</li>
+<li><strong>实时性约束：</strong>导航决策需要在毫秒级完成记忆检索</li>
+<li><strong>长序列压缩：</strong>数百帧的观察历史需要高效压缩而不丢失关键信息</li>
+</ul>
+</section>
+
+<!-- SECTION_TAXONOMY -->
+
+<section id="taxonomy">
+<h2>记忆分类体系（Memory Taxonomy）</h2>
+
+<h3>按时间范围分类</h3>
+<table>
+<thead><tr><th>类型</th><th>对应人类认知</th><th>Agent 实现</th><th>典型容量</th></tr></thead>
+<tbody>
+<tr><td><strong>工作记忆（Working Memory）</strong></td><td>前额叶皮层短期保持</td><td>LLM 上下文窗口 / System Prompt</td><td>数千~数十万 token</td></tr>
+<tr><td><strong>短期记忆（Short-term Memory）</strong></td><td>海马体暂存</td><td>对话历史缓冲区、KV-Cache、Scratchpad</td><td>当前会话</td></tr>
+<tr><td><strong>长期记忆（Long-term Memory）</strong></td><td>新皮层固化存储</td><td>外部数据库、知识图谱、向量库</td><td>理论无限</td></tr>
+</tbody>
+</table>
+
+<h3>按内容类型分类（认知科学视角）</h3>
+<table>
+<thead><tr><th>类型</th><th>定义</th><th>Agent 中的对应</th><th>代表系统</th></tr></thead>
+<tbody>
+<tr><td><strong>情景记忆（Episodic）</strong></td><td>具体事件与经历的时序记录</td><td>对话日志、交互轨迹、观察流</td><td>Generative Agents Memory Stream</td></tr>
+<tr><td><strong>语义记忆（Semantic）</strong></td><td>抽象事实与概念知识</td><td>知识图谱、总结性笔记、规则库</td><td>HippoRAG KG、A-MEM Zettelkasten</td></tr>
+<tr><td><strong>程序记忆（Procedural）</strong></td><td>技能与操作流程</td><td>工具使用模板、代码片段、SOP</td><td>ENGRAM procedural store</td></tr>
+</tbody>
+</table>
+
+<h3>按实现方式分类</h3>
+<table>
+<thead><tr><th>方式</th><th>机制</th><th>优势</th><th>劣势</th><th>代表</th></tr></thead>
+<tbody>
+<tr><td><strong>RAG 式（非参数化）</strong></td><td>向量检索 + 外部存储</td><td>可解释、易更新、无需重训练</td><td>检索延迟、召回率受限</td><td>HippoRAG, VimRAG, Embodied-RAG</td></tr>
+<tr><td><strong>参数化（Parametric）</strong></td><td>知识编码在模型权重中</td><td>推理快、无检索开销</td><td>更新需微调、灾难性遗忘</td><td>Memory³</td></tr>
+<tr><td><strong>上下文式 / 隐式 KV-Cache</strong></td><td>信息放入 prompt/context 或注意力键值缓存</td><td>即时可用、端到端、无额外系统</td><td>受窗口限制、成本高</td><td>MemGPT, JanusVLN, Uni-NaVid</td></tr>
+<tr><td><strong>混合式（Hybrid）</strong></td><td>多种方式组合</td><td>兼顾速度与容量</td><td>系统复杂度高</td><td>CoALA framework, Qiuchen/Remembr</td></tr>
+</tbody>
+</table>
+</section>
+
+<!-- SECTION_PAPERS -->
+
+<section id="papers">
+<h2>核心论文详解（Key Papers）</h2>
+
+<h3>1. Generative Agents: Interactive Simulacra of Human Behavior (2023)</h3>
+<h4>基本信息</h4>
+<ul>
+<li><strong>作者：</strong>Joon Sung Park, Joseph C. O'Brien, Carrie J. Cai, Meredith Ringel Morris, Percy Liang, Michael S. Bernstein</li>
+<li><strong>机构：</strong>Stanford University, Google Research</li>
+<li><strong>发表：</strong>UIST 2023 (ACM Symposium on User Interface Software and Technology)</li>
+<li><strong>链接：</strong><a href="https://arxiv.org/abs/2304.03442">arXiv:2304.03442</a></li>
+</ul>
+
+<h4>核心思想</h4>
+<p>本文是 Agent Memory 领域的开创性工作。作者构建了一个包含 25 个生成式智能体的沙盒小镇（Smallville），每个 Agent 拥有完整的记忆架构，能够自主规划日常活动、进行社交互动、形成观点并记住过往经历。</p>
+
+<h4>记忆架构</h4>
+<p>系统包含三个核心组件：</p>
+<ol>
+<li><strong>记忆流（Memory Stream）：</strong>以自然语言形式完整记录 Agent 的所有观察与经历，每条记忆附带时间戳和重要性评分（importance score, 1-10）</li>
+<li><strong>反思（Reflection）：</strong>Agent 定期对记忆流进行高层次抽象总结，生成更抽象的"反思"记忆节点，形成层次化记忆结构</li>
+<li><strong>规划（Planning）：</strong>基于记忆流和反思生成未来行动计划，计划本身也存入记忆流</li>
+</ol>
+
+<h4>检索机制</h4>
+<p>记忆检索基于三个因素的加权组合：</p>
+<div class="formula-box">
+<p>\[ \text{score}(m) = \alpha \cdot \text{recency}(m) + \beta \cdot \text{importance}(m) + \gamma \cdot \text{relevance}(m) \]</p>
+<p>其中 recency 为指数时间衰减函数，importance 为 LLM 评估的重要性分数（1-10），relevance 为与当前查询的余弦相似度。</p>
+</div>
+
+<h4>伪代码：反思机制</h4>
+<pre><code class="language-python">def reflect(agent, memory_stream):
+    # 当累积重要性超过阈值时触发反思
+    recent_memories = memory_stream.get_recent(n=100)
+    total_importance = sum(m.importance for m in recent_memories)
+
+    if total_importance > REFLECTION_THRESHOLD:
+        # LLM 生成高层次洞察
+        questions = llm.generate_questions(recent_memories)
+        for q in questions:
+            relevant = retrieve(memory_stream, query=q)
+            insight = llm.synthesize(relevant)
+            # 反思本身也存入记忆流，形成层次结构
+            memory_stream.add(Memory(
+                content=insight,
+                type="reflection",
+                importance=llm.rate_importance(insight)
+            ))
+</code></pre>
+
+<h4>关键结果</h4>
+<p>消融实验表明：移除反思机制后 Agent 行为可信度显著下降；移除记忆检索后 Agent 无法维持一致性人格。该工作证明了 LLM + 结构化记忆可以产生涌现的社会行为。</p>
+
+<!-- PAPER2_PLACEHOLDER -->
+
+<h3>2. MemGPT: Towards LLMs as Operating Systems (2023)</h3>
+<h4>基本信息</h4>
+<ul>
+<li><strong>作者：</strong>Charles Packer, Sarah Wooders, Kevin Lin, Vivian Fang, Shishir G. Patil, Ion Stoica, Joseph E. Gonzalez</li>
+<li><strong>机构：</strong>UC Berkeley (Sky Computing Lab / BAIR)</li>
+<li><strong>发表：</strong>arXiv 2023.10, 后续被 ICLR 2024 接收；团队创立 Letta 公司</li>
+<li><strong>链接：</strong><a href="https://arxiv.org/abs/2310.08560">arXiv:2310.08560</a></li>
+</ul>
+
+<h4>核心思想</h4>
+<p>将操作系统的<strong>虚拟内存管理</strong>概念引入 LLM，通过分层内存 + 自主内存管理函数调用，突破上下文窗口限制。LLM 被赋予"管理自身记忆"的能力，类似 OS 管理进程的虚拟地址空间。</p>
+
+<h4>记忆架构</h4>
+<div class="arch-diagram">
+┌─────────────────────────────────────────────┐
+│           Main Context (RAM)                 │
+│  ┌──────────┐ ┌──────────┐ ┌─────────────┐ │
+│  │ System   │ │ Core     │ │ Conversation│ │
+│  │ Prompt   │ │ Memory   │ │ Buffer      │ │
+│  └──────────┘ └──────────┘ └─────────────┘ │
+├─────────────────────────────────────────────┤
+│        External Context (Disk)               │
+│  ┌──────────────┐  ┌────────────────────┐  │
+│  │ Recall       │  │ Archival Storage   │  │
+│  │ Storage      │  │ (Vector DB)        │  │
+│  │ (对话全文索引)│  │ (长期知识库)        │  │
+│  └──────────────┘  └────────────────────┘  │
+└─────────────────────────────────────────────┘
+Agent 通过 function calling 自主执行:
+  archival_memory_insert(content)
+  archival_memory_search(query)
+  conversation_search(query)
+  core_memory_replace(old, new)
+</div>
+
+<p>MemGPT 定义了类似 OS 的多级存储层次：</p>
+<ol>
+<li><strong>主上下文（Main Context）：</strong>类比 RAM，即 LLM 当前可见的 token 窗口，包含系统指令、对话历史摘要、工作数据</li>
+<li><strong>外部上下文（External Context）：</strong>类比磁盘，分为：
+    <ul>
+    <li><strong>回忆存储（Recall Storage）：</strong>完整对话历史的搜索索引</li>
+    <li><strong>归档存储（Archival Storage）：</strong>长期知识库，支持向量检索</li>
+    </ul>
+</li>
+</ol>
+
+<h4>存储/检索/更新机制</h4>
+<ul>
+<li><strong>存储：</strong>Agent 通过函数调用（function calling）主动将信息写入 archival/recall storage</li>
+<li><strong>检索：</strong>Agent 自主决定何时从外部存储检索信息，通过 <code>archival_memory_search</code>、<code>conversation_search</code> 等函数</li>
+<li><strong>更新：</strong>Agent 可修改 main context 中的 "core memory" 区域（如用户偏好），实现持久化人格/知识更新</li>
+<li><strong>中断机制：</strong>类似 OS 中断，当 context 接近满时触发压缩/换出操作</li>
+</ul>
+
+<h4>关键结果</h4>
+<p>在文档分析任务中，MemGPT 能处理超出原生窗口的长文档；在多会话对话中，Agent 能跨会话记住用户信息并动态演化。该工作催生了 Letta 框架（开源 Agent 开发平台）。</p>
+
+<!-- PAPER3_PLACEHOLDER -->
+
+<h3>3. CoALA: Cognitive Architectures for Language Agents (2023)</h3>
+<h4>基本信息</h4>
+<ul>
+<li><strong>作者：</strong>Theodore R. Sumers, Shunyu Yao, Karthik Narasimhan, Thomas L. Griffiths</li>
+<li><strong>机构：</strong>Princeton University</li>
+<li><strong>发表：</strong>arXiv 2023.09（TMLR 2024 接收）</li>
+<li><strong>链接：</strong><a href="https://arxiv.org/abs/2309.02427">arXiv:2309.02427</a></li>
+</ul>
+
+<h4>核心思想</h4>
+<p>CoALA 是一个<strong>概念性框架</strong>（非具体系统），旨在系统化地组织 LLM Agent 的设计空间。它借鉴认知科学中的认知架构（Cognitive Architecture）传统（如 ACT-R、Soar），为语言智能体提供统一的描述语言。</p>
+
+<h4>记忆架构</h4>
+<p>CoALA 将 Agent 记忆分为：</p>
+<ol>
+<li><strong>工作记忆（Working Memory）：</strong>当前活跃的信息，对应 LLM 上下文窗口中的内容</li>
+<li><strong>长期记忆（Long-term Memory）：</strong>
+    <ul>
+    <li><strong>情景记忆（Episodic）：</strong>过去经历的具体记录（如交互日志）</li>
+    <li><strong>语义记忆（Semantic）：</strong>抽象知识与事实（如知识库、文档）</li>
+    <li><strong>程序记忆（Procedural）：</strong>行动策略与技能（如代码库、工具使用模板）</li>
+    </ul>
+</li>
+</ol>
+
+<h4>动作空间</h4>
+<p>CoALA 定义了两类动作：</p>
+<ul>
+<li><strong>内部动作：</strong>对记忆的读/写操作（检索、存储、推理）</li>
+<li><strong>外部动作：</strong>与环境交互（工具调用、API 请求、物理动作）</li>
+</ul>
+
+<h4>贡献</h4>
+<p>CoALA 为后续工作提供了统一的分析框架，使得不同 Agent 系统可以在同一维度下比较。其记忆分类体系被广泛引用。</p>
+
+<h3>4. HippoRAG: Neurobiologically Inspired Long-Term Memory for LLMs (2024)</h3>
+<h4>基本信息</h4>
+<ul>
+<li><strong>作者：</strong>Bernal Jiménez Gutiérrez, Yiheng Shu, Yu Gu, Michihiro Yasunaga, Yu Su</li>
+<li><strong>机构：</strong>Ohio State University (OSU NLP Group)</li>
+<li><strong>发表：</strong>NeurIPS 2024</li>
+<li><strong>链接：</strong><a href="https://arxiv.org/abs/2405.14831">arXiv:2405.14831</a> | <a href="https://github.com/OSU-NLP-Group/HippoRAG">GitHub</a></li>
+</ul>
+
+<h4>核心思想</h4>
+<p>受<strong>海马体索引理论（Hippocampal Indexing Theory）</strong>启发，HippoRAG 模拟人类长期记忆的神经生物学机制。在人脑中，海马体作为"索引器"将分散在新皮层各区域的记忆片段关联起来；HippoRAG 用知识图谱（KG）模拟这一索引功能。</p>
+
+<h4>记忆架构</h4>
+<p>系统由三个组件模拟大脑结构：</p>
+<ol>
+<li><strong>LLM（模拟新皮层处理）：</strong>负责从文档中提取开放信息（Open IE），生成知识三元组</li>
+<li><strong>知识图谱（模拟海马体索引）：</strong>无模式 KG 存储实体与关系，作为记忆的关联索引</li>
+<li><strong>个性化 PageRank（模拟记忆检索中的模式补全）：</strong>从查询实体出发，在 KG 上执行 Personalized PageRank 算法，找到相关的记忆片段</li>
+</ol>
+
+<h4>检索算法伪代码</h4>
+<pre><code class="language-python">def hipporag_retrieve(query, kg, passages):
+    # 1. 从查询中提取实体（模拟海马体模式分离）
+    query_entities = llm.extract_entities(query)
+
+    # 2. 在 KG 中定位种子节点
+    seed_nodes = kg.match_entities(query_entities)
+
+    # 3. Personalized PageRank 扩散（模拟模式补全）
+    personalization = {node: 1.0/len(seed_nodes) for node in seed_nodes}
+    ppr_scores = pagerank(kg, personalization=personalization, alpha=0.5)
+
+    # 4. 将节点分数映射回段落
+    passage_scores = aggregate_node_scores_to_passages(ppr_scores)
+    return top_k(passage_scores, k=5)
+</code></pre>
+
+<h4>存储/检索/更新机制</h4>
+<ul>
+<li><strong>离线索引：</strong>对语料库进行 Open IE → 构建 KG → 建立实体到段落的映射</li>
+<li><strong>在线检索：</strong>查询 → 实体识别 → KG 上 PPR 扩散 → 检索相关段落</li>
+<li><strong>持续学习：</strong>新文档可增量加入 KG，无需重建整个索引</li>
+</ul>
+
+<h4>关键结果</h4>
+<p>在多跳问答（multi-hop QA）任务上显著优于标准 RAG 方法（如 ColBERT、Contriever）。HippoRAG 2（ICML 2025）进一步增强了段落集成和在线 LLM 使用效果。</p>
+
+<!-- PAPER5_PLACEHOLDER -->
+
+<h3>5. A-MEM: Agentic Memory for LLM Agents (2025)</h3>
+<h4>基本信息</h4>
+<ul>
+<li><strong>作者：</strong>Wujiang Xu, Zujie Liang, Kai Mei, Hang Gao, Juntao Tan, Yongfeng Zhang</li>
+<li><strong>机构：</strong>Rutgers University 等</li>
+<li><strong>发表：</strong>arXiv 2025.02（NeurIPS 2025 接收）</li>
+<li><strong>链接：</strong><a href="https://arxiv.org/abs/2502.12110">arXiv:2502.12110</a></li>
+</ul>
+
+<h4>核心思想</h4>
+<p>受<strong>卡片盒笔记法（Zettelkasten Method）</strong>启发，A-MEM 让 Agent 以"智能体方式"自主组织记忆。不同于被动存储，A-MEM 中的记忆是动态互联的知识网络，新记忆的加入会触发对已有记忆的更新与重组。</p>
+
+<h4>记忆架构</h4>
+<ol>
+<li><strong>结构化笔记生成：</strong>每条记忆被组织为包含上下文描述、关键词、标签的结构化笔记</li>
+<li><strong>关联链接：</strong>新记忆加入时，系统自动识别与已有记忆的相关性并建立双向链接</li>
+<li><strong>记忆演化（Memory Evolution）：</strong>新记忆的整合可触发对历史记忆的上下文表示和属性的更新，使记忆网络持续精炼其理解</li>
+</ol>
+
+<h4>记忆演化伪代码</h4>
+<pre><code class="language-python">def add_memory(new_info, memory_graph):
+    # 1. 生成结构化笔记
+    note = Note(
+        content=new_info,
+        keywords=llm.extract_keywords(new_info),
+        tags=llm.generate_tags(new_info),
+        summary=llm.summarize(new_info)
+    )
+
+    # 2. 查找相关已有记忆
+    related = memory_graph.search(note.keywords + note.tags)
+
+    # 3. 建立双向链接
+    for existing_note in related:
+        memory_graph.add_link(note, existing_note)
+
+    # 4. 记忆演化：更新相关旧记忆的表示
+    for existing_note in related:
+        existing_note.context = llm.update_context(
+            existing_note, new_context=note
+        )
+
+    memory_graph.add(note)
+</code></pre>
+
+<h4>存储/检索/更新机制</h4>
+<ul>
+<li><strong>存储：</strong>Agent 自主决定何时创建新记忆笔记，并自动生成元数据（关键词、标签、摘要）</li>
+<li><strong>检索：</strong>基于关键词匹配 + 语义相似度 + 图结构遍历的多路检索</li>
+<li><strong>更新：</strong>记忆演化机制——新信息可修改旧记忆的表示，实现知识的持续整合</li>
+</ul>
+
+<h4>关键结果</h4>
+<p>在 6 个基础模型上的测试表明，A-MEM 在记忆检索准确率和任务完成率上优于现有基线方法（如简单向量存储、摘要式记忆）。</p>
+
+<h3>6. Memory³: Language Modeling with Explicit Memory (2024)</h3>
+<h4>基本信息</h4>
+<ul>
+<li><strong>作者：</strong>Hongkang Yang, Zehao Lin, Wenjin Wang, Hao Wu, Zhiyu Li, Bo Tang 等 16 位作者</li>
+<li><strong>发表：</strong>Journal of Machine Learning, 3(2024), 300-346</li>
+<li><strong>链接：</strong><a href="https://arxiv.org/abs/2407.01178">arXiv:2407.01178</a></li>
+</ul>
+
+<h4>核心思想</h4>
+<p>Memory³ 提出 LLM 中存在<strong>三种记忆形式</strong>：</p>
+<ol>
+<li><strong>隐式记忆（Implicit Memory）：</strong>模型参数中编码的知识</li>
+<li><strong>工作记忆（Working Memory）：</strong>上下文中的 Key-Value 缓存</li>
+<li><strong>显式记忆（Explicit Memory）：</strong>本文新引入的第三种形式——外部化的知识片段，成本介于参数存储和 RAG 文本检索之间</li>
+</ol>
+
+<h4>记忆架构</h4>
+<ul>
+<li><strong>显式记忆格式：</strong>将知识编码为紧凑的向量表示（非原始文本），存储成本低于 RAG 的全文存储</li>
+<li><strong>记忆电路理论（Memory Circuitry Theory）：</strong>解释显式记忆如何与模型参数交互</li>
+<li><strong>稀疏化机制：</strong>使大规模记忆存储在计算上可行</li>
+<li><strong>两阶段预训练：</strong>先训练基础模型，再训练记忆读取能力</li>
+</ul>
+
+<h4>关键结果</h4>
+<p>一个 2.4B 参数的 Memory³ 模型在性能上超越了更大的 LLM 和 RAG 模型，同时保持比 RAG 更高的解码速度。这表明显式记忆是一种高效的知识外部化方案。</p>
+
+<!-- PAPER7_PLACEHOLDER -->
+
+<h3>7. ENGRAM: Effective, Lightweight Memory Orchestration (2025)</h3>
+<h4>基本信息</h4>
+<ul>
+<li><strong>作者：</strong>Daivik Patel, Shrenik Patel</li>
+<li><strong>发表：</strong>arXiv 2025.11</li>
+<li><strong>链接：</strong><a href="https://arxiv.org/abs/2511.12960">arXiv:2511.12960</a></li>
+</ul>
+
+<h4>核心思想</h4>
+<p>ENGRAM 证明了<strong>简单但精心设计的记忆分类 + 密集检索</strong>即可实现强大的长期记忆管理，无需复杂的知识图谱或多阶段检索管线。</p>
+
+<h4>记忆架构</h4>
+<p>将对话组织为三种规范记忆类型：</p>
+<ul>
+<li><strong>情景记忆（Episodic）：</strong>具体事件与交互记录</li>
+<li><strong>语义记忆（Semantic）：</strong>从对话中提取的事实与知识</li>
+<li><strong>程序记忆（Procedural）：</strong>用户偏好的操作方式与流程</li>
+</ul>
+<p>每条记忆通过单一路由器（Router）分类，使用标准化 schema 和 embedding 存入数据库。检索时对每种类型取 top-k 近邻，通过集合运算合并结果。</p>
+
+<h4>关键结果</h4>
+<p>在 LoCoMo（多会话对话 QA）基准上达到 SOTA；在 LongMemEval 上超越全上下文基线 15 分，同时仅消耗约 1% 的 token。</p>
+
+<h3>8. All-Mem: Agentic Lifelong Memory via Dynamic Topology Evolution (2026)</h3>
+<h4>基本信息</h4>
+<ul>
+<li><strong>作者：</strong>Can Lv, Heng Chang, Yuchen Guo, Shengyu Tao, Shiji Zhou</li>
+<li><strong>发表：</strong>arXiv 2026.03</li>
+<li><strong>链接：</strong><a href="https://arxiv.org/abs/2603.19595">arXiv:2603.19595</a></li>
+</ul>
+
+<h4>核心思想</h4>
+<p>解决长期交互中记忆退化问题。通过<strong>拓扑结构化记忆库</strong>和显式、非破坏性的记忆整合，避免摘要化带来的不可逆信息损失。</p>
+
+<h4>记忆架构</h4>
+<ul>
+<li>三种记忆编辑算子：<strong>SPLIT</strong>（拆分）、<strong>MERGE</strong>（合并）、<strong>UPDATE</strong>（更新）</li>
+<li>保留编辑证据以支持可追溯性</li>
+<li>查询时通过类型化链接从活跃锚点进行有界扩展，控制检索延迟</li>
+</ul>
+</section>
+
+<!-- SECTION_SURVEYS -->
+
+<section id="surveys">
+<h2>综述论文（Surveys）</h2>
+
+<table>
+<thead><tr><th>论文</th><th>年份</th><th>核心贡献</th><th>链接</th></tr></thead>
+<tbody>
+<tr>
+<td><strong>Memory in the Age of AI Agents</strong><br>Yuyang Hu 等 47 位作者</td>
+<td>2025.12</td>
+<td>从形式（token/参数/潜在）、功能（事实/经验/工作）、动态（形成/演化/检索）三个维度组织 Agent Memory 全景；编纂基准与框架</td>
+<td><a href="https://arxiv.org/abs/2512.13564">arXiv:2512.13564</a></td>
+</tr>
+<tr>
+<td><strong>A Survey on the Memory Mechanism of LLM-based Agents</strong><br>Zeyu Zhang 等</td>
+<td>2024.04</td>
+<td>系统综述 Agent 记忆的设计、评估与应用；讨论"什么是记忆"、"为何需要记忆"、"如何构建记忆"</td>
+<td><a href="https://arxiv.org/abs/2404.13501">arXiv:2404.13501</a></td>
+</tr>
+<tr>
+<td><strong>Agent Memory: Mechanisms, Evaluation, and Emerging Frontiers</strong></td>
+<td>2026.03</td>
+<td>将 Agent Memory 形式化为 write-manage-read 循环；提出三维分类法（时间范围 × 表示基底 × 控制策略）</td>
+<td><a href="https://arxiv.org/abs/2603.07670">arXiv:2603.07670</a></td>
+</tr>
+<tr>
+<td><strong>Agent Memory: Taxonomy and Empirical Analysis</strong></td>
+<td>2026.02</td>
+<td>Agent 记忆系统的分类学与经验分析；识别评估与系统局限性</td>
+<td><a href="https://arxiv.org/html/2602.19320v1">arXiv:2602.19320</a></td>
+</tr>
+<tr>
+<td><strong>Memory for AI Systems: Taxonomy, Operations, Topics</strong></td>
+<td>2025.05</td>
+<td>将记忆表示分为参数化、上下文结构化、上下文非结构化三类；定义六种基本操作（整合、更新、检索、遗忘、压缩、泛化）</td>
+<td><a href="https://arxiv.org/html/2505.00675v2">arXiv:2505.00675</a></td>
+</tr>
+</tbody>
+</table>
+</section>
+
+<!-- SECTION_EMBODIED -->
+
+<section id="embodied">
+<h2>具身智能记忆（Embodied Agent Memory）</h2>
+
+<h3>ReMEmbR: Building and Reasoning Over Long-Horizon Spatio-Temporal Memory for Robot Navigation (2024)</h3>
+<ul>
+<li><strong>作者：</strong>Abrar Anwar, John Welsh, Joydeep Biswas, Soha Pouya, Yan Chang</li>
+<li><strong>机构：</strong>NVIDIA, UT Austin, USC</li>
+<li><strong>链接：</strong><a href="https://arxiv.org/abs/2409.13682">arXiv:2409.13682</a> | <a href="https://nvidia-ai-iot.github.io/remembr/">项目页</a></li>
+</ul>
+<p><strong>核心思想：</strong>为机器人构建<strong>检索增强的时空记忆</strong>系统。机器人在部署过程中持续积累视频历史，ReMEmbR 使其能够回答关于过去环境事件的空间、时间和描述性问题。</p>
+<p><strong>架构：</strong></p>
+<ol>
+<li><strong>记忆构建阶段：</strong>使用 NVIDIA VILA VLM 对视频片段进行字幕生成，将字幕嵌入向量数据库（MilvusDB），同时保留时间戳和空间位置信息</li>
+<li><strong>查询阶段：</strong>对用户问题进行多步推理，结合时间、空间和视觉语义进行检索</li>
+</ol>
+<p><strong>关键结果：</strong>在自建 NaVQA 数据集上优于基线模型，支持实际机器人部署中的多样化查询。</p>
+
+<h3>VimRAG: Navigating Massive Visual Context via Multimodal Memory Graph (ICML 2026)</h3>
+<ul>
+<li><strong>作者：</strong>Qiuchen Wang, Shihang Wang, Yu Zeng 等（阿里巴巴通义实验室）</li>
+<li><strong>发表：</strong>ICML 2026</li>
+<li><strong>链接：</strong><a href="https://arxiv.org/abs/2602.12735">arXiv:2602.12735</a></li>
+</ul>
+<p><strong>核心思想：</strong>面向多模态 Agent 的 RAG 框架，将推理过程建模为<strong>动态有向无环图（DAG）</strong>，结构化组织 Agent 状态和检索到的多模态证据。</p>
+<p><strong>关键创新：</strong></p>
+<ul>
+<li><strong>图调制视觉记忆编码（Graph-Modulated Visual Memory Encoding）：</strong>对重要证据分配高分辨率 token，压缩次要信息</li>
+<li><strong>图引导策略优化（Graph-Guided Policy Optimization）：</strong>细粒度信用分配，优化检索策略</li>
+<li>将传统线性历史记录升级为多模态记忆图（Multimodal Memory Graph）</li>
+</ul>
+
+<h3>Embodied-RAG: General Non-parametric Embodied Memory (2024)</h3>
+<ul>
+<li><strong>作者：</strong>Quanting Xie, So Yeon Min, Tianyi Zhang, Aarav Bajaj, Ruslan Salakhutdinov, Matthew Johnson-Roberson, Yonatan Bisk</li>
+<li><strong>机构：</strong>CMU</li>
+<li><strong>链接：</strong><a href="https://arxiv.org/abs/2409.18313">arXiv:2409.18313</a></li>
+</ul>
+<p><strong>核心思想：</strong>将 RAG 范式扩展到具身场景。构建<strong>语义森林（Semantic Forest）</strong>，在不同细粒度层次存储语言描述，处理多模态、相关联的环境数据。</p>
+<p><strong>关键结果：</strong>在 19 个环境中成功处理 200+ 解释和导航查询。</p>
+
+<h3>3D-Mem: 3D Scene Memory for Embodied Exploration and Reasoning (2024)</h3>
+<ul>
+<li><strong>作者：</strong>Yuncong Yang, Han Yang, Jiachen Zhou, Peihao Chen, Hongxin Zhang, Yilun Du, Chuang Gan</li>
+<li><strong>链接：</strong><a href="https://arxiv.org/abs/2411.17735">arXiv:2411.17735</a></li>
+</ul>
+<p><strong>核心思想：</strong>使用多视角图像（Memory Snapshots）表示 3D 场景，避免传统场景图将空间关系过度简化为孤立对象 + 文本关系的问题。包含增量构建管线和记忆检索技术，支持终身学习。</p>
+</section>
+
+<!-- SECTION_PROJECTS -->
+
+<section id="project-qiuchen">
+<h2>项目分析 I：Qiuchen — VimRAG / Remembr / SLIME</h2>
+
+<div class="project-box">
+<p><strong>项目定位：</strong>面向具身智能的多模态记忆检索与推理框架，结合 RL 训练基础设施（SLIME），实现机器人对环境的时空问答能力。</p>
+<p><strong>核心能力：</strong>机器人在部署过程中积累视频历史，通过文本/位置/时间三种检索模态回答关于过去环境事件的问题。</p>
+<p><strong>代码路径：</strong><code>pryer/project/14_qiuchen_shared_review/archives/remote_alignment_20260518/code/qiuchen_shared/</code></p>
+</div>
+
+<h3>整体架构</h3>
+<div class="arch-diagram">
+┌─────────────────────────────────────────────────────────────┐
+│                    Qiuchen Agent Framework                   │
+├─────────────────────────────────────────────────────────────┤
+│                                                              │
+│  ┌──────────┐   ┌──────────┐   ┌──────────────────────┐   │
+│  │ ReAct    │   │ Remembr  │   │ VimRAG               │   │
+│  │ Agent    │   │ Agent    │   │ Agent (DAG-based)     │   │
+│  └────┬─────┘   └────┬─────┘   └────┬─────────────────┘   │
+│       │               │               │                      │
+│       └───────────────┼───────────────┘                      │
+│                       ▼                                      │
+│  ┌─────────────────────────────────────────────────────┐   │
+│  │           Memory Retrieval Tools                     │   │
+│  │  ┌──────────┐  ┌──────────────┐  ┌──────────────┐  │   │
+│  │  │search_by │  │search_by     │  │search_by     │  │   │
+│  │  │_text     │  │_position     │  │_time         │  │   │
+│  │  │(语义边)   │  │(位置边)       │  │(时间边)       │  │   │
+│  │  └──────────┘  └──────────────┘  └──────────────┘  │   │
+│  └─────────────────────────────────────────────────────┘   │
+│                       ▼                                      │
+│  ┌─────────────────────────────────────────────────────┐   │
+│  │           Embodied Memory Store                      │   │
+│  │  { id, video_name, time, position[x,y,z],           │   │
+│  │    caption, source_file[], benchmark }               │   │
+│  └─────────────────────────────────────────────────────┘   │
+├─────────────────────────────────────────────────────────────┤
+│  SLIME: RL Training Infrastructure (Megatron + SGLang)      │
+└─────────────────────────────────────────────────────────────┘
+</div>
+
+<h3>记忆数据结构</h3>
+<p>每个记忆实体（Memory Entity）包含完整的时空-语义信息：</p>
+<pre><code class="language-python"># 记忆实体结构（roboagent/）
+memory_entity = {
+    "id": str,                    # 唯一标识符
+    "video_name": str,            # 来源视频
+    "time": float,                # 时间戳（秒）
+    "position": [x, y, z],        # 3D 世界坐标
+    "caption": str,               # 视觉描述（VLM 生成）
+    "benchmark": str,             # 数据集标识
+    "file_start": str,            # 起始帧文件
+    "file_end": str,              # 结束帧文件
+    "source_file": [str],         # 帧文件列表
+}
+</code></pre>
+
+<h3>三种检索模态的算法设计</h3>
+
+<h4>1. 文本语义检索（Semantic Edge）</h4>
+<pre><code class="language-python">def search_by_text(query: str, memory_store, top_k=5):
+    """
+    语义检索：基于 caption 的向量相似度搜索
+    创建 "Semantic Edge" 连接查询与记忆实体
+    """
+    query_embedding = encoder.encode(query)
+    scores = []
+    for entity in memory_store:
+        caption_embedding = encoder.encode(entity["caption"])
+        sim = cosine_similarity(query_embedding, caption_embedding)
+        scores.append((entity, sim))
+    return sorted(scores, key=lambda x: x[1], reverse=True)[:top_k]
+</code></pre>
+
+<h4>2. 位置空间检索（Position Edge）</h4>
+<pre><code class="language-python">def search_by_position(position: List[float], memory_store, radius=5.0):
+    """
+    空间检索：基于 3D 欧氏距离的近邻搜索
+    创建 "Position Edge" 用于拓扑推理
+    """
+    results = []
+    query_pos = np.array(position)  # [x, y, z]
+    for entity in memory_store:
+        entity_pos = np.array(entity["position"])
+        distance = np.linalg.norm(query_pos - entity_pos)
+        if distance <= radius:
+            results.append((entity, distance))
+    return sorted(results, key=lambda x: x[1])
+</code></pre>
+
+<h4>3. 时间检索（Time Edge）</h4>
+<pre><code class="language-python">def search_by_time(timestamp: float, memory_store, window=10.0):
+    """
+    时间检索：查找指定时间窗口内的记忆
+    创建 "Time Edge" 用于时序推理
+    """
+    results = []
+    for entity in memory_store:
+        time_diff = abs(entity["time"] - timestamp)
+        if time_diff <= window:
+            results.append((entity, time_diff))
+    return sorted(results, key=lambda x: x[1])
+</code></pre>
+
+<h3>Agent 实现：三种推理策略</h3>
+
+<h4>BaseAgent 抽象基类（roboagent/agents/base_agent.py）</h4>
+<pre><code class="language-python">class BaseAgent:
+    def __init__(self, llm_client, max_steps=10):
+        self.llm_client = llm_client
+        self.sem = asyncio.Semaphore(4)  # 并发控制
+        self.max_steps = max_steps
+
+    async def agent_rollout(self, query, memory_store):
+        """主推理循环：迭代调用工具直到得出答案"""
+        raise NotImplementedError
+
+    async def call_tool(self, tool_name, tool_args, memory_store):
+        """执行工具调用并返回结果"""
+        if tool_name == "search_by_text":
+            return search_by_text(tool_args["query"], memory_store)
+        elif tool_name == "search_by_position":
+            return search_by_position(tool_args["position"], memory_store)
+        elif tool_name == "search_by_time":
+            return search_by_time(tool_args["timestamp"], memory_store)
+</code></pre>
+
+<h4>ReAct Agent — 单步工具推理（roboagent/agents/react.py）</h4>
+<pre><code class="language-python">class ReActAgent(BaseAgent):
+    """
+    ReAct (Reasoning + Acting) 模式：
+    每步生成一个 thought + 一个 tool_call 或 answer
+    """
+    async def agent_rollout(self, query, memory_store):
+        history = []
+        for step in range(self.max_steps):
+            response = await self.llm_client.generate(
+                system_prompt=REACT_SYSTEM_PROMPT,
+                messages=history + [{"role": "user", "content": query}]
+            )
+            # 解析 XML 标签
+            if "&lt;answer&gt;" in response:
+                return parse_answer(response)
+            elif "&lt;tool_call&gt;" in response:
+                tool_name, tool_args = parse_tool_call(response)
+                result = await self.call_tool(tool_name, tool_args, memory_store)
+                # 工具结果可能包含视觉帧（base64 data URL）
+                history.append(format_tool_response(result))
+        return "Unable to determine answer"
+</code></pre>
+
+<h4>Remembr Agent — 多轮记忆检索（roboagent/agents/remembr.py）</h4>
+<pre><code class="language-python">class RemembrAgent(BaseAgent):
+    """
+    Remembr: 维护 previous_tool_requests 上下文
+    区分 agent reasoning 阶段和 final generation 阶段
+    支持三种检索模式的组合使用
+    """
+    async def agent_rollout(self, query, memory_store):
+        previous_tool_requests = []  # 历史工具调用记录
+
+        for step in range(self.max_steps):
+            # 构建包含历史工具调用的 prompt
+            context = build_remembr_context(
+                query=query,
+                previous_requests=previous_tool_requests
+            )
+            response = await self.llm_client.generate(context)
+
+            if is_final_answer(response):
+                return extract_answer(response)
+
+            tool_name, tool_args = parse_tool_call(response)
+            result = await self.call_tool(tool_name, tool_args, memory_store)
+
+            # 记录工具调用历史，供后续步骤参考
+            previous_tool_requests.append({
+                "tool": tool_name,
+                "args": tool_args,
+                "result_summary": summarize(result)
+            })
+</code></pre>
+
+<h4>VimRAG Agent — DAG 图推理（roboagent/agents/vimrag.py）</h4>
+<pre><code class="language-python">class VimRAGAgent(BaseAgent):
+    """
+    VimRAG: 构建动态 DAG（有向无环图）
+    节点类型: root → intermediate → answer
+    边类型: Semantic Edge / Position Edge / Time Edge
+    """
+    async def agent_rollout(self, query, memory_store):
+        # 初始化 DAG
+        dag = ActionGraph()
+        root = dag.add_node(type="root", content=query)
+
+        for step in range(self.max_steps):
+            # 基于当前 DAG 状态决定下一步
+            current_state = dag.serialize()
+            response = await self.llm_client.generate(
+                system_prompt=VIMRAG_SYSTEM_PROMPT,
+                context=current_state
+            )
+
+            if is_answer_node(response):
+                answer_node = dag.add_node(type="answer", content=response)
+                dag.add_edge(dag.current, answer_node)
+                return answer_node.content
+
+            # 添加中间推理节点
+            tool_name, tool_args = parse_action(response)
+            result = await self.call_tool(tool_name, tool_args, memory_store)
+
+            # 创建带类型的边
+            edge_type = get_edge_type(tool_name)  # semantic/position/time
+            intermediate = dag.add_node(
+                type="intermediate",
+                content=result,
+                frames=extract_frames_base64(result)  # 多模态证据
+            )
+            dag.add_edge(dag.current, intermediate, edge_type=edge_type)
+
+        return dag.best_path_answer()
+</code></pre>
+
+<h3>VimRAG Demo 实现细节（VRAG_demo/vimrag_agent.py）</h3>
+<pre><code class="language-python">class VimRAGDemoAgent:
+    async def _model_generate(self, messages):
+        """流式 LLM 推理（vLLM 后端）"""
+        async for token in self.llm_client.stream(messages):
+            yield token
+
+    def _get_video_frames_base64(self, video_path, timestamps):
+        """内存中提取视频帧并转为 base64 data URL
+        避免磁盘 I/O，提升实时性"""
+        cap = cv2.VideoCapture(video_path)
+        frames = []
+        for ts in timestamps:
+            cap.set(cv2.CAP_PROP_POS_MSEC, ts * 1000)
+            ret, frame = cap.read()
+            if ret:
+                _, buffer = cv2.imencode('.jpg', frame)
+                b64 = base64.b64encode(buffer).decode()
+                frames.append(f"data:image/jpeg;base64,{b64}")
+        return frames
+
+    def search(self, query, search_type="text"):
+        """统一检索接口，调用后端搜索服务"""
+        return self.search_service.query(query, type=search_type)
+</code></pre>
+
+<h3>SLIME：RL 训练基础设施</h3>
+<p>SLIME（Scalable LLM Inference and Megatron Engine）是 Qiuchen 项目的 RL 训练框架，支持大规模分布式训练：</p>
+<ul>
+<li><strong>Megatron-LM 集成：</strong>张量并行 + 流水线并行训练</li>
+<li><strong>SGLang 推理引擎：</strong>高效 rollout 数据生成</li>
+<li><strong>Ray 分布式计算：</strong>多节点协调</li>
+<li><strong>GPU 内存管理（slime_core/utils/memory_utils.py）：</strong><code>clear_memory()</code>、<code>available_memory()</code>、<code>print_memory()</code></li>
+</ul>
+
+<h3>评估基准与效果</h3>
+<table>
+<thead><tr><th>基准</th><th>任务类型</th><th>评估维度</th></tr></thead>
+<tbody>
+<tr><td><strong>CODA/NAVQA</strong></td><td>具身时空问答</td><td>空间："最近的座位在哪？" / 时间："你何时离开建筑？"</td></tr>
+<tr><td><strong>LVBench</strong></td><td>长视频事件定位</td><td>多分钟视频理解、事件时间范围定位</td></tr>
+<tr><td><strong>StreamingBench</strong></td><td>流式记忆</td><td>多轮 QA + 工作记忆 + 情景记忆追踪</td></tr>
+<tr><td><strong>VideoMME</strong></td><td>通用多模态视频 QA</td><td>帧-文本对齐、多选理解</td></tr>
+</tbody>
+</table>
+</section>
+
+<!-- SECTION_JANUS -->
+
+<section id="project-janus">
+<h2>项目分析 II：JanusVLN — 双隐式记忆导航</h2>
+
+<div class="project-box">
+<p><strong>项目定位：</strong>视觉语言导航（VLN, Vision-Language Navigation）框架，受人脑左右半球功能分化启发，引入双隐式记忆（Dual Implicit Memory）。</p>
+<p><strong>核心创新：</strong>将语义理解（左脑/LLM）与空间几何（右脑/VGGT）解耦为两个互补的固定大小紧凑神经记忆。</p>
+<p><strong>代码路径：</strong><code>pryer/project/20_vln_vla_navigation_models/JanusVLN/</code></p>
+</div>
+
+<h3>VLN 基础概念</h3>
+<p>视觉语言导航（Vision-Language Navigation）是具身智能的核心任务之一：</p>
+<ul>
+<li><strong>任务定义：</strong>给定自然语言指令（如"走到厨房，在冰箱旁边停下"），Agent 需要在 3D 环境中导航到目标位置</li>
+<li><strong>观察空间：</strong>Agent 每步获得 RGB 图像（第一人称视角）</li>
+<li><strong>动作空间：</strong>离散动作集 {MOVE_FORWARD, TURN_LEFT, TURN_RIGHT, STOP}</li>
+<li><strong>核心挑战：</strong>如何将语言指令与视觉观察对齐，并在长序列中保持对历史的记忆</li>
+</ul>
+
+<h3>整体架构</h3>
+<div class="arch-diagram">
+┌─────────────────────────────────────────────────────────────┐
+│                      JanusVLN                                │
+├─────────────────────────────────────────────────────────────┤
+│                                                              │
+│  ┌─────────────────────┐    ┌─────────────────────────┐    │
+│  │  Left Brain          │    │  Right Brain             │    │
+│  │  (Semantic Memory)   │    │  (Spatial Memory)        │    │
+│  │                      │    │                          │    │
+│  │  Qwen2.5-VL-7B      │    │  VGGT-1B (Frozen)       │    │
+│  │  ┌────────────────┐ │    │  ┌────────────────────┐ │    │
+│  │  │ Vision Tower   │ │    │  │ Aggregator         │ │    │
+│  │  │ (ViT, 32层)    │ │    │  │ + KV-Cache         │ │    │
+│  │  └───────┬────────┘ │    │  │ (start=8,recent=48)│ │    │
+│  │          │           │    │  └───────┬────────────┘ │    │
+│  │  ┌───────▼────────┐ │    │          │              │    │
+│  │  │ LLM Backbone   │ │    │  ┌───────▼────────────┐ │    │
+│  │  │ (80层, 8192d)  │ │    │  │ Spatial Features   │ │    │
+│  │  └───────┬────────┘ │    │  │ (2048d per patch)  │ │    │
+│  │          │           │    │  └───────┬────────────┘ │    │
+│  └──────────┼───────────┘    └──────────┼──────────────┘    │
+│             │                           │                    │
+│             ▼                           ▼                    │
+│  ┌──────────────────────────────────────────────────────┐  │
+│  │              VGGTMerger (MLP Fusion)                   │  │
+│  │  image_embeds = semantic + λ * spatial   (λ=0.2)      │  │
+│  └──────────────────────────────────────────────────────┘  │
+│             │                                                │
+│             ▼                                                │
+│  ┌──────────────────────────────────────────────────────┐  │
+│  │         LM Head → Action Token                        │  │
+│  │  {MOVE_FORWARD, TURN_LEFT, TURN_RIGHT, STOP}         │  │
+│  └──────────────────────────────────────────────────────┘  │
+└─────────────────────────────────────────────────────────────┘
+</div>
+
+<h3>核心算法：双记忆融合</h3>
+
+<h4>数学形式</h4>
+<div class="formula-box">
+<p>设第 \(t\) 步的视觉观察为 \(I_t\)，语义特征为 \(\mathbf{h}_t^{sem}\)，空间特征为 \(\mathbf{h}_t^{spa}\)，则融合表示为：</p>
+\[ \mathbf{h}_t = \mathbf{h}_t^{sem} + \lambda \cdot \text{VGGTMerger}(\mathbf{h}_t^{spa}) \]
+<p>其中 \(\lambda = 0.2\)，VGGTMerger 是一个两层 MLP：</p>
+\[ \text{VGGTMerger}(\mathbf{x}) = W_2 \cdot \text{GELU}(W_1 \cdot \text{RMSNorm}(\mathbf{x})) \]
+<p>输入维度 \(2048 \times 4 = 8192\)（spatial_merge_size=2 导致 4 个 patch 拼接），隐藏层 4096，输出 8192（匹配 LLM hidden_size）。</p>
+</div>
+
+<h4>VGGTMerger 网络结构（src/qwen_vl/model/modeling_qwen2_5_vl.py, Line 149-164）</h4>
+<pre><code class="language-python">class VGGTMerger(nn.Module):
+    """
+    将 VGGT 空间特征投影到 LLM 隐藏空间
+    Input:  2048 * (spatial_merge_size^2) = 8192
+    Hidden: 4096
+    Output: 8192 (LLM hidden_size)
+    """
+    def __init__(self, output_dim, hidden_dim, context_dim, spatial_merge_size=2):
+        super().__init__()
+        self.input_dim = context_dim * (spatial_merge_size ** 2)  # 2048*4=8192
+        self.hidden_dim = hidden_dim   # 4096
+        self.output_dim = output_dim   # 8192
+        self.ln_q = Qwen2RMSNorm(context_dim, eps=1e-6)
+        self.mlp = nn.Sequential(
+            nn.Linear(self.input_dim, self.hidden_dim),
+            nn.GELU(),
+            nn.Linear(self.hidden_dim, self.output_dim),
+        )
+
+    def forward(self, x):
+        x = self.ln_q(x)                    # RMSNorm 归一化
+        x = x.view(-1, self.input_dim)       # 展平 patch 组
+        return self.mlp(x)                   # MLP 投影
+</code></pre>
+
+<h4>时序记忆管理：StartRecentKVCache</h4>
+<p>VGGT 通过 KV-Cache 实现时序记忆的高效管理。关键设计是 <strong>StartRecentKVCache</strong> 策略（src/qwen_vl/model/modeling_qwen2_5_vl.py, Line 1676-1681）：</p>
+<pre><code class="language-python">class StartRecentKVCache:
+    """
+    保留最早的 start_size 帧 + 最近的 recent_size 帧
+    丢弃中间帧，实现固定大小的时序记忆窗口
+
+    设计直觉：
+    - 起始帧提供参考坐标系（"我从哪里出发"）
+    - 最近帧提供当��上下文（"我刚刚经过了什么"）
+    - 中间帧可以被压缩/丢弃（信息冗余度高）
+    """
+    def __init__(self, start_size=8, recent_size=48, k_seq_dim=2, v_seq_dim=2):
+        self.start_size = start_size
+        self.recent_size = recent_size
+
+    def __call__(self, past_key_values):
+        """裁剪 KV-Cache 到固定大小"""
+        pruned = []
+        for kv in past_key_values:
+            k, v = kv
+            seq_len = k.shape[self.k_seq_dim]
+            if seq_len <= self.start_size + self.recent_size:
+                pruned.append((k, v))
+            else:
+                # 保留前 start_size + 后 recent_size
+                k_pruned = torch.cat([
+                    k[:, :, :self.start_size, :],
+                    k[:, :, -self.recent_size:, :]
+                ], dim=self.k_seq_dim)
+                v_pruned = torch.cat([
+                    v[:, :, :self.start_size, :],
+                    v[:, :, -self.recent_size:, :]
+                ], dim=self.v_seq_dim)
+                pruned.append((k_pruned, v_pruned))
+        return pruned
+</code></pre>
+
+<h4>VGGT 时序聚合与特征融合（modeling_qwen2_5_vl.py, Line 2012-2048）</h4>
+<pre><code class="language-python"># 逐帧处理，通过 KV-Cache 积累时序信息
+for k, frame in enumerate(images_vggt[i]):
+    images = frame.unsqueeze(0).unsqueeze(0)
+
+    # VGGT aggregator 处理当前帧 + 历史 KV-Cache
+    aggregator_output = self.vggt.aggregator(
+        images,
+        past_key_values=self.past_key_values_vggt,
+        use_cache=True,
+        past_frame_idx=k
+    )
+    aggregated_tokens, patch_start_idx, past_key_values_vggt = aggregator_output
+    self.past_key_values_vggt = past_key_values_vggt
+
+    # 评估模式下裁剪 KV-Cache 防止内存溢出
+    if self.mode == "evaluation" and self.past_key_values_vggt is not None:
+        self.past_key_values_vggt = self.kv_cache_vggt(self.past_key_values_vggt)
+
+# 提取空间特征并做 spatial merge
+features = aggregated_tokens[-2][0, :, patch_start_idx:]
+features = features.view(n_image, h_grid, w_grid, -1)
+features = features[:, :h_grid_after_merge * merge_size,
+                       :w_grid_after_merge * merge_size, :].contiguous()
+features = features.view(n_image, h_grid_after_merge, merge_size,
+                         w_grid_after_merge, merge_size, -1)
+features = features.permute(0, 1, 3, 2, 4, 5).contiguous()
+
+# 通过 VGGTMerger 投影到 LLM 空间，融合语义 + 空间
+image_embeds_3d = self.merger(features)
+image_embeds = image_embeds + self.lam * image_embeds_3d  # λ=0.2
+</code></pre>
+
+<h3>导航策略：帧采样与动作生成（janus_agent.py）</h3>
+<pre><code class="language-python">class JanusAgent:
+    def __init__(self, model_path, gpu_id=0):
+        self.model = JanusVLN_Inference(model_path, device=f"cuda:{gpu_id}")
+        self.num_history = 8
+        self.actions2idx = {'STOP': 0, 'MOVE_FORWARD': 1, 'TURN_LEFT': 2, 'TURN_RIGHT': 3}
+
+    def act(self, obs):
+        current_frame = obs["rgb"]
+        instruction = obs["instruction"]["text"]
+        self.rgb_list.append(current_frame)
+
+        # 均匀采样历史帧（最多 8 帧）
+        history = self.rgb_list[:-1]
+        if len(history) <= 8:
+            images = history + [current_frame]
+        else:
+            # 线性插值选取 8 个均匀分布的历史帧
+            indices = np.linspace(0, len(history) - 1, 8, dtype=int)
+            images = [history[i] for i in indices] + [current_frame]
+
+        action_text = self.model.call_model(images, instruction, self.step_id)
+        return {"action": self.actions2idx[action_text]}
+</code></pre>
+
+<h3>训练配置</h3>
+<table>
+<thead><tr><th>参数</th><th>值</th><th>说明</th></tr></thead>
+<tbody>
+<tr><td>基础模型</td><td>Qwen2.5-VL-7B-Instruct</td><td>语义编码器（可训练）</td></tr>
+<tr><td>空间编码器</td><td>VGGT-1B (facebook)</td><td>冻结，不参与梯度更新</td></tr>
+<tr><td>LLM 学习率</td><td>2e-5</td><td>主干网络</td></tr>
+<tr><td>Merger 学习率</td><td>1e-5</td><td>融合层</td></tr>
+<tr><td>Vision Tower 学习率</td><td>1e-6</td><td>视觉编码器（微调）</td></tr>
+<tr><td>视频最大帧数</td><td>8</td><td>历史窗口大小</td></tr>
+<tr><td>最大序列长度</td><td>163840 tokens</td><td>支持长序列</td></tr>
+<tr><td>并行策略</td><td>DeepSpeed ZeRO-3</td><td>分布式训练</td></tr>
+</tbody>
+</table>
+
+<h3>DAgger 数据增强</h3>
+<p>DAgger（Dataset Aggregation）是一种迭代式模仿学习算法，用于缓解分布偏移（distribution shift）问题：</p>
+<pre><code class="language-python"># src/dagger.py - DAgger 数据收集流程伪代码
+def dagger_collection(model, environments, oracle):
+    """
+    DAgger 迭代：
+    1. 用当前模型收集轨迹
+    2. 在轨迹上标注 oracle（最短路径）动作
+    3. 将新数据加入训练集
+    4. 重新训练模型
+    """
+    for iteration in range(num_iterations):
+        trajectories = []
+        for env in environments:
+            obs = env.reset()
+            while not done:
+                action = model.predict(obs)
+                obs, done = env.step(action)
+                oracle_action = oracle.get_action(env.current_state)
+                trajectories.append((obs, oracle_action))
+        dataset.extend(trajectories)
+        model.train(dataset)
+</code></pre>
+
+<h3>评估效果</h3>
+<table>
+<thead><tr><th>数据集</th><th>指标</th><th>说明</th></tr></thead>
+<tbody>
+<tr><td>R2R-CE Val Unseen</td><td>SR / SPL</td><td>Matterport3D 室内导航，3m 成功半径</td></tr>
+<tr><td>RxR-CE Val Unseen</td><td>SR / SPL</td><td>多语言导航（英/印地/泰语）</td></tr>
+<tr><td>ScaleVLN</td><td>SR / SPL</td><td>大规模 HM3D 场景</td></tr>
+</tbody>
+</table>
+<p><strong>SPL 公式：</strong>\(\text{SPL} = \frac{1}{N}\sum_{i=1}^N S_i \cdot \frac{l_i}{\max(p_i, l_i)}\)，其中 \(S_i\) 为是否成功，\(l_i\) 为最短路径长度，\(p_i\) 为实际路径长度。</p>
+<p>JanusVLN 提供两个模型变体：<strong>JanusVLN_Base</strong>（R2R-CE + RxR-CE 训练）和 <strong>JanusVLN_Extra</strong>（+ DAgger + ScaleVLN 数据增强）。</p>
+</section>
+
+<!-- SECTION_UNINAVID -->
+
+<section id="project-uninavid">
+<h2>项目分析 III：Uni-NaVid — 在线 Token 合并记忆</h2>
+
+<div class="project-box">
+<p><strong>项目定位：</strong>统一视频导航模型（RSS 2025, 北京大学），将 VLN、目标追踪、ObjectNav、EQA 等多种导航范式统一到单一 VLA（Vision-Language-Action）模型中。</p>
+<p><strong>核心创新：</strong>在线 Token 合并（Online Token Merging）— 基于余弦相似度的帧级压缩，实现长视频序列的高效记忆管理。</p>
+<p><strong>论文：</strong><a href="https://arxiv.org/abs/2412.06224">arXiv:2412.06224</a> | <a href="https://pku-epic.github.io/Uni-NaVid/">项目页</a></p>
+<p><strong>代码路径：</strong><code>pryer/project/20_vln_vla_navigation_models/uni-navid_helei1/</code></p>
+</div>
+
+<h3>Token 合并基础概念</h3>
+<p>Token 合并（Token Merging）是一种视觉 Transformer 加速技术，核心思想是：</p>
+<ul>
+<li><strong>观察：</strong>视频中相邻帧的视觉 token 高度相似（尤其是静止或缓慢移动场景）</li>
+<li><strong>方法：</strong>将相似的 token 合并为一个，用加权平均表示</li>
+<li><strong>效果：</strong>减少序列长度，降低注意力计算的 \(O(n^2)\) 复杂度</li>
+<li><strong>关键参数：</strong>相似度阈值（threshold）控制合并激进程度</li>
+</ul>
+
+<h3>整体架构</h3>
+<div class="arch-diagram">
+┌─────────────────────────────────────────────────────────────┐
+│                       Uni-NaVid                              │
+├─────────────────────────────────────────────────────────────┤
+│                                                              │
+│  ┌──────────────────────────────────────────────────────┐  │
+│  │  Video Input (Historical Frames + Current Frame)      │  │
+│  │  [frame_1, frame_2, ..., frame_t-1] + [frame_t]      │  │
+│  └──────────────────────┬───────────────────────────────┘  │
+│                          │                                   │
+│  ┌──────────────────────▼───────────────────────────────┐  │
+│  │  Vision Encoder (EVA-CLIP / CLIP-ViT-L)              │  │
+│  │  → patch features: (N_frames, 256, 1408)             │  │
+│  └──────────────────────┬───────────────────────────────┘  │
+│                          │                                   │
+│  ┌──────────────────────▼───────────────────────────────┐  │
+│  │  Grid Compression                                     │  │
+│  │  History: grid:2 → 4 tokens/frame                    │  │
+│  │  Current: grid:8 → 64 tokens/frame (高分辨率)         │  │
+│  └──────────────────────┬───────────────────────────────┘  │
+│                          │                                   │
+│  ┌──────────────────────▼───────────────────────────────┐  │
+│  │  Online Token Merging (cosine sim > 0.985 → merge)   │  │
+│  │  Short-term: recent frames (full resolution)          │  │
+│  │  Long-term: compressed history (merged tokens)        │  │
+│  └──────────────────────┬───────────────────────────────┘  │
+│                          │                                   │
+│  ┌──────────────────────▼───────────────────────────────┐  │
+│  │  MLP Projector (mlp2x_gelu)                          │  │
+│  │  vision_dim → LLM_hidden_size                         │  │
+│  └──────────────────────┬───────────────────────────────┘  │
+│                          │                                   │
+│  ┌──────────────────────▼───────────────────────────────┐  │
+│  │  Vicuna-7B (LLaMA) + Task Instruction                │  │
+│  │  → Action Token: forward / left / right / stop        │  │
+│  └──────────────────────────────────────────────────────┘  │
+└────────��────────────────────────────────────────────────────┘
+</div>
+
+<h3>核心算法：在线 Token 合并</h3>
+
+<h4>数学形式</h4>
+<div class="formula-box">
+<p>设帧序列 \(\{f_1, f_2, \ldots, f_T\}\)，每帧的 token 表示为 \(\mathbf{v}_i \in \mathbb{R}^{k \times d}\)（k 个 token，d 维）。</p>
+<p>帧级均值表示：\(\bar{\mathbf{v}}_i = \frac{1}{k}\sum_{j=1}^k \mathbf{v}_i^{(j)}\)</p>
+<p>合并判据：\(\cos(\bar{\mathbf{v}}_i, \bar{\mathbf{v}}_{i-1}) = \frac{\bar{\mathbf{v}}_i \cdot \bar{\mathbf{v}}_{i-1}}{|\bar{\mathbf{v}}_i| \cdot |\bar{\mathbf{v}}_{i-1}|} > \tau\)，其中 \(\tau = 0.985\)</p>
+<p>加权合并：若合并，新表示为 \(\bar{\mathbf{v}}_{merged} = \frac{w_{old} \cdot \bar{\mathbf{v}}_{old} + \bar{\mathbf{v}}_{new}}{w_{old} + 1}\)，权重 \(w\) 记录已合并的帧数。</p>
+</div>
+
+<h4>离线 Token 合并实现（uninavid/model/uninavid_arch.py, Line 190-228）</h4>
+<pre><code class="language-python">def process_tensor(self, tensor, length_threshold, similarity_threshold=0.985):
+    """
+    离线 Token 合并（训练时使用）
+    将视频帧序列压缩为更短的表示
+
+    Args:
+        tensor: (n, k*nav_size, t) - n批次, k帧*每帧token数, 特征维度t
+        length_threshold: 保留最近多少帧不压缩
+        similarity_threshold: 合并阈值 (默认 0.985)
+    """
+    n, total, t = tensor.shape
+    nav_size = self.nav_token_size  # 每帧 token 数
+    k = total // nav_size           # 总帧数
+
+    # 将 tensor 重塑为 (batch, frames, tokens_per_frame, feature_dim)
+    split_tensors = tensor.view(n, k, nav_size, t)
+
+    # 只对旧帧（前 k-length_threshold 帧）进行合并
+    old_frames = split_tensors[:, :k - length_threshold, :, :]
+    means_tensor = old_frames.mean(dim=2)  # 帧级均值: (n, old_k, t)
+
+    cos = torch.nn.CosineSimilarity(dim=2)
+    means = [means_tensor[:, 0:1, :]]  # 初始化：第一帧
+    weights = [1]
+
+    for i in range(1, k - length_threshold):
+        last_mean = means[-1]
+        current_tensor = means_tensor[:, i:i+1, :]
+        similarity = cos(last_mean, current_tensor).mean(dim=0)
+
+        if similarity > similarity_threshold:
+            # 合并：加权平均
+            new_weight = weights[-1] + 1
+            new_mean = (last_mean * weights[-1] + current_tensor) / new_weight
+            means[-1] = new_mean
+            weights[-1] = new_weight
+        else:
+            # 不合并：保留为新的独立帧
+            means.append(current_tensor)
+            weights.append(1)
+
+    # 拼接压缩后的旧帧 + 未压缩的新帧
+    compressed = torch.cat(means, dim=1)
+    recent_frames = split_tensors[:, k - length_threshold:, :, :]
+    # ... 返回拼接结果
+</code></pre>
+
+<h4>在线推理版本（uninavid_arch.py, Line 113-163）</h4>
+<pre><code class="language-python">def online_process_tensor(self, tensor, similarity_threshold=0.985):
+    """
+    在线 Token 合并（推理时使用）
+    维护短期记忆（recent frames）和长期记忆��compressed history）
+
+    与离线版本的区别：
+    - 增量处理：每次只处理新到的一帧
+    - 维护状态：self.long_term_memory, self.merge_weight
+    - 实时性：单帧处理延迟低
+    """
+    current_frame_mean = tensor.mean(dim=1, keepdim=True)
+
+    if self.long_term_memory is None:
+        self.long_term_memory = current_frame_mean
+        self.merge_weight = 1
+    else:
+        cos_sim = F.cosine_similarity(
+            self.long_term_memory[:, -1:, :],
+            current_frame_mean,
+            dim=2
+        ).mean()
+
+        if cos_sim > similarity_threshold:
+            # 合并到最后一个长期记忆条目
+            w = self.merge_weight
+            self.long_term_memory[:, -1:, :] = (
+                self.long_term_memory[:, -1:, :] * w + current_frame_mean
+            ) / (w + 1)
+            self.merge_weight = w + 1
+        else:
+            # 创建新的长期记忆条目
+            self.long_term_memory = torch.cat(
+                [self.long_term_memory, current_frame_mean], dim=1
+            )
+            self.merge_weight = 1
+</code></pre>
+
+<h3>视觉编码与网格压缩（uninavid_arch.py, Line 357-398）</h3>
+<pre><code class="language-python">def token_generation(self, vis_embed, image_counts=None, navigation=False):
+    """
+    视觉 token 生成：
+    - 历史帧: grid:2 → 每帧 4 个 token (2x2 平均池化)
+    - 当前帧: grid:8 → 每帧 64 个 token (保持高分辨率)
+
+    设计理由：
+    - 历史帧只需要粗粒度语义（"经过了什么"）
+    - 当前帧需要细粒度感知（"现在看到什么"）
+    """
+    def process_grid(vis_embed, grid_size):
+        cur_shape = int(vis_embed.shape[1] ** 0.5)  # 16 (256 patches = 16x16)
+        vis_embed = vis_embed.reshape(
+            vis_embed.shape[0], cur_shape, cur_shape, -1
+        )
+        grid_stride = cur_shape // grid_size
+        vis_embed = F.avg_pool2d(
+            vis_embed.permute(0, 3, 1, 2),
+            kernel_size=grid_stride,
+            stride=grid_stride
+        )
+        return vis_embed.permute(0, 2, 3, 1).flatten(1, 2)
+
+    grid_size = int(self.config.compress_type.split('grid:')[-1])
+
+    if navigation:
+        vis_embed_nav = vis_embed[-1:]                    # 当前帧
+        vis_embed_nav = process_grid(vis_embed_nav, 8)    # 8x8 = 64 tokens
+        vis_embed = process_grid(vis_embed[:-1], grid_size)  # 历史: 2x2 = 4 tokens
+    else:
+        vis_embed = process_grid(vis_embed, grid_size)
+
+    vis_embed = self.get_model().mm_projector(vis_embed)
+    vis_embed_nav = self.get_model().mm_projector(vis_embed_nav) if navigation else None
+    return vis_embed, vis_embed_nav
+</code></pre>
+
+<h3>特殊 Token 设计（uninavid/constants.py）</h3>
+<pre><code class="language-python">VIDEO_START_SPECIAL_TOKEN = "&lt;video_special&gt;"
+VIDEO_END_SPECIAL_TOKEN = "&lt;/video_special&gt;"
+IMAGE_START_TOKEN = "&lt;image_special&gt;"
+IMAGE_END_TOKEN = "&lt;/image_special&gt;"
+NAVIGATION_SPECIAL_TOKEN = "[Navigation]"
+NAVIGATION_IDENTIFIER = 'a video of historical observations and an image of the current observation'
+IMAGE_SEPARATOR = "&lt;image_sep&gt;"
+</code></pre>
+<p>这些特殊 token 使模型能够区分不同输入模态和任务类型，是统一多任务的关键设计。</p>
+
+<h3>训练流程</h3>
+<table>
+<thead><tr><th>阶段</th><th>基础模型</th><th>训练内容</th><th>��据</th></tr></thead>
+<tbody>
+<tr><td>Stage 1</td><td>Vicuna-7B</td><td>全模型微调（Vision Encoder 冻结）</td><td>VLN + Video QA 混合</td></tr>
+<tr><td>Stage 2</td><td>Uni-NaVid (Stage 1)</td><td>继续微调，加入更多导航数据</td><td>R2R-CE + RxR-CE + 追踪</td></tr>
+</tbody>
+</table>
+
+<h3>评估效果</h3>
+
+<h4>VLN-CE 基准（来自 README）</h4>
+<table>
+<thead><tr><th>数据集</th><th>SR (%)</th><th>SPL (%)</th><th>TL</th><th>NE (m)</th><th>OS (%)</th></tr></thead>
+<tbody>
+<tr><td>R2R Val Unseen</td><td>51.8</td><td>47.7</td><td>9.22</td><td>4.96</td><td>57.4</td></tr>
+<tr><td>RxR Val Unseen</td><td>56.1</td><td>44.5</td><td>18.4</td><td>5.67</td><td>66.4</td></tr>
+</tbody>
+</table>
+<p><strong>指标说明：</strong>TL = 轨迹长度，NE = 导航误差（到目标的最终距离），OS = Oracle Success（最优路径成功率）。</p>
+
+<h4>动作预测准确率（来自 eval/final_result.json）</h4>
+<table>
+<thead><tr><th>动作</th><th>Ground Truth 数量</th><th>正确预测</th><th>准确率</th></tr></thead>
+<tbody>
+<tr><td>FORWARD</td><td>773</td><td>762</td><td>98.6%</td></tr>
+<tr><td>TURN_LEFT</td><td>54</td><td>14</td><td>25.9%</td></tr>
+<tr><td>STOP</td><td>52</td><td>50</td><td>96.2%</td></tr>
+<tr><td><strong>Overall</strong></td><td>879</td><td>826</td><td><strong>93.97%</strong></td></tr>
+</tbody>
+</table>
+<div class="note">
+<p><strong>分析：</strong>模型在 FORWARD 和 STOP 上表现优异，但 TURN_LEFT 准确率较低（25.9%），说明转向决策是当前的主要瓶颈。这可能与训练数据中转向样本不平衡有关（773 forward vs 54 left）。</p>
+</div>
+
+<h4>推理性能</h4>
+<ul>
+<li>推理速度：约 5 Hz（A100 GPU）</li>
+<li>Token 消耗：相比全帧输入减少约 99%（通过 grid compression + token merging）</li>
+</ul>
+</section>
+
+<!-- SECTION_COMPARISON -->
+
+<section id="comparison">
+<h2>方法对比与选择建议</h2>
+
+<h3>学术方法核心系统对比</h3>
+<table>
+<thead><tr><th>系统</th><th>记忆类型</th><th>存储方式</th><th>检索机制</th><th>更新策略</th><th>适用场景</th></tr></thead>
+<tbody>
+<tr><td>Generative Agents</td><td>情景 + 语义（反思）</td><td>自然语言流</td><td>recency × importance × relevance</td><td>反思生成新记忆</td><td>社会模拟、NPC</td></tr>
+<tr><td>MemGPT</td><td>工作 + 长期（分层）</td><td>分层上下文 + 外部DB</td><td>Agent 自主函数调用</td><td>Agent 主动读写</td><td>长对话、文档分析</td></tr>
+<tr><td>CoALA</td><td>情景/语义/程序（框架）</td><td>模块化（不限定）</td><td>内部动作</td><td>学习过程</td><td>通用 Agent 设计</td></tr>
+<tr><td>HippoRAG</td><td>语义（KG 索引）</td><td>知识图谱 + 段落库</td><td>PPR 图扩散</td><td>增量 KG 扩展</td><td>多跳 QA、知识密集任务</td></tr>
+<tr><td>A-MEM</td><td>语义（Zettelkasten）</td><td>结构化笔记网络</td><td>关键词 + 语义 + 图遍历</td><td>记忆演化（双向更新）</td><td>个人助手、知识管理</td></tr>
+<tr><td>Memory³</td><td>显式记忆（参数化）</td><td>紧凑向量表示</td><td>稀疏检索 + 注入</td><td>预训练阶段形���</td><td>高效推理、小模型增强</td></tr>
+<tr><td>ENGRAM</td><td>情景/语义/程序</td><td>类型化嵌入数据库</td><td>分类路由 + top-k 密集检索</td><td>每轮对话增量写入</td><td>多会话对话</td></tr>
+</tbody>
+</table>
+
+<h3>三个项目记忆机制对比</h3>
+<table>
+<thead><tr><th>维度</th><th>Qiuchen (VimRAG/Remembr)</th><th>JanusVLN</th><th>Uni-NaVid</th></tr></thead>
+<tbody>
+<tr><td><strong>记忆类型</strong></td><td>显式外部记忆（数据库）</td><td>隐式神经记忆（KV-Cache）</td><td>隐式压缩记忆（Token Merging）</td></tr>
+<tr><td><strong>存储形式</strong></td><td>结构化实体 + 向量索引</td><td>注意力键值对</td><td>合并后的 token 表示</td></tr>
+<tr><td><strong>检索方式</strong></td><td>文本/位置/时间三模态检索</td><td>注意力机制自动检索</td><td>全序列注意力（压缩后）</td></tr>
+<tr><td><strong>容量</strong></td><td>理论无限（外部存储）</td><td>固定窗口（start=8 + recent=48）</td><td>动态压缩（相似帧合并）</td></tr>
+<tr><td><strong>更新策略</strong></td><td>增量写入</td><td>KV-Cache 滑动窗口</td><td>在线合并（加权平均）</td></tr>
+<tr><td><strong>可解释性</strong></td><td>高（可查看检索结果）</td><td>低（隐式注意力）</td><td>中（可观察合并决策）</td></tr>
+<tr><td><strong>推理开销</strong></td><td>检索延迟 + LLM 调用</td><td>单次前向传播</td><td>单次前向传播</td></tr>
+<tr><td><strong>训练方式</strong></td><td>RL (SLIME) + 工具学习</td><td>监督学习 + DAgger</td><td>监督学习（两阶段）</td></tr>
+</tbody>
+</table>
+
+<h3>选择建议</h3>
+<table>
+<thead><tr><th>需求场景</th><th>推荐方案</th><th>理由</th></tr></thead>
+<tbody>
+<tr><td>多轮长对话 Agent</td><td>MemGPT / ENGRAM</td><td>MemGPT 提供 OS 级管理灵活性；ENGRAM 轻量高效</td></tr>
+<tr><td>知识密集型问答</td><td>HippoRAG</td><td>KG 索引支持多跳推理，关联性检索优于纯向量</td></tr>
+<tr><td>个人知识助手</td><td>A-MEM</td><td>Zettelkasten 式组织适合知识积累与演化</td></tr>
+<tr><td>具身时空问答</td><td>Qiuchen/Remembr</td><td>显式记忆支持精确的文本/位置/时间检索</td></tr>
+<tr><td>实时导航决策（低延迟）</td><td>JanusVLN</td><td>隐式记忆无检索开销，VGGT 提供 3D 空间感知</td></tr>
+<tr><td>统一多种导航任务</td><td>Uni-NaVid</td><td>统一架构 + 高效 token 压缩，支持 VLN/追踪/ObjectNav</td></tr>
+<tr><td>社会模拟/游戏 NPC</td><td>Generative Agents 架构</td><td>记忆流 + 反思机制产生可信行为</td></tr>
+<tr><td>资源受限部署</td><td>Memory³</td><td>小模型 + 显式记忆可替代大模型</td></tr>
+<tr><td>多模态 RAG</td><td>VimRAG</td><td>图结构化记忆支持视觉-文本联合推理</td></tr>
+</tbody>
+</table>
+
+<h3>关键设计维度</h3>
+<div class="note">
+<p><strong>设计 Agent Memory 系统时需考虑的核心权衡：</strong></p>
+<ul>
+<li><strong>容量 vs 延迟：</strong>存储越多检索越慢；需要分层/索引策略</li>
+<li><strong>精确性 vs 泛化：</strong>原始记录 vs 摘要/抽象；摘要会丢失细节但提高泛化</li>
+<li><strong>主动 vs 被动：</strong>Agent 自主管理记忆（MemGPT）vs 系统自动管理（ENGRAM）</li>
+<li><strong>结构化 vs 非结构化：</strong>KG/图（HippoRAG）vs 纯文本/向量（标准 RAG）</li>
+<li><strong>显式 vs 隐式：</strong>外部数据库（Qiuchen）vs 神经网络内部（JanusVLN/Uni-NaVid）</li>
+<li><strong>固定窗口 vs 动态压缩：</strong>实现简单（JanusVLN KV-Cache）vs 信息保留（Uni-NaVid Token Merging）</li>
+</ul>
+</div>
+</section>
+
+<section id="references">
+<h2>参考文献（References）</h2>
+<ol>
+<li>Park, J.S., O'Brien, J.C., Cai, C.J., Morris, M.R., Liang, P., Bernstein, M.S. "Generative Agents: Interactive Simulacra of Human Behavior", UIST 2023. <a href="https://arxiv.org/abs/2304.03442">arXiv:2304.03442</a></li>
+<li>Packer, C., Wooders, S., Lin, K., Fang, V., Patil, S.G., Stoica, I., Gonzalez, J.E. "MemGPT: Towards LLMs as Operating Systems", 2023. <a href="https://arxiv.org/abs/2310.08560">arXiv:2310.08560</a></li>
+<li>Sumers, T.R., Yao, S., Narasimhan, K., Griffiths, T.L. "Cognitive Architectures for Language Agents (CoALA)", 2023. <a href="https://arxiv.org/abs/2309.02427">arXiv:2309.02427</a></li>
+<li>Gutiérrez, B.J., Shu, Y., Gu, Y., Yasunaga, M., Su, Y. "HippoRAG: Neurobiologically Inspired Long-Term Memory for Large Language Models", NeurIPS 2024. <a href="https://arxiv.org/abs/2405.14831">arXiv:2405.14831</a></li>
+<li>Xu, W., Liang, Z., Mei, K., Gao, H., Tan, J., Zhang, Y. "A-MEM: Agentic Memory for LLM Agents", 2025. <a href="https://arxiv.org/abs/2502.12110">arXiv:2502.12110</a></li>
+<li>Yang, H., Lin, Z., Wang, W. et al. "Memory³: Language Modeling with Explicit Memory", Journal of Machine Learning, 2024. <a href="https://arxiv.org/abs/2407.01178">arXiv:2407.01178</a></li>
+<li>Patel, D., Patel, S. "ENGRAM: Effective, Lightweight Memory Orchestration for Conversational Agents", 2025. <a href="https://arxiv.org/abs/2511.12960">arXiv:2511.12960</a></li>
+<li>Lv, C., Chang, H., Guo, Y., Tao, S., Zhou, S. "All-Mem: Agentic Lifelong Memory via Dynamic Topology Evolution", 2026. <a href="https://arxiv.org/abs/2603.19595">arXiv:2603.19595</a></li>
+<li>Hu, Y. et al. "Memory in the Age of AI Agents" (Survey), 2025. <a href="https://arxiv.org/abs/2512.13564">arXiv:2512.13564</a></li>
+<li>Zhang, Z., Bo, X., Ma, C. et al. "A Survey on the Memory Mechanism of Large Language Model based Agents", 2024. <a href="https://arxiv.org/abs/2404.13501">arXiv:2404.13501</a></li>
+<li>Anwar, A., Welsh, J., Biswas, J., Pouya, S., Chang, Y. "ReMEmbR: Building and Reasoning Over Long-Horizon Spatio-Temporal Memory for Robot Navigation", 2024. <a href="https://arxiv.org/abs/2409.13682">arXiv:2409.13682</a></li>
+<li>Wang, Q. et al. "VimRAG: Navigating Massive Visual Context in Retrieval-Augmented Generation via Multimodal Memory Graph", ICML 2026. <a href="https://arxiv.org/abs/2602.12735">arXiv:2602.12735</a></li>
+<li>Xie, Q., Min, S.Y., Zhang, T. et al. "Embodied-RAG: General Non-parametric Embodied Memory for Retrieval and Generation", 2024. <a href="https://arxiv.org/abs/2409.18313">arXiv:2409.18313</a></li>
+<li>Yang, Y. et al. "3D-Mem: 3D Scene Memory for Embodied Exploration and Reasoning", 2024. <a href="https://arxiv.org/abs/2411.17735">arXiv:2411.17735</a></li>
+<li>Gutiérrez, B.J., Shu, Y. et al. "HippoRAG 2: From RAG to Memory — Non-Parametric Continual Learning for LLMs", ICML 2025. <a href="https://arxiv.org/abs/2502.14802">arXiv:2502.14802</a></li>
+<li>"Agent Memory: Mechanisms, Evaluation, and Emerging Frontiers" (Survey), 2026. <a href="https://arxiv.org/abs/2603.07670">arXiv:2603.07670</a></li>
+<li>Uni-NaVid: "A Video-based Vision-Language-Action Model for Unifying Embodied Navigation Tasks", RSS 2025. <a href="https://arxiv.org/abs/2412.06224">arXiv:2412.06224</a></li>
+</ol>
+</section>
+
+</article>
+</body>
+</html>

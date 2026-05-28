@@ -1,0 +1,909 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LLM Agent 轨迹评估奖励模型：PRM / ORM / 轨迹级 / 可微分方法全景调研</title>
+    <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <style>
+        *, *::before, *::after { box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            font-size: 16px;
+            line-height: 1.8;
+            color: #1a1a1a;
+            background: #fff;
+            margin: 0;
+            padding: 0 1rem;
+        }
+        article {
+            max-width: 900px;
+            margin: 2rem auto 4rem;
+        }
+        h1 { font-size: 1.9rem; margin-bottom: 0.3rem; }
+        h2 { font-size: 1.4rem; border-bottom: 2px solid #e0e0e0; padding-bottom: 0.3rem; margin-top: 2.5rem; }
+        h3 { font-size: 1.15rem; margin-top: 1.8rem; color: #2c3e50; }
+        h4 { font-size: 1rem; margin-top: 1.2rem; color: #555; }
+        p { margin: 0.6rem 0 0.9rem; }
+        a { color: #2563eb; text-decoration: none; }
+        a:hover { text-decoration: underline; }
+        .meta { color: #666; font-size: 0.9rem; margin-bottom: 1.5rem; }
+        .toc { background: #f8f9fa; border: 1px solid #e0e0e0; border-radius: 6px; padding: 1rem 1.5rem; margin: 1.5rem 0; }
+        .toc h3 { margin-top: 0; font-size: 1rem; color: #333; }
+        .toc ol { margin: 0; padding-left: 1.4rem; }
+        .toc li { margin: 0.25rem 0; font-size: 0.95rem; }
+        pre { background: #f4f4f4; border-radius: 6px; padding: 1rem; overflow-x: auto; font-size: 0.88rem; }
+        code { font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace; font-size: 0.9em; background: #f0f0f0; padding: 0.1em 0.3em; border-radius: 3px; }
+        pre code { background: none; padding: 0; }
+        table { width: 100%; border-collapse: collapse; margin: 1rem 0; font-size: 0.92rem; }
+        thead { background: #f0f4f8; }
+        th, td { border: 1px solid #d0d7de; padding: 0.55rem 0.8rem; text-align: left; vertical-align: top; }
+        tbody tr:nth-child(even) { background: #fafbfc; }
+        .tag { display: inline-block; font-size: 0.78rem; padding: 0.1em 0.5em; border-radius: 3px; margin-right: 0.3em; font-weight: 600; }
+        .tag-prm  { background: #dbeafe; color: #1e40af; }
+        .tag-orm  { background: #dcfce7; color: #166534; }
+        .tag-traj { background: #fef9c3; color: #854d0e; }
+        .tag-verif{ background: #fce7f3; color: #9d174d; }
+        .tag-diff { background: #ede9fe; color: #5b21b6; }
+        .tag-impl { background: #ffedd5; color: #9a3412; }
+        .callout { border-left: 4px solid #2563eb; background: #eff6ff; padding: 0.7rem 1rem; border-radius: 0 6px 6px 0; margin: 1rem 0; }
+        .warn { border-left: 4px solid #f59e0b; background: #fffbeb; padding: 0.7rem 1rem; border-radius: 0 6px 6px 0; margin: 1rem 0; }
+        .ref-list { font-size: 0.88rem; }
+        .ref-list li { margin: 0.4rem 0; }
+        @media (max-width: 640px) {
+            h1 { font-size: 1.4rem; }
+            table { font-size: 0.82rem; }
+        }
+    </style>
+</head>
+<body>
+<article>
+<h1>LLM Agent 轨迹评估奖励模型：PRM / ORM / 轨迹级 / 可微分方法全景调研</h1>
+<p class="meta">调研日期：2026-05-28 &nbsp;|&nbsp; 面向：RL 训练流水线（PPO / GRPO）中的 Agent 奖励建模</p>
+
+<div class="toc">
+<h3>目录</h3>
+<ol>
+    <li><a href="#question">问题与背景</a></li>
+    <li><a href="#prm">过程奖励模型（PRM）</a></li>
+    <li><a href="#orm">结果奖励模型（ORM）</a></li>
+    <li><a href="#trajectory">轨迹级奖励模型</a></li>
+    <li><a href="#verifier">验证器 / LLM-as-Judge 奖励模型</a></li>
+    <li><a href="#differentiable">可微分奖励模型</a></li>
+    <li><a href="#impl">工程实现：OpenRLHF / veRL / TRL</a></li>
+    <li><a href="#comparison">方法对比与选型建议</a></li>
+    <li><a href="#references">参考文献</a></li>
+</ol>
+</div>
+
+<!-- ============================================================ -->
+<section id="question">
+<h2>1. 问题与背景（Question &amp; Background）</h2>
+
+<p>在将大语言模型（Large Language Model，LLM）训练为 Agent 的强化学习（Reinforcement Learning，RL）流水线中，奖励信号的质量直接决定策略收敛的速度与最终性能。与单轮问答不同，Agent 任务（工具调用、导航、多步规划）具有以下特点：</p>
+<ul>
+    <li>轨迹长度可达数十乃至数百步，奖励稀疏（Sparse Reward）</li>
+    <li>中间步骤的正确性难以用规则验证</li>
+    <li>工具调用结果（API 返回值、环境状态）需要被纳入评估</li>
+    <li>最终目标可能是模糊的自然语言描述，而非可精确比对的答案</li>
+</ul>
+
+<p>本报告系统梳理五类奖励建模方法，并重点关注其与 GRPO / PPO 训练的兼容性，以及在机器人导航 / 工具调用 Agent 场景下的适用性。</p>
+
+<h3>1.1 核心概念速览</h3>
+<table>
+<thead><tr><th>概念</th><th>英文全称</th><th>核心思想</th></tr></thead>
+<tbody>
+<tr><td>PRM</td><td>Process Reward Model</td><td>对轨迹中每一步打分，提供密集奖励</td></tr>
+<tr><td>ORM</td><td>Outcome Reward Model</td><td>仅对最终结果打分，奖励稀疏</td></tr>
+<tr><td>轨迹级 RM</td><td>Trajectory-level Reward Model</td><td>将整条多轮轨迹作为评估单元</td></tr>
+<tr><td>验证器 RM</td><td>Verifier / LLM-as-Judge</td><td>用 LLM 生成评判文本或分数</td></tr>
+<tr><td>可微分 RM</td><td>Differentiable Reward Model</td><td>奖励梯度可直接反传至策略参数</td></tr>
+</tbody>
+</table>
+
+<h3>1.2 RL 训练中的奖励接入方式</h3>
+<p>在 PPO / GRPO 框架中，奖励模型的输出以如下方式进入损失计算：</p>
+<ul>
+    <li>序列级标量 \( r(\tau) \)：最简单，适合 ORM；GRPO 直接用组内相对奖励计算优势</li>
+    <li>步骤级标量 \( r_t \)：PRM 输出，需要与 GAE（Generalized Advantage Estimation）结合</li>
+    <li>Token 级标量 \( r_i \)：最细粒度，可直接替换 PPO 的 token-level advantage</li>
+    <li>可微分标量：奖励本身可对策略参数求导，绕过 REINFORCE 的高方差问题</li>
+</ul>
+</section>
+
+<!-- ============================================================ -->
+<section id="prm">
+<h2>2. 过程奖励模型（Process Reward Model，PRM）</h2>
+<span class="tag tag-prm">PRM</span>
+
+<p>PRM 对推理链或 Agent 轨迹中的每一步（Step）独立打分，提供密集的中间监督信号。其核心优势在于：即使最终结果失败，正确的中间步骤也能获得正向奖励，从而缓解稀疏奖励问题。</p>
+
+<h3>2.1 数学基础</h3>
+<p>给定轨迹 \( \tau = (s_0, a_0, s_1, a_1, \ldots, s_T) \)，PRM 学习函数：</p>
+\[
+r_{\text{PRM}}(s_t, a_t) \in [0, 1]
+\]
+<p>训练目标通常为二元交叉熵（Binary Cross-Entropy）：</p>
+\[
+\mathcal{L}_{\text{PRM}} = -\sum_{t=1}^{T} \left[ y_t \log r_t + (1 - y_t) \log(1 - r_t) \right]
+\]
+<p>其中 \( y_t \in \{0, 1\} \) 为步骤级标签，可通过 Monte Carlo 估计或人工标注获得。</p>
+
+<h3>2.2 Math-Shepherd：自动化过程监督的奠基工作</h3>
+<p>Wang et al. (2023/2024) 提出 Math-Shepherd，是 PRM 领域的奠基性工作。其核心贡献是无需人工标注步骤标签，通过自动化方式生成过程监督数据。</p>
+<h4>方法</h4>
+<ul>
+    <li>对每个中间步骤，从该步骤出发采样多条完整轨迹，以最终答案正确率作为该步骤的软标签</li>
+    <li>使用二元搜索（Binary Search）快速定位推理链中的第一个错误步骤</li>
+    <li>正负样本平衡策略确保训练数据质量</li>
+</ul>
+<h4>结果</h4>
+<p>在 Mistral-7B 上，结合 Math-Shepherd 的 step-by-step PPO 将数学推理准确率提升至 77.9%。</p>
+<h4>对 Robot Agent 的适用性</h4>
+<p>可将每次工具调用或导航动作视为一个"步骤"，从该状态出发 rollout 多条轨迹，以任务完成率作为软标签。挑战在于 rollout 成本高，且机器人环境的随机性使软标签方差较大。</p>
+
+<h3>2.3 Let's Reward Step by Step（LRSS）</h3>
+<p>Lightman et al. (2023) 提出使用人工标注的步骤级标签训练 PRM，并将其用作推理路径的导航器（Navigator）。提出了贪心搜索算法，利用 PRM 的步骤级反馈优化推理路径。</p>
+<h4>对 Agent 的启示</h4>
+<p>在 Beam Search 或 MCTS 引导的 Agent 规划中，PRM 可作为节点评估函数，指导搜索方向。</p>
+
+<h3>2.4 OmegaPRM：Monte Carlo 树搜索 + 自动化 PRM</h3>
+<p>Liao et al. (2024) 提出 OmegaPRM，将 MCTS 与自动化过程监督结合，通过二元搜索高效定位错误步骤，生成高质量 PRM 训练数据。</p>
+<h4>核心算法</h4>
+<pre><code>for each problem:
+    rollout complete solution
+    if solution correct:
+        all steps labeled positive
+    else:
+        binary search to find first error step
+        steps before error: positive
+        error step and after: negative
+</code></pre>
+<h4>局限</h4>
+<p>依赖可验证的最终答案（如数学题），对开放式 Agent 任务（如导航目标描述模糊）适用性受限。</p>
+
+<h3>2.5 AgentPRM（Step-Wise Promise and Progress）</h3>
+<p>Xiong et al. (2024) 专门针对 Agent 任务重新定义 PRM，提出"承诺（Promise）"与"进展（Progress）"双维度评估框架。</p>
+<h4>核心思想</h4>
+<ul>
+    <li>Promise：当前步骤对最终目标的潜在贡献（前瞻性）</li>
+    <li>Progress：当前步骤相对于前一步骤的实际进展（回顾性）</li>
+    <li>步骤奖励 \( r_t = \alpha \cdot \text{Promise}_t + (1-\alpha) \cdot \text{Progress}_t \)</li>
+</ul>
+<h4>与数学 PRM 的区别</h4>
+<p>数学 PRM 将步骤视为独立的正确/错误判断；AgentPRM 捕捉步骤间的序列依赖性，以及每步对最终目标的贡献度。</p>
+<h4>对 Robot Agent 的适用性</h4>
+<p>Promise 可映射为"当前位置到目标的估计距离减少量"，Progress 可映射为"已完成子任务数量"。适合导航 + 工具调用的混合 Agent。</p>
+
+<h3>2.6 AgentPRM（Actor-Critic 框架，2502.10325）</h3>
+<p>Zeng et al. (2025) 提出另一版本的 AgentPRM，采用轻量级 Actor-Critic 范式，使用 Monte Carlo rollout 计算奖励目标。</p>
+<h4>三阶段迭代训练</h4>
+<ol>
+    <li>Rollout：策略在环境中生成轨迹，对每个状态-动作对采样多条完整轨迹，平均折扣回报作为 PRM 目标</li>
+    <li>PRM 训练：用软二元交叉熵损失训练 PRM，软标签 \( \in [0,1] \)</li>
+    <li>策略优化：用 Online DPO 最大化 PRM 分数，同时保持 KL 正则化</li>
+</ol>
+<h4>InversePRM 扩展</h4>
+<p>从专家演示中学习 PRM，无需结果监督。将其建模为逆强化学习（Inverse RL），用二元分类损失区分专家转移与学习者转移。</p>
+<h4>实验结果</h4>
+<p>在 ALFWorld 上，3B Llama 模型达到 88.1% 成功率，超越 Claude-3.5-Sonnet（76.1%）。InversePRM 仅用 10k 专家演示达到 86.6%，远超 SFT（63.4%）。</p>
+
+<h3>2.7 Web-Shepherd：面向 Web 导航的 PRM</h3>
+<p>Xu et al. (2025) 构建了首个专门用于 Web 导航的 PRM，NeurIPS 2025 Spotlight。</p>
+<h4>方法</h4>
+<ul>
+    <li>构建 WebPRM Collection：40K 步骤级偏好对 + 带注释的检查清单（Checklist）</li>
+    <li>WebRewardBench：首个 PRM 元评估基准</li>
+    <li>步骤级标注覆盖多领域、多难度</li>
+</ul>
+<h4>结果</h4>
+<p>在 WebRewardBench 上比 GPT-4o 高约 30 个百分点；在 WebArena-lite 上作为验证器，比 GPT-4o-mini 验证器高 10.9 分，成本降低 10 倍。</p>
+
+<h3>2.8 DataPRM：面向数据分析 Agent 的过程奖励</h3>
+<p>Xu et al. (2025) 针对数据分析 Agent 提出 DataPRM，引入"反思感知三元奖励策略（Reflection-Aware Ternary Reward）"。</p>
+<h4>三元奖励</h4>
+<ul>
+    <li>正确步骤：+1</li>
+    <li>可纠正错误（探索性试错）：0（不惩罚）</li>
+    <li>真正错误：-1</li>
+</ul>
+<p>这一设计区分了"必要的探索"与"真正的错误"，对工具调用 Agent 尤为重要（工具调用失败不一定是策略错误）。</p>
+
+<h3>2.9 PRIME：隐式过程奖励（无需步骤标签）</h3>
+<p>Cui et al. (2025) 提出 PRIME（Process Reinforcement through Implicit Rewards），通过仅使用策略 rollout 和结果标签，在线��新 PRM，无需昂贵的步骤级标注。</p>
+<h4>核心洞察</h4>
+<p>隐式 PRM 可以从 ORM 的响应级标签中"免费"获得——训练 ORM 时，其内部表示已隐含了步骤级信息。</p>
+<h4>结果</h4>
+<p>从 Qwen2.5-Math-7B-Base 出发，在多个推理基准上平均提升 15.1%，仅使用 Qwen2.5-Math-7B-Instruct 训练数据的 10%。</p>
+
+<h3>2.10 iStar：在线过程奖励学习（Agentic RL）</h3>
+<p>Zhu et al. (2025) 提出 iStar（Online Process Reward Learning for Agentic RL），交替优化 PRM 和策略，无需额外 rollout。</p>
+<h4>方法</h4>
+<ul>
+    <li>用轨迹级 DPO 目标优化 PRM</li>
+    <li>步骤级优势 = PRM 输出 + 轨迹级优势的加权组合</li>
+    <li>形成自强化训练循环（Self-Reinforcing Loop）</li>
+</ul>
+<h4>结果</h4>
+<p>在 WebShop、VisualSokoban、SOTOPIA 三个基准上达到 SOTA，超越前沿 LLM 和强 RL 基线。</p>
+
+<h3>2.11 PRM 局限性总结</h3>
+<div class="warn">
+<ul>
+    <li>步骤标签获取成本高（人工标注或大量 MC rollout）</li>
+    <li>步骤边界定义模糊（Agent 轨迹中"一步"的粒度难以统一）</li>
+    <li>奖励黑客（Reward Hacking）：模型可能学会在每步获得高分但整体失败</li>
+    <li>对随机环境的鲁棒性差（MC 估计方差大）</li>
+    <li>与 GRPO 结合时需要将步骤级奖励转换为序列级优势，增加实现复杂度</li>
+</ul>
+</div>
+</section>
+
+<!-- ============================================================ -->
+<section id="orm">
+<h2>3. 结果奖励模型（Outcome Reward Model，ORM）</h2>
+<span class="tag tag-orm">ORM</span>
+
+<p>ORM 仅对轨迹的最终结果打分，是最简单也是最常用的奖励建模方式。其优势在于训练数据易于获取（只需知道任务是否成功），但奖励稀疏，信用分配（Credit Assignment）困难。</p>
+
+<h3>3.1 数学形式</h3>
+<p>给定完整轨迹 \( \tau = (s_0, a_0, \ldots, s_T) \)，ORM 学习：</p>
+\[
+r_{\text{ORM}}(\tau) = f(s_T, g) \in [0, 1]
+\]
+<p>其中 \( g \) 为任务目标描述，\( s_T \) 为终止状态。训练目标为二元交叉熵或 Bradley-Terry 偏好模型：</p>
+\[
+\mathcal{L}_{\text{ORM}} = -\mathbb{E}_{(\tau^+, \tau^-)} \left[ \log \sigma(r(\tau^+) - r(\tau^-)) \right]
+\]
+
+<h3>3.2 WebRL：自进化课程 RL 中的 ORM</h3>
+<p>Qi et al. (2024) 提出 WebRL，将 ORM 嵌入自进化在线课程强化学习框架，在 WebArena-Lite 上将 Llama-3.1-8B 的成功率从 4.8% 提升至 42.4%。</p>
+<h4>ORM 架构与训练</h4>
+<ul>
+    <li>输入：任务指令 + 历史动作��列 + 最终网页 HTML 状态</li>
+    <li>输出："YES"（成功）vs "NO"（失败）的概率比</li>
+    <li>训练数据：WebArena-Lite + 任务改写增强（地名、产品名替换）</li>
+    <li>测试集准确率约 80%，优于 GPT-4（71-73%）</li>
+</ul>
+<h4>RL 集成</h4>
+<p>ORM 提供二元奖励（0/1），驱动优势估计。课程学习循环：ORM 评估失败轨迹 → 生成新任务 → 策略改进 → ORM 精度提升，形成正向循环。</p>
+<h4>对 Robot Agent 的适用性</h4>
+<p>将最终机器人状态（位置、已完成子任务列表）输入 ORM，判断是否达到目标。适合有明确成功标准的导航任务。</p>
+
+<h3>3.3 ToolRM：面向工具调用的 ORM</h3>
+<p>Shi et al. (2024) 提出 ToolRM，专门针对工具调用 LLM 的结果奖励建模。</p>
+<h4>方法</h4>
+<ul>
+    <li>从开源 LLM 合成训练数据，构建 FC-RewardBench（首个工具调用场景 RM 评估基准）</li>
+    <li>模型规模：1.7B 到 14B 参数</li>
+    <li>评估维度：工具选择正确性、参数格式、执行结果</li>
+</ul>
+<h4>结果</h4>
+<p>在 7 个域外基准上平均提升 25%（Best-of-N 采样），对输入噪声鲁棒，支持策略模型的 RL 训练。</p>
+
+<h3>3.4 ToolRL：工具学习的奖励设计系统研究</h3>
+<p>Chen et al. (2025) 系统研究了工具学习中的奖励设计，基于 GRPO 训练框架。</p>
+<h4>奖励策略维度</h4>
+<ul>
+    <li>类型：格式奖励、执行奖励、结果奖励</li>
+    <li>尺度：绝对值 vs 相对值</li>
+    <li>粒度：工具级 vs 参数级 vs 结果级</li>
+    <li>时序动态：稀疏 vs 密集</li>
+</ul>
+<h4>结论</h4>
+<p>精心设计的奖励比基础模型提升 17%，比 SFT 提升 15%。奖励设计是工具学习的核心杠杆。</p>
+
+<h3>3.5 ORM vs PRM：实证对比</h3>
+<p>Zeng et al. (2024) 在多领域测试时扩展（Test-Time Scaling）场景下对比 ORM 和 PRM：</p>
+<ul>
+    <li>判别式 ORM（dORM）与判别式 PRM（dPRM）性能相当</li>
+    <li>生成式 PRM（gPRM）竞争力不足</li>
+    <li>生成式 ORM（gORM）最鲁棒，在多领域一致提升</li>
+</ul>
+<div class="callout">结论：在资源受限场景下，gORM 是最稳健的选择；PRM 的优势在于密集监督，但需要更多标注成本。</div>
+
+<h3>3.6 ORM 局限性</h3>
+<div class="warn">
+<ul>
+    <li>奖励稀疏：长轨迹中信用分配困难，策略难以知道哪一步导致失败</li>
+    <li>奖励黑客：模型可能通过错误推理偶然得到正确答案，获得满分</li>
+    <li>对部分完成任务无法给予中间奖励，不利于探索</li>
+    <li>需要可验证的最终状态，对开放式任务（如对话质量）适用性有限</li>
+</ul>
+</div>
+</section>
+
+<!-- ============================================================ -->
+<section id="trajectory">
+<h2>4. 轨迹级奖励模型（Trajectory-Level Reward Models）</h2>
+<span class="tag tag-traj">轨迹级</span>
+
+<p>轨迹级奖励模型将整条多轮交互轨迹作为评估单元，而非单步或最终状态。这类方法特别适合多轮对话、工具调用链、导航序列等场景。</p>
+
+<h3>4.1 多轮 RLHF：轨迹偏好学习</h3>
+<p>Shi et al. (2024) 提出多轮 RLHF 框架，将偏好反馈从单轮扩展到完整多轮对话轨迹。</p>
+<h4>方法</h4>
+<ul>
+    <li>在表格设定下，提出基于镜���下降（Mirror Descent）的策略优化算法</li>
+    <li>在单决策（Turn）级别比较偏好，而非整条轨迹</li>
+    <li>深度 RL 变体在教育对话环境中超越 RLHF 基线</li>
+</ul>
+<h4>关键发现</h4>
+<p>基于偏好的学习可以恢复与显式奖励 RL 相同的性能，尽管仅依赖更弱的偏好信号。</p>
+
+<h3>4.2 MT-GRPO：多轮 Turn 级奖励设计</h3>
+<p>Luo et al. (2025) 提出 MT-GRPO，将 GRPO 扩展到多轮 Agent 交互，引入 Turn 级奖励。</p>
+<h4>Turn 级奖励类型</h4>
+<ul>
+    <li>可验证奖励（Verifiable Reward）：基于客观标准自动计算</li>
+    <li>LLM-as-Judge 奖励：由语言模型评估中间推理步骤</li>
+</ul>
+<h4>与轨迹级奖励的对比</h4>
+<p>传统方法仅在任务完成时给予稀疏奖励；MT-GRPO 在每个 Turn 后提供中间信号，实现更精细的信用分配。实验显示：更高的稳定性、更快的收敛、更高的准确率。</p>
+<h4>对 Robot Agent 的适用性</h4>
+<p>每次工具调用后计算 Turn 级奖励（如工具调用格式正确性、返回值合理性），与最终任务奖励结合，形成密集监督。</p>
+
+<h3>4.3 BranPO：对比动态分支采样</h3>
+<p>Xu et al. (2025) 提出 BranPO（Branching Relative Policy Optimization），通过截断轨迹末尾并重采样替代续接，构建对比对。</p>
+<h4>核心思想</h4>
+<ul>
+    <li>在轨迹末尾附近截断，从同一前缀出发采样多条不同后缀</li>
+    <li>构建共享前缀、不同后缀的对比对，提供步骤级对比监督</li>
+    <li>解决长轨迹中的信用模糊（Credit Ambiguity）问题</li>
+</ul>
+<h4>增强技术</h4>
+<ul>
+    <li>难度感知分支采样（Difficulty-Aware Branch Sampling）</li>
+    <li>冗余步骤掩码（Redundant Step Masking）</li>
+</ul>
+<h4>结果</h4>
+<p>在长轨迹问答基准上显著提升准确率，不增加总训练预算。</p>
+
+<h3>4.4 TSR：轨迹搜索 Rollout</h3>
+<p>Wan et al. (2025) 提出 TSR（Trajectory-Search Rollouts），在训练 rollout 阶段应用测试时扩展技术（Best-of-N、Beam Search、浅层前瞻）。</p>
+<h4>方法</h4>
+<ul>
+    <li>在每个 Turn 使用基于状态反馈的轻量级树搜索，选择高分动作</li>
+    <li>与 PPO / GRPO 等标准策略梯度优化器兼容</li>
+    <li>避免模式崩溃，稳定学习</li>
+</ul>
+<h4>结果</h4>
+<p>在 Sokoban、FrozenLake、WebShop 上提升最高 15%，训练计算量仅一次性增加。</p>
+
+<h3>4.5 PROF：过程与结果奖励协调</h3>
+<p>Liao et al. (2024) 提出 PROF（PRocess cOnsistency Filter），通过 PRM-ORM 一致性进行样本筛选，而非直接组合两种奖励。</p>
+<h4>方法</h4>
+<ul>
+    <li>保留"ORM 正确 + PRM 强支持"的样本（真正正确）</li>
+    <li>保留"ORM 错误 + PRM 弱支持"的样本（真正错误）</li>
+    <li>丢弃"ORM 正确 + PRM 弱支持"（侥幸正确）和"ORM 错误 + PRM 强支持"（推理正确但答案错）</li>
+</ul>
+<h4>结果</h4>
+<p>一致性提升最终答案准确率和中间推理质量，对强 PRM 的依赖性降低。</p>
+
+<h3>4.6 轨迹级 RM 的信用分配问题</h3>
+<p>轨迹级奖励的核心挑战是信用分配：给定轨迹级奖励 \( R(\tau) \)，如何将其分配到各步骤？</p>
+<table>
+<thead><tr><th>方法</th><th>信用分配策略</th><th>优缺点</th></tr></thead>
+<tbody>
+<tr><td>GRPO</td><td>组内相对奖励，均匀分配到所有 token</td><td>简单，但粗粒度</td></tr>
+<tr><td>PPO + GAE</td><td>时序差分 + 广义优势估计</td><td>精细，但需要 Critic 网络</td></tr>
+<tr><td>BranPO</td><td>对比分支，末尾步骤获得更精确信用</td><td>无需 Critic，但仅覆盖末尾</td></tr>
+<tr><td>PRM + GRPO</td><td>步骤级奖励直接作为密集信号</td><td>最精细，但需要 PRM 训练</td></tr>
+</tbody>
+</table>
+
+</section>
+
+<!-- ============================================================ -->
+<section id="verifier">
+<h2>5. 验证器 / LLM-as-Judge 奖励模型</h2>
+<span class="tag tag-verif">验证器</span>
+
+<p>验证器类奖励模型使用 LLM 本身作为评判者（Judge），生成评分或批评文本。这类方法无需大量标注数据，但存在自我偏好（Self-Preference Bias）和评分不一致等问题。</p>
+
+<h3>5.1 Constitutional AI（CAI）/ RLAIF</h3>
+<p>Bai et al. (2022) 提出 Constitutional AI，通过 AI 自我批评和修订实现对齐，无需人工标注有害输出。</p>
+<h4>两阶段流程</h4>
+<ol>
+    <li>监督学习阶段：模型生成输出 → 根据宪法原则（Constitution）自我批评 → 修订输出 → 在修订数据上微调</li>
+    <li>RL 阶段（RLAIF）：用 AI 偏好反馈训练偏好模型 → 用偏好模型作为奖励信号进行 RL</li>
+</ol>
+<h4>对 Agent 的适用性</h4>
+<p>可为 Agent 定义"宪法"（如"工具调用应最小化副作用"、"导航应优先安全路径"），让 Agent 自我评估每步行为是否符合原则。</p>
+<h4>局限</h4>
+<p>宪法原则需要人工设计；自我批评可能存在系统性偏差；对复杂 Agent 任务的覆盖度有限。</p>
+
+<h3>5.2 Agent-RRM：推理型奖励模型</h3>
+<p>Zhu et al. (2025) 提出 Agent-RRM，为 Agent 轨迹生成结构化反馈：显式推理链 + 聚焦批评 + 整体评分。</p>
+<h4>三组件输出</h4>
+<ul>
+    <li>推理链（Reasoning Trace）：逐步分析 Agent 决策过程</li>
+    <li>聚焦批评（Focused Critique）：指出推理缺陷，提供改进建议</li>
+    <li>整体评分（Overall Score）：评估过程性能</li>
+</ul>
+<h4>三种集成策略</h4>
+<ul>
+    <li>Reagent-C：文本增强精炼（Text-Augmented Refinement）</li>
+    <li>Reagent-R：奖励增强引导（Reward-Augmented Guidance）</li>
+    <li>Reagent-U：统一反馈集成（Unified Feedback Integration）</li>
+</ul>
+<h4>结果</h4>
+<p>Reagent-U 在 12 个基准上提升显著：GAIA 43.7%，WebWalkerQA 46.2%。</p>
+
+<h3>5.3 AgentV-RL：智能体验证器</h3>
+<p>Zhu et al. (2025) 提出 AgentV-RL，将奖励建模重新定义为多轮工具增强过程，使用前向和后向双智能体进行双向验证。</p>
+<h4>双向验证</h4>
+<ul>
+    <li>前向智能体（Forward Agent）：从前提追踪到结论</li>
+    <li>后向智能体（Backward Agent）：从结论反向验证前提</li>
+    <li>主动探索 + RL 训练（AgentV-RL）</li>
+</ul>
+<h4>结果</h4>
+<p>4B 模型超越 SOTA ORM 25.2%，在并行和串行测试时扩展场景下均有一致提升。</p>
+
+<h3>5.4 CRew：置信度即奖励</h3>
+<p>Xu et al. (2024) 提出 CRew（Confidence as Reward），利用 LLM 最终答案的 token 级置信度分数作为奖励代理，无需训练独立奖励模型。</p>
+<h4>方法</h4>
+<ul>
+    <li>模型置信度可有效区分 CoT 路径与非 CoT 路径</li>
+    <li>CRew-DPO：结合置信度分数与正确性信号构建偏好数据</li>
+</ul>
+<h4>结果</h4>
+<p>在 MATH500 和 RewardMATH 上超越大多数训练型奖励模型，无需额外训练成本。</p>
+<h4>局限</h4>
+<p>仅适用于封闭式任务（有明确正确答案）；对开放式 Agent 任务（如导航）适用性有限。</p>
+
+<h3>5.5 SPPO / SPIN：自博弈奖励模型</h3>
+<p>Wu et al. (2024) 提出 SPPO（Self-Play Preference Optimization），通过迭代策略更新近似 Nash 均衡，无需显式奖励模型。</p>
+<h4>方法</h4>
+<ul>
+    <li>LLM 与自身的历史版本博弈，生成训练数据</li>
+    <li>SPIN（Self-Play Fine-Tuning）：LLM 生成自身训练数据，与历史版本竞争</li>
+    <li>理论收敛保证：近似 Nash 均衡</li>
+</ul>
+<h4>对 Agent 的适用性</h4>
+<p>在有明确胜负判断的 Agent 任务（如导航成功/失败）中，可用自博弈生成对比轨迹对，无需人工偏好标注。</p>
+
+<h3>5.6 VPR：可验证过程奖励</h3>
+<p>Zhu et al. (2025) 提出 VPR（Verifiable Process Rewards），将符号或算法预言机（Oracle）转化为中间动作的客观检验。</p>
+<h4>三类验证设定</h4>
+<ul>
+    <li>基于搜索的验证（动态演绎）</li>
+    <li>基于约束的验证（逻辑推理）</li>
+    <li>基于后验的验证（概率推断）</li>
+</ul>
+<h4>结果</h4>
+<p>在受控环境中超越结果级奖励和基于 rollout 的过程奖励基线，并迁移到通用和 Agent 推理基准。</p>
+
+<h3>5.7 LLM-as-Judge 的已知偏差</h3>
+<div class="warn">
+<ul>
+    <li>自我偏好偏差（Self-Preference Bias）：模型倾向于给自己生成的输出更高分</li>
+    <li>位置偏差（Position Bias）：倾向于给第一个或最后一个选项更高分</li>
+    <li>长度偏差（Length Bias）：倾向于给更长的输出更高分</li>
+    <li>单 token 攻击（One Token Attack）：在输出末尾添加特定 token 可操纵评分</li>
+    <li>评分不一致：同一输出在不同上下文下评分差异大</li>
+</ul>
+</div>
+</section>
+
+<!-- ============================================================ -->
+<section id="differentiable">
+<h2>6. 可微分奖励模型（Differentiable Reward Models）</h2>
+<span class="tag tag-diff">可微分</span>
+
+<p>可微分奖励模型允许奖励梯度直接反传至策略参数，绕过 REINFORCE 类方法的高方差问题。这是将奖励模型深度集成到训练损失中的关键技术。</p>
+
+<h3>6.1 核心挑战：离散 token 采样的不可微性</h3>
+<p>LLM 生成 token 是离散采样过程，标准反向传播无法穿越采样操作：</p>
+\[
+a_t \sim \text{Categorical}(\pi_\theta(\cdot | s_t)) \quad \text{（不可微）}
+\]
+<p>解决方案分为两类：</p>
+<ol>
+    <li>松弛（Relaxation）：用连续近似替代离散采样（Gumbel-Softmax）</li>
+    <li>绕过（Bypass）：用可微分代理奖励替代原始奖励</li>
+</ol>
+
+<h3>6.2 GRADE：Gumbel-Softmax 松弛对齐</h3>
+<p>Ziegler et al. (2025) 提出 GRADE（Gumbel-softmax Relaxation for Alignment via Differentiable Estimation），用直通估计器（Straight-Through Estimator，STE）实现端到端梯度流。</p>
+<h4>方法</h4>
+<ul>
+    <li>Gumbel-Softmax 重参数化：将离散 token 采样松弛为连续分布</li>
+    <li>直通估计器（GRADE-STE）：前向传播用离散 token，反向传播用连续近似</li>
+    <li>奖励梯度直接从奖励信号流向模型参数，无需 REINFORCE 估计</li>
+</ul>
+<h4>数学形式</h4>
+\[
+\tilde{a}_t = \text{softmax}\left(\frac{\log \pi_\theta(\cdot|s_t) + g}{\tau}\right), \quad g \sim \text{Gumbel}(0,1)
+\]
+<p>其中 \( \tau \) 为温度参数，\( \tau \to 0 \) 时趋近于 argmax。</p>
+<h4>结果</h4>
+<p>在 IMDB 情感控制任务上，测试奖励 0.763（PPO：0.510），梯度方差降低 14 倍以上。</p>
+<h4>对 Agent 的适用性</h4>
+<p>可将工具调用奖励（如 API 返回值的质量评分）作为可微分信号，直接优化工具选择策略。挑战在于工具调用的离散性（工具名称、参数）需要额外松弛。</p>
+
+<h3>6.3 ABPT：部分可微分奖励的修正反传</h3>
+<p>Luo et al. (2025) 提出 ABPT（Amended Backpropagation Through Time），解决奖励函数部分不可微时的梯度偏差问题。</p>
+<h4>部分可微分奖励</h4>
+<p>在机器人控制中，奖励函数通常包含：</p>
+<ul>
+    <li>可微分部分：位置误差、速度误差（连续函数）</li>
+    <li>不可微分部分：碰撞检测（阶跃函数）、任务完成判断（布尔值）</li>
+</ul>
+<h4>方法</h4>
+<p>结合 0-step 和 N-step 回报，减少梯度偏差；利用学习到的 Q 值函数的值梯度；熵正则化 + 状态初始化促进探索。</p>
+<h4>结果</h4>
+<p>在四旋翼飞行任务（仿真 + 真实环境）中，收敛速度显著快于现有算法，最终奖励更高。</p>
+<h4>对 Robot Agent 的直接适用性</h4>
+<div class="callout">ABPT 专为机器人��制设计，直接适用于导航 Agent：将路径规划奖励（连续）与任务完成奖励（离散）混合，通过修正反传处理不可微分部分。</div>
+
+<h3>6.4 Token 级连续奖励（TLCR）</h3>
+<p>Zeng et al. (2024) 提出 TLCR（Token-Level Continuous Reward），用判别器的置信度分数为每个 token 分配连续奖励。</p>
+<h4>方法</h4>
+<ul>
+    <li>训练判别器区分正负 token</li>
+    <li>判别器置信度分数作为 token 级连续奖励</li>
+    <li>替代离散奖励值（+1/-1/0），提供更细粒度的偏好信号</li>
+</ul>
+<h4>与 GRPO 的结合</h4>
+<p>TLCR 输出的 token 级奖励可直接替换 GRPO 中的序列级奖励，实现更精细的优势估计：</p>
+\[
+A_t = r_t^{\text{TLCR}} - \mathbb{E}[r^{\text{TLCR}}]
+\]
+
+<h3>6.5 Token 级奖励塑形（GTPO）</h3>
+<p>Xu et al. (2025) 提出 GTPO（Group Token Policy Optimization），用动态熵加权为每个 token 分配奖励，超越 GRPO 的粗粒度信用分配。</p>
+<h4>方法</h4>
+<ul>
+    <li>动态熵加权（Dynamic Entropy Weighting）：基于 token 的熵值分配奖励权重</li>
+    <li>高熵 token（决策关键点）获得更高权重</li>
+    <li>序列级变体 GRPO-S 在长 CoT 推理任务中表现更稳定</li>
+</ul>
+
+<h3>6.6 可微分奖励的局限性</h3>
+<div class="warn">
+<ul>
+    <li>Gumbel-Softmax 松弛引入近似误差，温度参数敏感</li>
+    <li>长序列的反传计算图庞大，内存开销高</li>
+    <li>对复杂 Agent 轨迹（数十步工具调用），梯度消失/爆炸问题严重</li>
+    <li>与 vLLM 等推理加速框架不兼容（需要保留计算图）</li>
+    <li>目前主要在短序列任务（情感控制、数学）上验证，Agent 场景验证不足</li>
+</ul>
+</div>
+</section>
+
+<!-- ============================================================ -->
+<section id="impl">
+<h2>7. 工程实现：OpenRLHF / veRL / TRL</h2>
+<span class="tag tag-impl">实现</span>
+
+<p>本节梳理主流 RL 训练框架中奖励模型的集成方式，以及面向 Agent 的专用实现。</p>
+
+<h3>7.1 三大框架对比</h3>
+<table>
+<thead>
+<tr><th>框架</th><th>架构</th><th>奖励模型集成</th><th>Agent 支持</th><th>适用规模</th></tr>
+</thead>
+<tbody>
+<tr>
+    <td><strong>TRL</strong><br>(HuggingFace)</td>
+    <td>Accelerate + HF Trainer</td>
+    <td>RewardTrainer；支持 PPO、GRPO、DPO；OpenReward 协议集成环境奖励</td>
+    <td>基础工具调用；OpenReward 标准（HTTP/SSE）</td>
+    <td>&lt;30B，单机多卡</td>
+</tr>
+<tr>
+    <td><strong>OpenRLHF</strong></td>
+    <td>Ray Actor Pool；异构集群</td>
+    <td>独立 RM 服务（可用小 GPU）；支持 PPO、GRPO、REINFORCE++；异步 Agentic RL</td>
+    <td>异步 Agent RL；动态采样</td>
+    <td>7B-70B，多节点</td>
+</tr>
+<tr>
+    <td><strong>veRL</strong></td>
+    <td>HybridEngine（FSDP + vLLM 同 GPU）</td>
+    <td>RM 与 Actor 共享 GPU；支持 Megatron 张量并行；VerlTool 扩展工具调用</td>
+    <td>VerlTool（代码执行、搜索、SQL、视觉）；异步 rollout（近 2× 加速）</td>
+    <td>70B+，生产级</td>
+</tr>
+</tbody>
+</table>
+
+<h3>7.2 TRL 奖励模型训练</h3>
+<p>TRL 提供 <code>RewardTrainer</code> 类，支持标准偏好对训练：</p>
+<pre><code class="language-python">from trl import RewardTrainer, RewardConfig
+
+config = RewardConfig(
+    output_dir="./reward_model",
+    per_device_train_batch_size=4,
+    num_train_epochs=3,
+    max_length=512,
+)
+trainer = RewardTrainer(
+    model=model,
+    args=config,
+    train_dataset=dataset,  # 需要 chosen/rejected 字段
+    tokenizer=tokenizer,
+)
+trainer.train()
+</code></pre>
+<p>OpenReward 集成（TRL v1.4+）支持通过 HTTP/SSE 协议连接外部环境奖励，适合 Agent 任务：</p>
+<pre><code class="language-python"># 环境奖励通过 OpenReward Standard (ORS) 协议接入
+# 支持工具调用结果、导航状态等外部信号
+</code></pre>
+
+<h3>7.3 OpenRLHF 奖励模型集成</h3>
+<p>OpenRLHF 将奖励模型作为独立 Ray Actor 运行，支持异构 GPU 分配：</p>
+<pre><code class="language-bash"># 启动 PPO 训练，RM 运行在独立 GPU 上
+python train_ppo.py \
+    --actor_num_gpus 4 \
+    --critic_num_gpus 2 \
+    --reward_model_num_gpus 1 \
+    --reward_pretrain path/to/reward_model \
+    --remote_rm_url http://reward-server:8000  # 支持远程 RM 服务
+</code></pre>
+<p>异步 Agentic RL 模式支持多步工具调用轨迹的异步评估，避免环境交互阻塞训练。</p>
+
+<h3>7.4 veRL / VerlTool</h3>
+<p>VerlTool（Zeng et al., 2024）在 veRL 基础上扩展多轮工具调用支持：</p>
+<ul>
+    <li>标准化工具 API：代码执行、搜索、SQL 数据库、视觉处理</li>
+    <li>工具定义仅需轻量级 Python 函数</li>
+    <li>异步 rollout 执行：近 2× 加速</li>
+    <li>多模态观测 token（文本/图像/视频）</li>
+    <li>在数学推理、知识 QA、SQL 生成、视觉推理、Web 搜索、软件工程六个领域评估</li>
+</ul>
+
+<h3>7.5 RLHFlow：奖励模型训练配方</h3>
+<p>RLHFlow/RLHF-Reward-Modeling 提供完整的奖励模型训练配方，包括：</p>
+<ul>
+    <li>Bradley-Terry 模型训练</li>
+    <li>偏好数据处理流水线</li>
+    <li>与 OpenRLHF / TRL 的集成示例</li>
+</ul>
+
+<h3>7.6 Agent-Lightning（Microsoft）</h3>
+<p>Microsoft 的 Agent-Lightning 框架提供基于 veRL 的 SQL Agent RL 训练示例，展示了完整的 Agent RL 流水线：LangGraph Agent + LitAgent 包装 + veRL RL 训练 + 单元测试奖励。</p>
+
+<h3>7.7 奖励模型在 GRPO 中的接入方式</h3>
+<p>GRPO（Group Relative Policy Optimization）的损失函数为：</p>
+\[
+\mathcal{L}_{\text{GRPO}} = -\mathbb{E} \left[ \sum_{t} \min\left( \frac{\pi_\theta(a_t|s_t)}{\pi_{\text{old}}(a_t|s_t)} \hat{A}_t, \text{clip}(\cdot, 1-\epsilon, 1+\epsilon) \hat{A}_t \right) \right]
+\]
+<p>其中优势 \( \hat{A}_t \) 由组内相对奖励计算：</p>
+\[
+\hat{A}_i = \frac{r_i - \text{mean}(\{r_j\}_{j=1}^G)}{\text{std}(\{r_j\}_{j=1}^G)}
+\]
+<p>不同奖励模型的接入方式：</p>
+<table>
+<thead><tr><th>奖励类型</th><th>接入点</th><th>实现方式</th></tr></thead>
+<tbody>
+<tr><td>ORM（序列级）</td><td>\( r_i \) 直接输入</td><td>最简单，标准 GRPO</td></tr>
+<tr><td>PRM（步骤级）</td><td>步骤奖励求和或加权平均后作为 \( r_i \)</td><td>需要步骤边界标记</td></tr>
+<tr><td>Turn 级奖励</td><td>每个 Turn 的奖励累加，MT-GRPO 变体</td><td>需要修改 GRPO 实现</td></tr>
+<tr><td>Token 级奖励</td><td>替换均匀分配的 token 优势</td><td>TLCR / GTPO 方式</td></tr>
+<tr><td>可微分奖励</td><td>直接加入损失函数，反传梯度</td><td>GRADE / ABPT 方式</td></tr>
+</tbody>
+</table>
+
+</section>
+
+<!-- ============================================================ -->
+<section id="comparison">
+<h2>8. 方法对比与选型建议</h2>
+
+<h3>8.1 全景对比表</h3>
+<table>
+<thead>
+<tr>
+    <th>方法类别</th>
+    <th>代表工作</th>
+    <th>奖励粒度</th>
+    <th>标注成本</th>
+    <th>GRPO/PPO 兼容性</th>
+    <th>Robot Agent 适用性</th>
+    <th>主要局限</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+    <td>PRM（数学）</td>
+    <td>Math-Shepherd, LRSS, OmegaPRM</td>
+    <td>步骤级</td>
+    <td>高（MC rollout）</td>
+    <td>需转换为序列级</td>
+    <td>低（需可验证答案）</td>
+    <td>步骤边界模糊，奖励黑客</td>
+</tr>
+<tr>
+    <td>PRM（Agent）</td>
+    <td>AgentPRM, Web-Shepherd, DataPRM</td>
+    <td>步骤/Turn 级</td>
+    <td>中（MC rollout）</td>
+    <td>中等（需步骤标记）</td>
+    <td>高（专为 Agent 设计）</td>
+    <td>随机环境方差大</td>
+</tr>
+<tr>
+    <td>隐式 PRM</td>
+    <td>PRIME, iStar, Free PRM</td>
+    <td>步骤级（隐式）</td>
+    <td>低（仅需结果标签）</td>
+    <td>高（在线更新）</td>
+    <td>高（无需步骤标注）</td>
+    <td>隐式信号质量不稳定</td>
+</tr>
+<tr>
+    <td>ORM</td>
+    <td>WebRL, ToolRM, ToolRL</td>
+    <td>序列级</td>
+    <td>低（仅需成功/失败）</td>
+    <td>高（直接接入）</td>
+    <td>高（适合导航任务）</td>
+    <td>信用分配困难</td>
+</tr>
+<tr>
+    <td>轨迹级偏好</td>
+    <td>MT-GRPO, BranPO, TSR</td>
+    <td>Turn/轨迹级</td>
+    <td>中（偏好对）</td>
+    <td>高（MT-GRPO 直接扩展）</td>
+    <td>高（多步工具调用）</td>
+    <td>偏好标注主观性</td>
+</tr>
+<tr>
+    <td>LLM-as-Judge</td>
+    <td>Agent-RRM, AgentV-RL, CAI</td>
+    <td>序列/步骤级</td>
+    <td>低（无需标注）</td>
+    <td>中（需转换为标量）</td>
+    <td>中（偏差问题）</td>
+    <td>自我偏好偏差，不一致</td>
+</tr>
+<tr>
+    <td>可微分 RM</td>
+    <td>GRADE, ABPT, TLCR</td>
+    <td>Token 级</td>
+    <td>低-中</td>
+    <td>高（直接反传）</td>
+    <td>中（ABPT 适合机器人）</td>
+    <td>内存开销大，长序列困难</td>
+</tr>
+</tbody>
+</table>
+
+<h3>8.2 针对机器人导航 / 工具调用 Agent 的选型建议</h3>
+
+<h4>场景 A：有明确成功标准的导航任务（如"到达目标位置"）</h4>
+<div class="callout">
+<strong>推荐：ORM + MT-GRPO Turn 级奖励</strong><br>
+<ul>
+    <li>ORM 提供最终成功/失败信号（低标注成本）</li>
+    <li>MT-GRPO 在每个导航步骤后添加中间奖励（如距离减少量、子目标完成）</li>
+    <li>与 GRPO 直接兼容，实现简单</li>
+    <li>参考：WebRL（ORM）+ MT-GRPO（Turn 级）</li>
+</ul>
+</div>
+
+<h4>场景 B：多步工具调用 Agent（如搜索 + 计算 + 执行）</h4>
+<div class="callout">
+<strong>推荐：AgentPRM（Actor-Critic）+ PRIME（隐式 PRM）</strong><br>
+<ul>
+    <li>AgentPRM 通过 MC rollout 计算步骤级奖励，无需人工标注</li>
+    <li>PRIME 在线更新 PRM，仅需结果标签，成本低</li>
+    <li>ToolRM 提供工具调用质量的 ORM 信号</li>
+    <li>参考：AgentPRM（2502.10325）+ ToolRL 奖励设计</li>
+</ul>
+</div>
+
+<h4>场景 C：开放式任务（目标描述模糊，无法精确验证）</h4>
+<div class="callout">
+<strong>推荐：Agent-RRM（推理型 LLM-as-Judge）+ 自博弈（SPPO）</strong><br>
+<ul>
+    <li>Agent-RRM 生成结构化批评，提供可解释的奖励信号</li>
+    <li>SPPO 通过自博弈生成对比轨迹，无需人工偏好标注</li>
+    <li>注意：需要校准 LLM-as-Judge 的偏差</li>
+</ul>
+</div>
+
+<h4>场景 D：需要可微分信号（端到端优化）</h4>
+<div class="callout">
+<strong>推荐：ABPT（机器人控制）或 GRADE（LLM 策略）</strong><br>
+<ul>
+    <li>ABPT 专为部分可微分奖励设计，直接适用于机器人导航</li>
+    <li>GRADE 适合 LLM 策略的端到端优化，但需要 Gumbel-Softmax 松弛</li>
+    <li>TLCR / GTPO 提供 token 级密集奖励，与 GRPO 结合效果好</li>
+</ul>
+</div>
+
+<h3>8.3 推荐的混合奖励架构</h3>
+<p>对于复杂的机器人导航 + 工具调用 Agent，建议采用分层混合奖励：</p>
+<pre><code class="language-python">def compute_reward(trajectory, task_goal):
+    # 层 1：结果奖励（ORM）- 稀疏但可靠
+    r_outcome = orm(trajectory[-1], task_goal)  # 0 or 1
+
+    # 层 2：过程奖励（PRM）- 密集但需要训练
+    r_process = sum(prm(s, a) for s, a in trajectory) / len(trajectory)
+
+    # 层 3：格式奖励 - 规则化，无需训练
+    r_format = check_tool_call_format(trajectory)  # 工具调用格式正确性
+
+    # 层 4：进展奖励 - 基于环境状态
+    r_progress = compute_distance_reduction(trajectory, task_goal)
+
+    # 加权组合
+    return (0.5 * r_outcome +
+            0.3 * r_process +
+            0.1 * r_format +
+            0.1 * r_progress)
+</code></pre>
+
+<h3>8.4 与 GRPO 训练的集成路径</h3>
+<p>以 OpenRLHF 为例，完整的 Agent RL 训练流水线：</p>
+<ol>
+    <li>SFT 阶段：在专家演示轨迹上微调基础模型</li>
+    <li>奖励模型训练：用 WebRL/ToolRM 方式训练 ORM；用 AgentPRM 方式训练 PRM</li>
+    <li>GRPO 训练：
+        <ul>
+            <li>策略生成 G 条轨迹（组大小）</li>
+            <li>ORM 评估每条轨迹，计算组内相对优势</li>
+            <li>PRM 提供步骤级密集奖励（可选）</li>
+            <li>MT-GRPO 在每个 Turn 后更新优势估计</li>
+        </ul>
+    </li>
+    <li>���代：用新策略更新 ORM/PRM 训练数据（WebRL 自进化课程）</li>
+</ol>
+</section>
+
+<!-- ============================================================ -->
+<section id="references">
+<h2>9. 参考文献（References）</h2>
+<ol class="ref-list">
+    <li>Wang et al., "Math-Shepherd: Verify and Reinforce LLMs Step-by-step without Human Annotations", ACL 2024. <a href="https://arxiv.org/abs/2312.08935">arXiv:2312.08935</a></li>
+    <li>Lightman et al., "Let's Verify Step by Step", 2023. <a href="https://arxiv.org/abs/2310.10080">arXiv:2310.10080</a></li>
+    <li>Liao et al., "OmegaPRM: Improve Mathematical Reasoning in Language Models by Automated Process Supervision", 2024. <a href="https://arxiv.org/abs/2406.06592">arXiv:2406.06592</a></li>
+    <li>Xiong et al., "Process Reward Models for LLM Agents via Step-Wise Promise and Progress", 2024. <a href="https://arxiv.org/abs/2511.08325">arXiv:2511.08325</a></li>
+    <li>Zeng et al., "Process Reward Models for LLM Agents (AgentPRM)", 2025. <a href="https://arxiv.org/abs/2502.10325">arXiv:2502.10325</a></li>
+    <li>Xu et al., "Web-Shepherd: Advancing PRMs for Reinforcing Web Agents", NeurIPS 2025 Spotlight. <a href="https://arxiv.org/abs/2505.15277">arXiv:2505.15277</a></li>
+    <li>Xu et al., "Process-Level Reward Modeling for Agentic Data Analysis (DataPRM)", 2025. <a href="https://arxiv.org/abs/2604.24198">arXiv:2604.24198</a></li>
+    <li>Cui et al., "Process Reinforcement through Implicit Rewards (PRIME)", 2025. <a href="https://arxiv.org/abs/2502.01456">arXiv:2502.01456</a></li>
+    <li>Zhu et al., "Online Process Reward Learning for Agentic RL (iStar)", 2025. <a href="https://arxiv.org/abs/2509.19199">arXiv:2509.19199</a></li>
+    <li>Luo et al., "Free Process Rewards without Process Labels", 2024. <a href="https://arxiv.org/abs/2412.01981">arXiv:2412.01981</a></li>
+    <li>Qi et al., "WebRL: Training LLM Web Agents via Self-Evolving Online Curriculum RL", 2024. <a href="https://arxiv.org/abs/2411.02337">arXiv:2411.02337</a></li>
+    <li>Shi et al., "Outcome Reward Models for Tool-Calling LLMs (ToolRM)", 2024. <a href="https://arxiv.org/abs/2509.11963">arXiv:2509.11963</a></li>
+    <li>Chen et al., "Reward is All Tool Learning Needs (ToolRL)", 2025. <a href="https://arxiv.org/abs/2504.13958">arXiv:2504.13958</a></li>
+    <li>Zeng et al., "Rethinking Reward Models for Multi-Domain Test-Time Scaling", 2024. <a href="https://arxiv.org/abs/2510.00492">arXiv:2510.00492</a></li>
+    <li>Liao et al., "Harmonizing Process and Outcome Rewards through RL Training (PROF)", 2024. <a href="https://arxiv.org/abs/2509.03403">arXiv:2509.03403</a></li>
+    <li>Shi et al., "Multi-turn Reinforcement Learning from Preference Human Feedback", 2024. <a href="https://arxiv.org/abs/2405.14655">arXiv:2405.14655</a></li>
+    <li>Luo et al., "Reinforcing Multi-Turn Reasoning in LLM Agents via Turn-Level Reward Design (MT-GRPO)", 2025. <a href="https://arxiv.org/abs/2505.11821">arXiv:2505.11821</a></li>
+    <li>Xu et al., "Training Multi-Turn Search Agent via Contrastive Dynamic Branch Sampling (BranPO)", 2025. <a href="https://arxiv.org/abs/2602.03719">arXiv:2602.03719</a></li>
+    <li>Wan et al., "Trajectory-Search Rollouts for Multi-Turn RL of LLM Agents (TSR)", 2025. <a href="https://arxiv.org/abs/2602.11767">arXiv:2602.11767</a></li>
+    <li>Zhan et al., "Active RLHF via Best Policy Learning from Trajectory Preference Feedback", 2025. <a href="https://arxiv.org/abs/2501.18873">arXiv:2501.18873</a></li>
+    <li>Bai et al., "Constitutional AI: Harmlessness from AI Feedback", Anthropic, 2022. <a href="https://arxiv.org/abs/2212.08073">arXiv:2212.08073</a></li>
+    <li>Zhu et al., "Exploring Reasoning Reward Model for Agents (Agent-RRM)", 2025. <a href="https://arxiv.org/abs/2601.22154">arXiv:2601.22154</a></li>
+    <li>Zhu et al., "Scaling Reward Modeling with Agentic Verifier (AgentV-RL)", 2025. <a href="https://arxiv.org/abs/2604.16004">arXiv:2604.16004</a></li>
+    <li>Xu et al., "Transforming LLMs into Reward Models (CRew)", 2024. <a href="https://arxiv.org/abs/2510.13501">arXiv:2510.13501</a></li>
+    <li>Wu et al., "Self-Play Preference Optimization for Language Model Alignment (SPPO)", 2024. <a href="https://arxiv.org/abs/2405.00675">arXiv:2405.00675</a></li>
+    <li>Chen et al., "Self-Play Fine-Tuning Converts Weak Language Models to Strong Language Models (SPIN)", 2024. <a href="https://arxiv.org/abs/2401.01335">arXiv:2401.01335</a></li>
+    <li>Zhu et al., "Verifiable Process Rewards for Agentic Reasoning (VPR)", 2025. <a href="https://arxiv.org/abs/2605.10325">arXiv:2605.10325</a></li>
+    <li>Ziegler et al., "Replacing Policy Gradients with Backpropagation for LLM Alignment (GRADE)", 2025. <a href="https://arxiv.org/abs/2601.11574">arXiv:2601.11574</a></li>
+    <li>Luo et al., "Amended Backpropagation through Time with Partially Differentiable Rewards (ABPT)", 2025. <a href="https://arxiv.org/abs/2501.14513">arXiv:2501.14513</a></li>
+    <li>Zeng et al., "Token-Level Continuous Reward for Fine-grained RLHF (TLCR)", ACL 2024 Findings. <a href="https://arxiv.org/abs/2407.16574">arXiv:2407.16574</a></li>
+    <li>Xu et al., "Token and Sequence-Level Reward Shaping with Policy Entropy (GTPO)", 2025. <a href="https://arxiv.org/abs/2508.04349">arXiv:2508.04349</a></li>
+    <li>Hu et al., "OpenRLHF: An Easy-to-use, Scalable and High-performance RLHF Framework", 2024. <a href="https://arxiv.org/abs/2405.11143">arXiv:2405.11143</a> | <a href="https://github.com/OpenRLHF/OpenRLHF">GitHub</a></li>
+    <li>Sheng et al., "veRL/HybridFlow: A Flexible and Efficient RL Post-Training Framework". <a href="https://github.com/volcengine/verl">GitHub</a></li>
+    <li>HuggingFace TRL. <a href="https://github.com/huggingface/trl">GitHub</a> | <a href="https://huggingface.co/docs/trl/openreward">OpenReward 文档</a></li>
+    <li>Zeng et al., "VerlTool: Towards Holistic Agentic RL with Tool Use", 2024. <a href="https://arxiv.org/abs/2509.01055">arXiv:2509.01055</a></li>
+    <li>RLHFlow/RLHF-Reward-Modeling. <a href="https://github.com/RLHFlow/RLHF-Reward-Modeling">GitHub</a></li>
+    <li>Xu et al., "Towards Agentic Tool-Use Reward Modeling (ToolRM)", 2024. <a href="https://arxiv.org/abs/2510.26167">arXiv:2510.26167</a></li>
+    <li>Zhu et al., "General-Purpose Vision-Language Reward Models for Robotics (RoboReward)", 2025. <a href="https://arxiv.org/abs/2601.00675">arXiv:2601.00675</a></li>
+    <li>Zhang et al., "The Lessons of Developing Process Reward Models in Mathematical Reasoning", 2025. <a href="https://arxiv.org/abs/2501.07301">arXiv:2501.07301</a></li>
+    <li>WebArbiter: A Principle-Guided Reasoning Process Reward Model for Web Agents, 2025. <a href="https://arxiv.org/abs/2601.21872">arXiv:2601.21872</a></li>
+</ol>
+</section>
+</article>
+</body>
+</html>

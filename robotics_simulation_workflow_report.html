@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>机器人与机器狗仿真平台：ROS2、Sandbox、Isaac 与生产力流程报告</title>
+    <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            font-size: 16px;
+            line-height: 1.8;
+            color: #1f2933;
+            background: #ffffff;
+            padding: 2rem 1rem;
+        }
+        article { max-width: 900px; margin: 0 auto; }
+        h1 {
+            font-size: 2rem;
+            line-height: 1.35;
+            margin-bottom: 0.5rem;
+            color: #111827;
+            border-bottom: 3px solid #2563eb;
+            padding-bottom: 0.65rem;
+        }
+        .subtitle { color: #52616b; font-size: 0.95rem; margin-bottom: 1.8rem; }
+        h2 {
+            font-size: 1.45rem;
+            margin-top: 2.4rem;
+            margin-bottom: 1rem;
+            color: #1e3a8a;
+            border-left: 4px solid #2563eb;
+            padding-left: 0.75rem;
+        }
+        h3 { font-size: 1.18rem; margin-top: 1.6rem; margin-bottom: 0.75rem; color: #243b53; }
+        h4 { font-size: 1.05rem; margin-top: 1.1rem; margin-bottom: 0.45rem; color: #334155; }
+        p { margin-bottom: 1rem; }
+        ul, ol { margin-bottom: 1rem; padding-left: 1.45rem; }
+        li { margin-bottom: 0.35rem; }
+        code {
+            font-family: "Fira Code", Consolas, monospace;
+            background: #f3f4f6;
+            color: #b42318;
+            border-radius: 3px;
+            padding: 0.1rem 0.35rem;
+            font-size: 0.9em;
+        }
+        pre {
+            background: #f8fafc;
+            border: 1px solid #dbe3ea;
+            border-radius: 6px;
+            padding: 1rem;
+            margin-bottom: 1.2rem;
+            overflow-x: auto;
+            line-height: 1.55;
+            font-size: 0.9em;
+        }
+        pre code { color: #111827; background: none; padding: 0; }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 1.5rem;
+            font-size: 0.9rem;
+        }
+        th, td { border: 1px solid #d6dee6; padding: 0.55rem 0.7rem; vertical-align: top; text-align: left; }
+        th { background: #eff6ff; color: #1e40af; font-weight: 650; }
+        tbody tr:nth-child(even) { background: #f9fafb; }
+        a { color: #2563eb; text-decoration: none; }
+        a:hover { text-decoration: underline; }
+        .toc {
+            background: #f8fafc;
+            border: 1px solid #dbe3ea;
+            border-radius: 6px;
+            padding: 1rem 1.2rem;
+            margin-bottom: 1.5rem;
+        }
+        .toc h3 { margin-top: 0; }
+        .note {
+            background: #eef7ff;
+            border-left: 4px solid #2563eb;
+            padding: 0.8rem 1rem;
+            border-radius: 0 4px 4px 0;
+            margin-bottom: 1rem;
+        }
+        .warn {
+            background: #fff7ed;
+            border-left: 4px solid #ea580c;
+            padding: 0.8rem 1rem;
+            border-radius: 0 4px 4px 0;
+            margin-bottom: 1rem;
+        }
+        .evidence {
+            color: #5b677a;
+            font-size: 0.88rem;
+            margin-top: -0.25rem;
+        }
+        .flow {
+            font-family: "Fira Code", Consolas, monospace;
+            background: #0f172a;
+            color: #dbeafe;
+            border-radius: 6px;
+            padding: 1rem;
+            margin-bottom: 1.2rem;
+            white-space: pre;
+            overflow-x: auto;
+            line-height: 1.55;
+            font-size: 0.86rem;
+        }
+        .small { font-size: 0.88rem; color: #475569; }
+        @media (max-width: 640px) {
+            body { padding: 1rem 0.55rem; }
+            h1 { font-size: 1.45rem; }
+            h2 { font-size: 1.22rem; }
+            table { font-size: 0.8rem; }
+        }
+    </style>
+</head>
+<body>
+<article>
+<h1>机器人与机器狗仿真平台：ROS2、Sandbox、Isaac 与生产力流程报告</h1>
+<p class="subtitle">技术调研报告 | 2026-05-28 | 本地项目取证：<code>agent</code> 与 <code>19_sensebot_robotics_system</code></p>
+
+<div class="toc">
+    <h3>目录</h3>
+    <ol>
+        <li><a href="#question">问题（Question）</a></li>
+        <li><a href="#background">背景与动机（Background &amp; Motivation）</a></li>
+        <li><a href="#ros">ROS 是什么</a></li>
+        <li><a href="#aceagent">本地项目一：AceAgent 仿真环境</a></li>
+        <li><a href="#sensebot">本地项目二：SenseBot 仿真与部署环境</a></li>
+        <li><a href="#public">公版项目与工具链对照</a></li>
+        <li><a href="#workflow">机器人/机器狗仿真的生产力流程</a></li>
+        <li><a href="#comparison">方法对比与选择建议</a></li>
+        <li><a href="#references">参考文献（References）</a></li>
+    </ol>
+</div>
+
+<section id="question">
+<h2>1. 问题（Question）</h2>
+<p>本报告回答一个工程问题：在本地已有 <code>agent</code> 与 <code>19_sensebot_robotics_system</code> 两条项目线的情况下，如何理解 ROS2、机器人/机器狗仿真、模型在环测试与部署之间的关系，并形成一套可复用的生产力流程。</p>
+<p>核心结论是：这两个项目覆盖了不同层级的仿真，不应混为一谈。<code>agent</code> 是工具调用与任务状态层的 sandbox，用来验证 LLM Agent 是否会正确调用导航、TTS、拍照、下单、天气等工具；<code>SenseBot</code> 是 ROS2 机器人系统快照，覆盖传感器、感知、SLAM、规划、控制、Unitree SDK、Docker 构建、bag 回灌、PNC 轻量仿真和 Isaac/DLP 模型在环。</p>
+</section>
+
+<section id="background">
+<h2>2. 背景与动机（Background &amp; Motivation）</h2>
+<p>机器人仿真的目的不是只做一个“看起来像机器人在动”的画面，而是把真实机器上的风险拆成可重复、可观测、可回放的实验单元。对机器狗尤其如此：导航策略、感知模型、底盘控制、语音/LLM 工具链、传感器驱动和网络中间件都有不同的失败模式。</p>
+<p>因此，一条实用的仿真体系通常分成四层：</p>
+<ol>
+    <li><strong>工具层仿真</strong>：不模拟物理，只模拟 API 返回、工具调用、状态迁移和任务评估，适合训练/评估 Agent。</li>
+    <li><strong>ROS2 节点层仿真</strong>：用 topic、message、launch、bag、bridge 把软件模块连起来，适合查通信契约和模块生命周期。</li>
+    <li><strong>模型在环仿真</strong>：把感知/规划模型接入 ROS2 输入输出，用录制数据、Isaac 或 synthetic occupancy 验证模型行为。</li>
+    <li><strong>物理仿真</strong>：用 Gazebo、Isaac Sim/Lab、MuJoCo、Genesis 等模拟动力学、碰撞、传感器和控制闭环。</li>
+</ol>
+<div class="flow">数据/地图/任务 → fixture 或 bag → 离线评估 → ROS2 节点在环 → 物理仿真 → 小流量实机 → 批量部署
+      │              │             │              │              │
+      │              │             │              │              └─ 日志、遥测、故障回灌
+      │              │             │              └─ Isaac/Gazebo/MuJoCo
+      │              │             └─ DLP/感知/规划节点
+      │              └─ AceAgent sandbox / rosbag2
+      └─ 真实地图、传感器数据、任务脚本</div>
+</section>
+
+<section id="ros">
+<h2>3. ROS 是什么</h2>
+<p>机器人操作系统（Robot Operating System, ROS）不是传统意义上的操作系统，而是一套机器人软件中间件：它提供节点（Node）、话题（Topic）、服务（Service）、动作（Action）、参数（Parameter）、启动系统（Launch）、坐标变换（tf2）、日志和 bag 录制回放等机制。ROS2 在通信层使用 DDS（Data Distribution Service），适合分布式、多进程、实时性更强的机器人系统。</p>
+
+<h3>3.1 ROS2 图模型</h3>
+<p>ROS2 程序由一组节点组成。节点通过 topic 发布/订阅连续数据，通过 service 做同步请求/响应，通过 action 执行可取消、可反馈的长任务。典型导航链路如下：</p>
+<pre><code class="language-text">/camera, /lidar, /imu
+      ↓
+perception_node  → /perception/occ3d
+slam_node        → /slam/localization_stateinfo, /dog_odom
+planning_node    → /planning/path 或 /pnc_planner_path_with_time
+control_node     → Unitree SDK2 / motor command
+      ↓
+robot</code></pre>
+
+<h3>3.2 坐标系与局部地图</h3>
+<p>仿真和真实机器人都会不断做坐标转换。若机器人在世界坐标中的位姿为 \((x_r, y_r, \theta_r)\)，世界点 \(p_w=(x_w,y_w)\) 转到机器人局部坐标可写为：</p>
+\[
+p_{ego} =
+\begin{bmatrix}
+\cos\theta_r & \sin\theta_r \\
+-\sin\theta_r & \cos\theta_r
+\end{bmatrix}
+\left(
+\begin{bmatrix}x_w\\y_w\end{bmatrix}
+-
+\begin{bmatrix}x_r\\y_r\end{bmatrix}
+\right)
+\]
+<p>SenseBot 的 PNC simulator 正是在这个意义上从全局 heightmap 按机器人 pose 裁出局部 heightmap，再发布给规划/控制链路。</p>
+
+<h3>3.3 rosbag2 为什么重要</h3>
+<p>rosbag2 是 ROS2 的数据录制与回放机制。它让真实机器上的传感器、定位、规划输出变成可复现实验。生产中常见做法是：实机采集 bag，离线回放给感知/SLAM/规划节点，保存日志与轨迹，再把失败片段转成回归测试。</p>
+</section>
+
+<section id="aceagent">
+<h2>4. 本地项目一：AceAgent 仿真环境</h2>
+<p class="evidence">主要证据：<code>agent/server/agent/sandbox.py</code>、<code>agent/scripts/build_xian10th_sim_assets.py</code>、<code>agent/data/agent_sandbox/xian10th_real_fixture.json</code>、<code>agent/examples/agent_sandbox_cases_xian10th_real.jsonl</code>、<code>agent/ros2/agent_sandbox_bridge/</code>。</p>
+
+<h3>4.1 这是工具层 sandbox，不是物理仿真</h3>
+<p><code>agent</code> 的主系统是 OpenAI-compatible 对话服务，工具包括机器人控制、天气、地图、视觉分析、店铺下单等。其 sandbox 的重点是验证模型的“工具调用轨迹”：模型是否先查库存、再导航到小卖部、再播报、再下单、再检查订单、最后回到目标点。</p>
+<p><code>sandbox.py</code> 把工具分成三类：fixture-backed 查询工具、安全查询工具、执行类工具。默认情况下，查询工具从离线 fixture 返回，执行类工具被 sandbox 模拟，不会调用真实机器人、真实导航或真实下单 API。</p>
+
+<table>
+    <thead>
+        <tr><th>层次</th><th>实现</th><th>用途</th></tr>
+    </thead>
+    <tbody>
+        <tr><td>输入数据</td><td><code>xian10th_real_fixture.json</code></td><td>提供机器人状态、当前地图、点位、SKU、POI 等离线数据。</td></tr>
+        <tr><td>任务用例</td><td><code>agent_sandbox_cases_xian10th_real.jsonl</code></td><td>定义用户指令、允许工具、期望轨迹、位置检查、状态检查和禁止工具。</td></tr>
+        <tr><td>工具代理</td><td><code>SandboxToolProxy</code></td><td>拦截工具调用，决定真实调用或模拟返回，并更新虚拟机器人状态。</td></tr>
+        <tr><td>评估函数</td><td><code>score_trace()</code></td><td>从序列、参数、禁止工具、最终文本、状态、行为约束计算 loss。</td></tr>
+        <tr><td>ROS2 桥</td><td><code>agent_sandbox_bridge</code></td><td>把 2D sandbox 暴露成 ROS2 topic，便于接入 ROS2 生态。</td></tr>
+    </tbody>
+</table>
+
+<h3>4.2 xian_10th 场景是怎样搭出来的</h3>
+<p><code>build_xian10th_sim_assets.py</code> 从只读地图/机器人列表中提取 <code>xian_10th</code> 地图，构建 fixture、用例和地图可视化。当前 fixture 中 preferred robot 是 <code>xian_10</code>，地图 id 为 <code>181</code>，包含 8 个真实点位：前台、贩卖机、茶水间、男卫生间、王老师办公室、充电桩、女卫生间、小卖部。</p>
+<p>这类 fixture 的价值是可重复：同一个模型、同一批任务、同一个离线地图，可以稳定比较工具轨迹和 response time。</p>
+
+<h3>4.3 评估公式</h3>
+<p><code>score_trace()</code> 的综合 loss 可抽象为：</p>
+\[
+L =
+w_s L_{seq}
++ w_a L_{arg}
++ w_f L_{forbid}
++ w_t L_{text}
++ w_r L_{state}
++ w_b L_{behavior}
+\]
+<p>当存在状态检查时，源码使用的权重是 \(w_s=0.35, w_a=0.25, w_f=0.15, w_t=0.05, w_r=0.10, w_b=0.10\)。没有状态检查时，序列和参数权重分别提高到 0.40 和 0.30。</p>
+
+<h3>4.4 本地结果</h3>
+<p>在 <code>data/agent_sandbox/runs/</code> 中，真实 xian_10th fixture 的两组摘要都显示 10 个用例全部通过。需要注意，“通过”表示 loss 没超过每个 case 的 <code>max_loss</code>，不是物理仿真里的碰撞安全通过。</p>
+<table>
+    <thead>
+        <tr><th>模型</th><th>用例数</th><th>通过</th><th>最大 loss</th><th>平均响应时间</th><th>p95</th></tr>
+    </thead>
+    <tbody>
+        <tr><td>qwen-122b</td><td>10</td><td>10</td><td>0.175</td><td>1843.595 ms</td><td>3634.186 ms</td></tr>
+        <tr><td>qwen-35b</td><td>10</td><td>10</td><td>0.225</td><td>1361.704 ms</td><td>2999.764 ms</td></tr>
+    </tbody>
+</table>
+<div class="warn">
+    <strong>工程观察：</strong><code>interrupt_store_then_meeting_xian_10</code> 被标注为真实 xian_10th 不支持，因为点位列表没有“会议室”。这是一个好的仿真设计信号：它没有伪造不存在的点位让用例看起来完美，而是保留 loss 和 unsupported reason。
+</div>
+
+<h3>4.5 ROS2 bridge 的作用</h3>
+<p><code>agent/ros2/agent_sandbox_bridge</code> 是一个最小 ROS2 bridge：读取 <code>xian10th_real_fixture.json</code>，发布 <code>/agent_sandbox/robot_pose</code> 和 <code>/agent_sandbox/state</code>，订阅 <code>/agent_sandbox/goal</code>。输入可以是文本点位，也可以是 JSON 目标；如果目标点位存在，节点立即更新 2D pose。</p>
+<pre><code class="language-text">/agent_sandbox/goal  -- std_msgs/String(JSON or text) --> xian10th_sim_node
+xian10th_sim_node    -- geometry_msgs/Pose2D ------------> /agent_sandbox/robot_pose
+xian10th_sim_node    -- std_msgs/String(JSON) -----------> /agent_sandbox/state</code></pre>
+<p>这一步的意义是把 Agent sandbox 从“Python 内部测试”推进到“ROS2 graph 中的一个可连接节点”。之后可以接 RViz、rosbag2、测试节点或上层调度器。</p>
+</section>
+
+<section id="sensebot">
+<h2>5. 本地项目二：SenseBot 仿真与部署环境</h2>
+<p class="evidence">主要证据：<code>19_sensebot_robotics_system/congq_sensebot/CLAUDE.md</code>、<code>README.md</code>、<code>Makefile</code>、<code>scripts/start_all.sh</code>、<code>scripts/setup_and_launch.sh</code>、<code>src/pnc/*simulator*</code>、<code>congq_sensebot_dlp/README.md</code>、<code>dlp_node.py</code>、<code>config/isaac.yaml</code>。</p>
+
+<h3>5.1 SenseBot 是 ROS2 生产系统快照</h3>
+<p>SenseBot 主工程是面向 Unitree Go2/HG 四足机器人的 ROS2 自主导航系统。目标硬件包括 NVIDIA Jetson Orin/aarch64，支持 Ubuntu 20.04/ROS2 Foxy 与 Ubuntu 22.04/ROS2 Humble。构建和运行均要求在 Docker 容器内执行。</p>
+<div class="flow">Sensors → Perception → SLAM → Planning → Control → Unitree SDK2 → Robot
+            │           │        │           │
+            │           │        │           └─ 低层运动控制
+            │           │        └─ TEB / PNC / 轨迹
+            │           └─ /slam/odom_stateinfo, /slam/localization_stateinfo, /slam/nav_map
+            └─ RealSense, Hesai/RSLiDAR, GNSS, IMU</div>
+
+<h3>5.2 构建与部署</h3>
+<p>构建链路使用 <code>colcon build</code> 和 Makefile 封装。x86 目标更像开发/回放环境，ARM 目标包含传感器驱动与机器人部署包。典型命令包括：</p>
+<pre><code class="language-bash"># 容器内执行
+make x86_u22      # Ubuntu 22.04 / ROS2 Humble 开发构建
+make arm_u22      # aarch64 / Jetson Orin 目标构建
+./scripts/pack.sh aarch64
+
+# 部署到 Go2 Orin 后
+./scripts/start_all.sh
+./scripts/stop_all.sh</code></pre>
+<p><code>start_all.sh</code> 的职责包括停止旧进程、设置环境变量和校准、启动诊断、启动传感器、启动应用层节点、启动 voice agent、monitor 和 util 服务。<code>setup_and_launch.sh</code> 单独启动 statemachine、slam、perception、planning、control、device_control 等应用层节点。</p>
+
+<h3>5.3 传感器与运行时配置</h3>
+<p><code>start_sensor.sh</code> 会读取 <code>~/config/config.sh</code> 中的 <code>robot_id</code>、<code>gnss_type</code>、<code>robot_model</code>，设置 <code>UNITREE_SDK2_DIR=/opt/unitree_sdk2</code>，再启动 Hesai、M20 RSLiDAR、RealSense、GNSS、H30、RID 等节点。它还会检查特定设备或服务是否在线，例如 JT128 LiDAR、M20 multicast relay、RealSense USB 模式。</p>
+
+<h3>5.4 bag 回灌是生产仿真的主力</h3>
+<p><code>scripts/batch_bag_replay.sh</code> 把每条回放命令包装成严格顺序：更新 calibration 软链接，<code>start_all</code>，执行 <code>robot bag play</code>，<code>stop_all</code>，归档日志，再用 SLAM SDK 绘制轨迹。它体现了生产测试的关键思想：真实数据回放比随机写一个 simulator 更能暴露传感器、SLAM 和规划的工程问题。</p>
+
+<h3>5.5 PNC 轻量 simulator</h3>
+<p>SenseBot 的 <code>src/pnc</code> 下有一个轻量级 simulator。它不是完整物理引擎，而是为了给规划/控制链路提供局部 heightmap 和机器人 odometry：</p>
+<ul>
+    <li><code>simulator.launch.py</code> 声明全局/局部 heightmap 尺寸、分辨率、机器人初始 pose 和发布频率。</li>
+    <li><code>simulator_node.cpp</code> 创建全局 heightmap，加入矩形障碍物，订阅 <code>/pnc_planner_path_with_time</code>，按轨迹时间戳线性插值机器人 pose。</li>
+    <li><code>simulator.cpp</code> 支持创建、加载、保存全局 heightmap，并从全局图按 ego pose 裁出局部 heightmap。</li>
+</ul>
+<pre><code class="language-text">/pnc_planner_path_with_time
+      ↓
+simulator_node: trajectory interpolation
+      ↓
+/simulator/robot_pose        → remap to /dog_odom
+/simulator/local_heightmapa  → intended local height map for planning/control</code></pre>
+<div class="warn">
+    <strong>工程观察：</strong><code>simulator.launch.py</code> 中 remap 的源 topic 是 <code>/simulator/local_heightmap</code>，但 <code>simulator_node.cpp</code> 实际发布 <code>/simulator/local_heightmapa</code>；remap 目标还写成 <code>/utlidar/height_map_arra</code>。此外主 <code>launch/sensebot.launch.py</code> 在 SLAM include 附近存在明显语法断裂。报告只把这些作为本地快照的审阅发现，不假设当前目录可直接运行。
+</div>
+
+<h3>5.6 DLP 与 Isaac 模型在环</h3>
+<p><code>congq_sensebot_dlp</code> 是基于 PyTorch Lightning 和 Hydra 的路径规划模型训练/评估框架。它提供了训练、评估、批量评估、指标聚合、ONNX 导出和 ROS2 推理节点。</p>
+<p><code>README.md</code> 的仿真测试流程显示：启动 <code>isaaclab_dev</code> conda 环境，source ROS2 Humble，构建 <code>ros_ws</code>，设置 <code>ROS_DOMAIN_ID=60</code>，运行 <code>python dlp_node.py</code>；另起容器运行 planning/control；最后在 <code>isaac_go2_ros2</code> 中运行 <code>isaac_go2_ros2.py --livestream 2 --enable_cameras --scene scene_5/route_4</code>。</p>
+<p><code>dlp_node.py</code> 的 ROS2 输入输出如下：</p>
+<table>
+    <thead>
+        <tr><th>方向</th><th>Topic / 消息</th><th>作用</th></tr>
+    </thead>
+    <tbody>
+        <tr><td>订阅</td><td><code>/perception/occ3d_single</code> / <code>nav2_msgs/VoxelGrid</code></td><td>占据栅格，转为 <code>occ_grid</code> 与 <code>mask_camera</code>。</td></tr>
+        <tr><td>订阅</td><td><code>/slam/localization_stateinfo</code></td><td>定位、速度、加速度、角速度，转为状态向量。</td></tr>
+        <tr><td>订阅</td><td><code>/state_change</code></td><td>导航 route 描述，解析后转到 ego 坐标。</td></tr>
+        <tr><td>发布</td><td><code>planning_pred_traj</code> / <code>nav_msgs/Path</code></td><td>发布模型预测的最佳轨迹。</td></tr>
+    </tbody>
+</table>
+<p>ONNX 部署脚本 <code>export_onnx.py</code> 使用输入 <code>occ_grid</code>、<code>mask_camera</code>、<code>route</code>、<code>state</code>，输出 <code>trajs</code>、<code>confidences</code>、<code>best_mode</code>，并调用 <code>onnx.checker.check_model</code> 做导出校验。</p>
+
+<h3>5.7 感知 OCC 与仿真数据</h3>
+<p><code>congq_sensebot_perception</code> 负责 occupancy / 3D 感知训练和部署。README 中包含 Docker 镜像、<code>train_occ_sensebot.py</code>、<code>test_occ.py</code>、可视化、deploy eval、数据结构和 OCC ground truth 命名规则。<code>script/occ_infer/model_release/r30.3/README.md</code> 还提供了 release 版 OCCDLP 的推理命令、视频/可视化保存参数和训练命令。</p>
+<p>这说明 SenseBot 的模型生产流并不是“仿真环境单独存在”，而是由真实数据、OCC 训练、DLP 规划、ROS2 节点、bag 回灌和 Isaac 场景共同构成。</p>
+</section>
+
+<section id="public">
+<h2>6. 公版项目与工具链对照</h2>
+<p>本地项目已经覆盖工具层 sandbox、ROS2 生产系统、PNC 轻量 simulator、DLP Isaac 模型在环。若要补全机器人/机器狗仿真工具链，建议把下列公版项目作为对照基线。</p>
+
+<table>
+    <thead>
+        <tr><th>工具/项目</th><th>定位</th><th>适合解决的问题</th><th>与本地项目的关系</th></tr>
+    </thead>
+    <tbody>
+        <tr><td>ROS2 官方文档</td><td>中间件基础</td><td>节点、topic、service、action、launch、QoS、bag、tf2。</td><td>解释 SenseBot 和 agent bridge 的通信骨架。</td></tr>
+        <tr><td>Gazebo Sim + ros_gz</td><td>经典机器人仿真与 ROS2 桥接</td><td>传感器、世界、机器人模型、ROS topic 桥接。</td><td>可作为 SenseBot PNC simulator 的更完整替代层。</td></tr>
+        <tr><td>Nav2</td><td>ROS2 导航栈</td><td>地图、定位、全局/局部规划、行为树、恢复行为。</td><td>可用于对照 SenseBot 自研 SLAM/Planning/Control 接口。</td></tr>
+        <tr><td>ros2_control</td><td>硬件接口与控制器框架</td><td>把真实硬件和仿真控制器抽象成一致接口。</td><td>适合学习“同一控制栈跑仿真/实机”的模式。</td></tr>
+        <tr><td>NVIDIA Isaac Sim</td><td>高保真传感器与场景仿真</td><td>摄像头、LiDAR、ROS2 bridge、数字孪生。</td><td>对应 DLP 的 Isaac Go2 ROS2 仿真。</td></tr>
+        <tr><td>Isaac Lab</td><td>GPU 并行机器人学习</td><td>强化学习、模仿学习、可扩展任务环境。</td><td>适合机器狗 locomotion 或策略训练。</td></tr>
+        <tr><td>MuJoCo / Unitree MuJoCo</td><td>动力学仿真</td><td>四足/人形机器人控制、接触动力学、快速仿真。</td><td>补足 SenseBot 当前主要偏导航/感知而非动力学仿真的部分。</td></tr>
+        <tr><td>Unitree ROS2 / SDK2</td><td>机器人硬件桥</td><td>Go2/G1 等 Unitree 机器人通信、消息和底层接口。</td><td>SenseBot 已依赖 Unitree SDK2，公版仓库可帮助理解接口来源。</td></tr>
+        <tr><td>TurtleBot3 Simulations</td><td>入门级 ROS/Gazebo 导航样例</td><td>低成本学习 Gazebo、Nav2、SLAM、launch。</td><td>适合作为 ROS2 仿真训练场，而不是直接替代机器狗项目。</td></tr>
+    </tbody>
+</table>
+
+<h3>6.1 其他本地项目线索</h3>
+<p>本地还检索到 <code>dimensional-applications/local_git_snapshots/dimos_improved_bbox_codeonly</code>，它包含 Unitree Go2/G1 blueprints、replay、MuJoCo simulation、Genesis simulator、occupancy-to-MuJoCo scene、agentic MCP 等能力；<code>20_vln_vla_navigation_models</code> 包含 JanusVLN、StreamVLN、OpenTrackVLA、Uni-NaVid 等导航模型，部分使用 Habitat simulator、websocket 推理和轨迹输出。它们不是本次重点审阅对象，但可作为“模型层/仿真层/机器人接口层”的补充样本。</p>
+</section>
+
+<section id="workflow">
+<h2>7. 机器人/机器狗仿真的生产力流程</h2>
+
+<h3>7.1 从最小可复现开始</h3>
+<ol>
+    <li><strong>定义任务契约</strong>：用户指令、地图点位、允许工具、禁止工具、预期状态、成功指标。</li>
+    <li><strong>做 fixture/sandbox</strong>：先用离线地图和模拟状态验证 LLM 或调度器是否会按正确顺序调用工具。</li>
+    <li><strong>接 ROS2 bridge</strong>：把 sandbox 的状态和目标暴露成 topic，开始检查消息类型、topic 名和 launch 组织。</li>
+    <li><strong>引入 bag 回灌</strong>：用真实传感器和定位数据驱动感知/SLAM/规划，避免只在 synthetic 场景中自洽。</li>
+    <li><strong>模型在环</strong>：把 DLP、OCC、VLN/VLA 模型作为 ROS2 节点接入，记录输入输出和延迟。</li>
+    <li><strong>物理仿真</strong>：用 Isaac/Gazebo/MuJoCo 检查传感器模拟、碰撞、足式动力学和控制闭环。</li>
+    <li><strong>实机灰度</strong>：在低风险场景、低速度、可急停条件下部署，失败日志回灌到前面几层。</li>
+</ol>
+
+<h3>7.2 推荐目录与产物</h3>
+<pre><code class="language-text">robot_sim_project/
+  maps/                 # 地图、点位、场景配置
+  fixtures/             # sandbox fixture
+  cases/                # 任务用例与期望轨迹
+  ros_ws/src/           # ROS2 packages
+  launch/               # 系统启动入口
+  bags/                 # 录制与回放索引
+  models/               # checkpoint / onnx / tensorrt
+  sim/                  # Gazebo/Isaac/MuJoCo 场景
+  reports/              # loss、latency、轨迹图、失败分析</code></pre>
+
+<h3>7.3 关键验收指标</h3>
+<table>
+    <thead>
+        <tr><th>层级</th><th>指标</th><th>示例</th></tr>
+    </thead>
+    <tbody>
+        <tr><td>Agent sandbox</td><td>任务通过率、最大 loss、工具误调用、平均延迟</td><td>qwen-122b 在 xian_10th 10/10 通过，max loss 0.175。</td></tr>
+        <tr><td>ROS2 通信</td><td>topic 存活、频率、QoS、消息字段、launch 成功率</td><td><code>ros2 topic hz</code>、<code>ros2 topic echo</code>、launch 日志。</td></tr>
+        <tr><td>感知模型</td><td>OCC mIoU、bbox AP、可视化 hardcase、部署延迟</td><td><code>test_occ.py --eval occ</code> 与 release infer。</td></tr>
+        <tr><td>规划模型</td><td>minADE/minFDE、miss rate、碰撞暴露、舒适度</td><td>DLP metrics summary 与 batch eval。</td></tr>
+        <tr><td>物理仿真</td><td>碰撞率、跌倒率、能耗、足端打滑、轨迹跟踪误差</td><td>Isaac Lab / MuJoCo 并行 rollouts。</td></tr>
+        <tr><td>实机</td><td>急停次数、导航完成率、恢复次数、CPU/GPU/内存、水位</td><td>SenseBot monitor、logs、bag 回灌。</td></tr>
+    </tbody>
+</table>
+</section>
+
+<section id="comparison">
+<h2>8. 方法对比与选择建议</h2>
+<table>
+    <thead>
+        <tr><th>目标</th><th>优先环境</th><th>原因</th><th>不适合做什么</th></tr>
+    </thead>
+    <tbody>
+        <tr><td>评估 LLM Agent 是否会正确用工具</td><td>AceAgent sandbox</td><td>成本低、可批量、可给轨迹 loss。</td><td>不能证明物理安全、避障和运动控制正确。</td></tr>
+        <tr><td>检查 ROS2 模块通信</td><td>ROS2 bridge / launch / rosbag2</td><td>直接暴露 topic、message、QoS、启动顺序。</td><td>不能自动覆盖传感器真实性和动力学。</td></tr>
+        <tr><td>回归真实道路/园区数据</td><td>bag replay</td><td>最接近线上问题，便于复现。</td><td>不能探索没有采集过的新场景。</td></tr>
+        <tr><td>训练/验证感知与规划模型</td><td>OCC/DLP 离线评估 + Isaac 模型在环</td><td>既有指标又能接 ROS2 闭环。</td><td>如果没有物理闭环，不能验证底盘动态。</td></tr>
+        <tr><td>机器狗 locomotion 和接触控制</td><td>MuJoCo / Isaac Lab / Unitree RL Gym</td><td>需要接触动力学和大量并行 rollouts。</td><td>不擅长直接替代 ROS2 生产系统部署。</td></tr>
+        <tr><td>端到端产品部署</td><td>Docker + colcon + pack + 实机灰度</td><td>贴近 SenseBot 当前生产形态。</td><td>风险高，必须前置 sandbox、bag、仿真验证。</td></tr>
+    </tbody>
+</table>
+<div class="note">
+    <strong>建议路线：</strong>先用 <code>agent</code> 的 sandbox 建立任务级回归集，再把关键任务通过 ROS2 bridge 接到最小 ROS graph；随后用 SenseBot 的 bag replay 和 DLP/Isaac 流程做模型在环；最后再进入 Unitree 实机与 Docker 打包部署。这样每一层失败都有可回放证据。
+</div>
+</section>
+
+<section id="references">
+<h2>9. 参考文献（References）</h2>
+<ol>
+    <li>ROS 2 Documentation, "Concepts", Humble. <a href="https://docs.ros.org/en/humble/Concepts.html">链接</a></li>
+    <li>ROS 2 Documentation, "Recording and playing back data", Humble. <a href="https://docs.ros.org/en/humble/Tutorials/Beginner-CLI-Tools/Recording-And-Playing-Back-Data/Recording-And-Playing-Back-Data.html">链接</a></li>
+    <li>ROS 2 Documentation, "Launch", Humble. <a href="https://docs.ros.org/en/humble/Tutorials/Intermediate/Launch/Launch-Main.html">链接</a></li>
+    <li>Gazebo Sim Documentation, "ROS 2 integration". <a href="https://gazebosim.org/docs/latest/ros2_integration/">链接</a></li>
+    <li>gazebosim, "ros_gz", official GitHub repository. <a href="https://github.com/gazebosim/ros_gz">链接</a></li>
+    <li>Nav2 Documentation, "Navigation2". <a href="https://docs.nav2.org/">链接</a></li>
+    <li>ros2_control Documentation. <a href="https://control.ros.org/">链接</a></li>
+    <li>NVIDIA Isaac Sim Documentation, "ROS 2 Tutorials". <a href="https://docs.isaacsim.omniverse.nvidia.com/latest/ros2_tutorials/index.html">链接</a></li>
+    <li>Isaac Lab Documentation. <a href="https://isaac-sim.github.io/IsaacLab/main/">链接</a></li>
+    <li>unitreerobotics, "unitree_ros2", official GitHub repository. <a href="https://github.com/unitreerobotics/unitree_ros2">链接</a></li>
+    <li>unitreerobotics, "unitree_mujoco", official GitHub repository. <a href="https://github.com/unitreerobotics/unitree_mujoco">链接</a></li>
+    <li>unitreerobotics, "unitree_rl_gym", official GitHub repository. <a href="https://github.com/unitreerobotics/unitree_rl_gym">链接</a></li>
+    <li>ROBOTIS-GIT, "turtlebot3_simulations", official GitHub repository. <a href="https://github.com/ROBOTIS-GIT/turtlebot3_simulations">链接</a></li>
+    <li>dheera, "rosboard", GitHub repository. <a href="https://github.com/dheera/rosboard">链接</a></li>
+    <li>Local evidence: <code>agent/server/agent/sandbox.py</code>, <code>agent/data/agent_sandbox/xian10th_real_fixture.json</code>, <code>agent/ros2/agent_sandbox_bridge/</code>.</li>
+    <li>Local evidence: <code>19_sensebot_robotics_system/congq_sensebot/</code>, <code>congq_sensebot_dlp/</code>, <code>congq_sensebot_perception/</code>.</li>
+</ol>
+</section>
+
+</article>
+</body>
+</html>

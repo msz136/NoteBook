@@ -11,3 +11,7 @@
 - [Agentic RL：面向 LLM Agent 的强化学习技术调研](https://msz136.github.io/NoteBook/agentic_rl_report.html)
 - [可微分 RL 损失函数：LLM Agent 训练的梯度计算深度调研](https://msz136.github.io/NoteBook/differentiable_rl_losses_report.html)
 - [具身智能感知、规控与世界模型技术报告](https://msz136.github.io/NoteBook/embodied_ai_perception_planning_report.html)
+- [Agent Memory：LLM 智能体记忆系统技术调研与项目实现分析（Qiuchen/JanusVLN/Uni-NaVid）](https://msz136.github.io/NoteBook/agent_memory_report.html)
+- [LLM Agent 轨迹评估奖励模型：PRM / ORM / 轨迹级 / 可微分方法全景调研](https://msz136.github.io/NoteBook/reward_model_agent_report.html)
+- [Agent 轨迹奖励模型设计：从 Sandbox 评估到可微分 RL 损失的完整方案](https://msz136.github.io/NoteBook/agent_reward_report.html)
+- [机器人与机器狗仿真平台：ROS2、Sandbox、Isaac 与生产力流程](https://msz136.github.io/NoteBook/robotics_simulation_workflow_report.html)

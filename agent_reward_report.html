@@ -1,0 +1,884 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Agent 轨迹奖励模型设计：从 Sandbox 评估到可微分 RL 损失的完整方案</title>
+    <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; font-size: 16px; line-height: 1.8; color: #1a1a1a; background: #ffffff; padding: 2rem 1rem; }
+article { max-width: 900px; margin: 0 auto; }
+h1 { font-size: 2rem; margin-bottom: 0.5rem; color: #111; border-bottom: 3px solid #2563eb; padding-bottom: 0.5rem; }
+.subtitle { color: #555; font-size: 0.95rem; margin-bottom: 2rem; }
+h2 { font-size: 1.5rem; margin-top: 2.5rem; margin-bottom: 1rem; color: #1e40af; border-left: 4px solid #2563eb; padding-left: 0.75rem; }
+h3 { font-size: 1.25rem; margin-top: 1.8rem; margin-bottom: 0.8rem; color: #1e3a5f; }
+h4 { font-size: 1.1rem; margin-top: 1.2rem; margin-bottom: 0.5rem; color: #374151; }
+p { margin-bottom: 1rem; }
+ul, ol { margin-bottom: 1rem; padding-left: 1.5rem; }
+li { margin-bottom: 0.4rem; }
+code { font-family: "Fira Code", "Consolas", monospace; background: #f3f4f6; padding: 0.15rem 0.4rem; border-radius: 3px; font-size: 0.9em; }
+pre { background: #f8f9fa; border: 1px solid #e5e7eb; border-radius: 6px; padding: 1rem; overflow-x: auto; margin-bottom: 1rem; }
+pre code { background: none; padding: 0; }
+table { width: 100%; border-collapse: collapse; margin-bottom: 1.5rem; font-size: 0.92rem; }
+th, td { border: 1px solid #d1d5db; padding: 0.6rem 0.8rem; text-align: left; }
+th { background: #eff6ff; font-weight: 600; color: #1e40af; }
+tr:nth-child(even) { background: #f9fafb; }
+a { color: #2563eb; text-decoration: none; }
+a:hover { text-decoration: underline; }
+.note { background: #fffbeb; border-left: 4px solid #f59e0b; padding: 0.75rem 1rem; margin-bottom: 1rem; border-radius: 0 4px 4px 0; }
+.warn { background: #fef2f2; border-left: 4px solid #ef4444; padding: 0.75rem 1rem; margin-bottom: 1rem; border-radius: 0 4px 4px 0; }
+    </style>
+</head>
+<body>
+<article>
+
+<h1>Agent 轨迹奖励模型设计：从 Sandbox 评估到可微分 RL 损失的完整方案</h1>
+<p class="subtitle">技术报告 · 2026-05-28 · 具身机器人导航 Agent · 奖励模型 · 强化学习</p>
+
+<section id="question">
+<h2>1. 问题（Question）</h2>
+<p>在具身机器人导航 Agent 的训练中，我们面临两个核心问题：</p>
+<ol>
+  <li><strong>如何为多轮工具调用轨迹设计奖励模型？</strong> 机器人导航 Agent 在执行任务时会产生包含多次工具调用（如 <code>move_forward</code>、<code>turn_left</code>、<code>check_obstacle</code> 等）的轨迹序列。现有的 <code>sandbox.score_trace()</code> 函数通过六个维度的加权规则对轨迹打分，但这种规则式评估无法泛化到训练集之外的场景，也无法捕捉语义层面的质量差异。</li>
+  <li><strong>如何将奖励信号接入可微分 RL 训练？</strong> 规则式 loss 产出的是离散或稀疏信号，难以直接用于 GRPO、PPO 等策略梯度方法的训练。我们需要一套从 sandbox 评估到可学习奖励模型、再到可微分 RL 损失的完整方案。</li>
+</ol>
+<p>本报告系统梳理奖励模型（Reward Model）的分类与设计方法，结合 sandbox 的六维度评估体系，提出针对具身导航 Agent 的混合奖励模型架构，并给出与 GRPO/PPO/MT-GRPO/GAGPO 等 RL 算法的接入方案。</p>
+</section>
+
+<section id="background">
+<h2>2. 背景与动机（Background &amp; Motivation）</h2>
+
+<h3>2.1 Sandbox 评估体系：score_trace 的六维度加权 Loss</h3>
+<p>当前 <code>server/agent/sandbox.py</code> 中的 <code>score_trace()</code> 函数对 Agent 轨迹进行六个维度的规则式评估，最终输出一个加权综合分数：</p>
+
+<pre><code class="language-python"># sandbox.py 中 score_trace 的核心逻辑（简化示意）
+def score_trace(trajectory, reference):
+    scores = {}
+
+    # 1. sequence_loss (权重 0.35-0.40)：工具调用序列匹配
+    #    检测缺失的工具调用（missing calls）和多余的工具调用（extra calls）
+    scores['sequence_loss'] = compute_sequence_loss(
+        trajectory.tool_calls, reference.expected_calls
+    )
+
+    # 2. arg_loss (权重 0.25-0.30)：参数匹配精度
+    #    对每次工具调用的参数进行精确匹配或模糊匹配
+    scores['arg_loss'] = compute_arg_loss(
+        trajectory.tool_args, reference.expected_args
+    )
+
+    # 3. forbidden_loss (权重 0.15)：禁止工具使用惩罚
+    #    检测是否调用了被禁止的工具（如危险操作）
+    scores['forbidden_loss'] = compute_forbidden_loss(
+        trajectory.tool_calls, reference.forbidden_tools
+    )
+
+    # 4. final_text_loss (权重 0.05)：最终响应内容质量
+    #    评估 Agent 最终输出文本与参考答案的相似度
+    scores['final_text_loss'] = compute_text_loss(
+        trajectory.final_text, reference.expected_text
+    )
+
+    # 5. state_loss (权重 0.10)：机器人状态检查
+    #    验证轨迹执行后机器人的状态是否符合预期
+    scores['state_loss'] = compute_state_loss(
+        trajectory.final_state, reference.expected_state
+    )
+
+    # 6. behavior_loss (权重 0.10)：行为序列检查
+    #    检查行为的顺序约束是否满足（如先探测再移动）
+    scores['behavior_loss'] = compute_behavior_loss(
+        trajectory.behavior_sequence, reference.behavior_constraints
+    )
+
+    # 加权综合
+    total = (0.375 * scores['sequence_loss'] +
+             0.275 * scores['arg_loss'] +
+             0.150 * scores['forbidden_loss'] +
+             0.050 * scores['final_text_loss'] +
+             0.100 * scores['state_loss'] +
+             0.100 * scores['behavior_loss'])
+    return total, scores</code></pre>
+
+<p>六个维度的详细说明如下：</p>
+<table>
+  <thead>
+    <tr><th>维度</th><th>权重</th><th>评估内容</th><th>信号类型</th></tr>
+  </thead>
+  <tbody>
+    <tr><td><code>sequence_loss</code></td><td>0.35–0.40</td><td>工具调用序列的完整性：缺失调用（漏掉必要步骤）和多余调用（冗余操作）</td><td>稀疏，基于集合匹配</td></tr>
+    <tr><td><code>arg_loss</code></td><td>0.25–0.30</td><td>每次工具调用的参数精度：数值参数的误差、字符串参数的精确匹配</td><td>连续，可计算 MSE</td></tr>
+    <tr><td><code>forbidden_loss</code></td><td>0.15</td><td>是否调用了被明确禁止的工具（安全约束）</td><td>二值，硬约束</td></tr>
+    <tr><td><code>final_text_loss</code></td><td>0.05</td><td>最终输出文本与参考答案的语义相似度</td><td>连续，BLEU/BERTScore</td></tr>
+    <tr><td><code>state_loss</code></td><td>0.10</td><td>轨迹执行后机器人物理状态（位置、朝向、电量等）是否符合预期</td><td>连续，状态向量距离</td></tr>
+    <tr><td><code>behavior_loss</code></td><td>0.10</td><td>行为序列的顺序约束（如"先感知再行动"的时序规则）</td><td>稀疏，顺序约束检查</td></tr>
+  </tbody>
+</table>
+
+<h3>2.2 规则式 Loss 的局限性</h3>
+<p>尽管 <code>score_trace</code> 提供了结构化的评估框架，但规则式方法存在三个根本性局限：</p>
+<ol>
+  <li><strong>泛化能力不足</strong>：规则基于预定义的参考轨迹，无法处理"不同但同样正确"的轨迹。例如，机器人可以通过不同路径到达同一目标，但规则式评估会惩罚偏离参考路径的行为。</li>
+  <li><strong>梯度信号稀疏</strong>：<code>sequence_loss</code> 和 <code>forbidden_loss</code> 本质上是离散的集合操作，无法直接对 LLM 参数求梯度。即使使用 REINFORCE 估计梯度，方差也极高。</li>
+  <li><strong>语义质量盲区</strong>：规则式评估无法捕捉"虽然工具调用序列不完全匹配，但 Agent 展现出了合理的推理过程"这类语义层面的质量差异。</li>
+</ol>
+
+<h3>2.3 与可微分 RL Loss 的关系</h3>
+<p>在 LLM Agent 的 RL 训练框架中，奖励模型（Reward Model, RM）产出的标量奖励 \( r \) 通过策略梯度方法反传到 LLM 参数。以 GRPO 为例：</p>
+\[
+\mathcal{L}_{\text{GRPO}}(\theta) = -\mathbb{E}_{\tau \sim \pi_\theta} \left[ \sum_{t=1}^{T} \hat{A}_t \log \pi_\theta(a_t | s_t) - \beta \cdot \text{KL}(\pi_\theta \| \pi_{\text{ref}}) \right]
+\]
+<p>其中优势估计 \( \hat{A}_t \) 依赖于奖励模型的输出质量。规则式 <code>score_trace</code> 只能提供轨迹级的稀疏奖励，而神经奖励模型可以提供：</p>
+<ul>
+  <li><strong>密集奖励（Dense Reward）</strong>：每步工具调用后立即给出反馈，降低信用分配难度</li>
+  <li><strong>语义奖励</strong>：捕捉参考轨迹之外的合理行为</li>
+  <li><strong>可微分奖励</strong>：通过 Gumbel-Softmax 等技术实现端到端梯度传播</li>
+</ul>
+</section>
+
+<section id="reward-model-types">
+<h2>3. 奖励模型分类与选型</h2>
+<p>针对 Agent 轨迹评估，奖励模型可分为四大类：结果奖励模型（ORM）、过程奖励模型（PRM）、轨迹级偏好奖励模型，以及可微分奖励模型。以下逐一介绍其数学形式、训练方法及与 sandbox 的关系。</p>
+
+<h3>3.1 结果奖励模型（Outcome Reward Model, ORM）</h3>
+<h4>定义与数学形式</h4>
+<p>结果奖励模型（ORM）对完整轨迹 \( \tau = (s_0, a_1, o_1, a_2, o_2, \ldots, a_T, y) \) 打一个标量分数：</p>
+\[
+r_\theta(\tau) \in [0, 1]
+\]
+<p>其中 \( s_0 \) 为初始状态，\( a_t \) 为第 \( t \) 步的工具调用动作，\( o_t \) 为工具返回的观测，\( y \) 为最终文本输出。ORM 通常以 LLM 为骨干，在序列末尾添加一个线性头（value head）输出标量。</p>
+
+<h4>训练：Bradley-Terry 偏好模型</h4>
+<p>给定同一任务的两条轨迹 \( \tau^+ \)（好轨迹）和 \( \tau^- \)（差轨迹），Bradley-Terry 模型定义偏好概率：</p>
+\[
+P(\tau^+ \succ \tau^-) = \frac{\exp(r_\theta(\tau^+))}{\exp(r_\theta(\tau^+)) + \exp(r_\theta(\tau^-))} = \sigma(r_\theta(\tau^+) - r_\theta(\tau^-))
+\]
+<p>对比损失（Contrastive Loss）为：</p>
+\[
+\mathcal{L}_{\text{BT}}(\theta) = -\mathbb{E}_{(\tau^+, \tau^-) \sim \mathcal{D}} \left[ \log \sigma(r_\theta(\tau^+) - r_\theta(\tau^-)) \right]
+\]
+<p>其中 \( \mathcal{D} \) 为偏好对数据集，可由 sandbox 的 <code>score_trace</code> 自动构造：score 高的轨迹作为 \( \tau^+ \)，score 低的轨迹作为 \( \tau^- \)。</p>
+
+<h4>与 sandbox score_trace 的关系</h4>
+<p><code>score_trace</code> 本质上是一个<strong>规则式 ORM</strong>：它对完整轨迹输出一个 \([0,1]\) 的综合分数。这意味着我们可以直接用 <code>score_trace</code> 的输出作为标注信号，训练神经 ORM：</p>
+<ul>
+  <li>运行 \( N \) 条轨迹，用 <code>score_trace</code> 自动标注得分</li>
+  <li>构造偏好对：同一任务中，score 差异 \( > 0.3 \) 的轨迹对作为训练样本</li>
+  <li>神经 ORM 学习泛化 <code>score_trace</code> 的评估逻辑到未见场景</li>
+</ul>
+
+<h4>代表性工作</h4>
+<p><strong>WebRL</strong>（arXiv:2411.02337）提出自进化课程 ORM（Self-Evolving Curriculum ORM），通过迭代式数据收集不断扩充偏好对，使 ORM 随 policy 的提升而同步进化，避免奖励过时（reward staleness）问题。</p>
+<p><strong>ToolRM</strong>（arXiv:2509.11963）专门针对工具调用场景设计 ORM，将工具调用的正确性（tool correctness）和参数质量（argument quality）纳入奖励建模，在工具调用 Agent 的评估上显著优于通用 ORM。</p>
+
+<h3>3.2 过程奖励模型（Process Reward Model, PRM）</h3>
+<h4>定义与数学形式</h4>
+<p>过程奖励模型（PRM）对轨迹中的每一步工具调用 \( (s_t, a_t, o_t) \) 单独打分：</p>
+\[
+r_\theta^{\text{PRM}}(s_t, a_t, o_t) \in \mathbb{R}, \quad t = 1, 2, \ldots, T
+\]
+<p>PRM 提供密集奖励（Dense Reward），解决了 ORM 中信用分配（Credit Assignment）困难的问题。轨迹级综合分数可通过以下方式聚合：</p>
+<ul>
+  <li><strong>乘积聚合</strong>（Math-Shepherd 风格）：\( R(\tau) = \prod_{t=1}^{T} r_t \)，强调每步都必须正确</li>
+  <li><strong>最小值聚合</strong>：\( R(\tau) = \min_t r_t \)，关注最薄弱环节</li>
+  <li><strong>加权求和</strong>：\( R(\tau) = \sum_{t=1}^{T} \gamma^{T-t} r_t \)，时间折扣强调近期步骤</li>
+</ul>
+
+<h4>训练：蒙特卡洛 Rollout 标注</h4>
+<p>PRM 的训练标签难以直接获取（人工标注每步代价高昂）。Math-Shepherd（arXiv:2312.08935）提出用蒙特卡洛 rollout 自动标注：对轨迹中的每个中间状态 \( s_t \)，从该状态出发采样 \( K \) 条完整轨迹，用最终结果的成功率作为该步的 PRM 标签：</p>
+\[
+\hat{r}_t = \frac{1}{K} \sum_{k=1}^{K} \mathbf{1}[\text{rollout}_k \text{ 成功}]
+\]
+<p>在 sandbox 环境中，"成功"可定义为 <code>score_trace</code> 超过阈值（如 \( > 0.7 \)）。</p>
+
+<h4>与 sandbox 的关系</h4>
+<p>sandbox 的 <code>sequence_loss</code> 和 <code>arg_loss</code> 天然具有步骤级（step-level）的结构：每次工具调用都可以独立评估其正确性。因此，这两个维度可以直接分解为 PRM 的训练信号：</p>
+<ul>
+  <li><code>sequence_loss</code> → 工具选择正确性（tool selection score）：该步是否调用了正确的工具</li>
+  <li><code>arg_loss</code> → 参数质量分数（argument quality score）：该步的参数是否正确</li>
+  <li><code>behavior_loss</code> → 行为顺序分数（behavior ordering score）：该步是否满足顺序约束</li>
+</ul>
+
+<h4>代表性工作</h4>
+<p><strong>AgentPRM</strong>（arXiv:2502.10325, arXiv:2511.08325）提出双维度 PRM 框架，同时建模<strong>前瞻承诺</strong>（Forward-Looking Commitment）和<strong>回顾进展</strong>（Backward-Looking Progress）：</p>
+\[
+r_t^{\text{AgentPRM}} = \alpha \cdot \underbrace{P(\text{success} | s_t)}_{\text{前瞻承诺}} + (1-\alpha) \cdot \underbrace{\frac{P(\text{success}|s_t) - P(\text{success}|s_{t-1})}{1 - P(\text{success}|s_{t-1})}}_{\text{回顾进展}}
+\]
+<p>前瞻承诺衡量从当前状态出发的成功概率，回顾进展衡量该步相对于上一步的改善幅度。</p>
+<p><strong>Web-Shepherd</strong>（arXiv:2505.15277）专门针对网页导航 Agent 设计 PRM，将网页操作（点击、输入、滚动）的每一步分解为可独立评估的子任务，在 WebArena 等基准上取得 SOTA 性能。其核心创新是引入<strong>操作可行性评估</strong>（Action Feasibility Assessment），判断当前步骤在当前页面状态下是否可执行。</p>
+
+<h3>3.3 轨迹级偏好奖励模型</h3>
+<h4>DPO/IPO 框架下的轨迹偏好学习</h4>
+<p>直接偏好优化（Direct Preference Optimization, DPO）将奖励模型隐式地编码在 policy 中，避免了显式训练 RM 的开销。对于轨迹偏好对 \( (\tau^+, \tau^-) \)，DPO 损失为：</p>
+\[
+\mathcal{L}_{\text{DPO}}(\theta) = -\mathbb{E} \left[ \log \sigma \left( \beta \log \frac{\pi_\theta(\tau^+)}{\pi_{\text{ref}}(\tau^+)} - \beta \log \frac{\pi_\theta(\tau^-)}{\pi_{\text{ref}}(\tau^-)} \right) \right]
+\]
+<p>其中 \( \pi_\theta(\tau) = \prod_{t} \pi_\theta(a_t | s_t, \text{context}) \) 为轨迹的对数概率之和，\( \beta \) 控制与参考策略的偏离程度。</p>
+<p>IPO（Identity Preference Optimization）在 DPO 基础上增加正则项，避免 policy 对偏好对过拟合：</p>
+\[
+\mathcal{L}_{\text{IPO}}(\theta) = \mathbb{E} \left[ \left( \log \frac{\pi_\theta(\tau^+)}{\pi_{\text{ref}}(\tau^+)} - \log \frac{\pi_\theta(\tau^-)}{\pi_{\text{ref}}(\tau^-)} - \frac{1}{2\beta} \right)^2 \right]
+\]
+
+<h4>BranPO：对比分支采样</h4>
+<p><strong>BranPO</strong>（arXiv:2602.03719）针对多轮 Agent 轨迹提出<strong>分支对比采样</strong>（Branch Contrastive Sampling）策略。在轨迹的关键决策点（branching point）处，同时采样多条分支轨迹，构造细粒度的偏好对：</p>
+\[
+\mathcal{L}_{\text{BranPO}} = -\sum_{b \in \mathcal{B}} \log \sigma \left( r_\theta(\tau^+_b) - r_\theta(\tau^-_b) \right)
+\]
+<p>其中 \( \mathcal{B} \) 为所有分支点的集合，\( \tau^+_b \) 和 \( \tau^-_b \) 为从分支点 \( b \) 出发的好/差轨迹。这种方法能精确定位导致轨迹质量差异的关键步骤。</p>
+
+<h4>用 sandbox 生成偏好对</h4>
+<p>sandbox 的 <code>score_trace</code> 为自动构造偏好对提供了天然的标注工具：</p>
+<ol>
+  <li>对同一导航任务，用不同温度参数采样多条轨迹</li>
+  <li>用 <code>score_trace</code> 对每条轨迹打分</li>
+  <li>构造偏好对：score 差异 \( > 0.3 \) 的轨迹对 \( (\tau_{\text{high}}, \tau_{\text{low}}) \)</li>
+  <li>数据格式：<code>(prompt, trajectory_tokens_pos, trajectory_tokens_neg, score_diff)</code></li>
+</ol>
+
+<h3>3.4 可微分奖励模型</h3>
+<p>标准奖励模型产出的标量奖励通过 REINFORCE 估计梯度，方差高、样本效率低。可微分奖励模型通过松弛离散操作，实现奖励信号对 policy 参数的直接梯度传播。</p>
+
+<h4>GRADE：Gumbel-Softmax 松弛</h4>
+<p><strong>GRADE</strong>（arXiv:2601.11574）使用 Gumbel-Softmax 技术将离散 token 选择松弛为连续操作，使奖励模型的梯度可以直接传回 policy：</p>
+\[
+\tilde{a}_t = \text{Gumbel-Softmax}\left(\frac{\log \pi_\theta(\cdot | s_t)}{\tau}\right)
+\]
+\[
+\mathcal{L}_{\text{GRADE}} = -r_\theta\left(\tau(\tilde{a}_{1:T})\right)
+\]
+<p>其中 \( \tau \) 为温度参数（随训练退火降低），\( \tilde{a}_t \) 为软化的动作表示。当 \( \tau \to 0 \) 时，Gumbel-Softmax 退化为 argmax（离散采样）；当 \( \tau \) 较大时，梯度可以顺畅传播。</p>
+
+<h4>ABPT：部分可微分奖励的修正反传</h4>
+<p><strong>ABPT</strong>（Approximate Backpropagation Through, arXiv:2501.14513）针对奖励函数中存在不可微分组件（如规则检查、外部 API 调用）的情况，提出修正反传策略：</p>
+\[
+\frac{\partial \mathcal{L}}{\partial \theta} \approx \frac{\partial r_{\text{diff}}}{\partial \theta} + \lambda \cdot \frac{\partial r_{\text{rule}}}{\partial \theta}\bigg|_{\text{STE}}
+\]
+<p>其中 \( r_{\text{diff}} \) 为可微分部分（如神经 ORM），\( r_{\text{rule}} \) 为规则部分（如 <code>forbidden_loss</code>），STE 表示直通估计器（Straight-Through Estimator）。这种方法特别适合 sandbox 场景：<code>forbidden_loss</code> 保留为硬约束，其余维度使用可微分神经网络建模。</p>
+
+<h4>TLCR：Token 级连续奖励</h4>
+<p><strong>TLCR</strong>（Token-Level Continuous Reward, arXiv:2407.16574）将轨迹级奖励分解到每个 token 上，提供最细粒度的密集奖励信号：</p>
+\[
+r_t^{\text{token}} = r_\theta(x_{1:t}) - r_\theta(x_{1:t-1})
+\]
+<p>即第 \( t \) 个 token 的奖励为生成该 token 前后奖励模型输出的差值（奖励增量）。这种方法将轨迹级 ORM 转化为 token 级 PRM，无需额外的步骤级标注。</p>
+<p>在 sandbox 场景中，TLCR 可以将 <code>score_trace</code> 的六维度综合分数分解到每个工具调用 token 上，为 GRPO/PPO 提供密集的 token 级奖励。</p>
+</section>
+<section id="sandbox-design">
+<h2>4. 针对 Sandbox Agent 的奖励模型设计方案</h2>
+
+<h3>4.1 数据生成策略</h3>
+<p>利用现有 sandbox 环境，可以低成本地生成大规模标注数据：</p>
+
+<h4>轨迹采样与自动标注</h4>
+<ol>
+  <li><strong>多样化采样</strong>：对每个导航任务，使用不同温度参数（\( T \in \{0.3, 0.7, 1.0, 1.3\} \)）各采样 \( K \) 条轨迹，确保覆盖好/差轨迹的分布</li>
+  <li><strong>自动标注</strong>：对每条轨迹运行 <code>score_trace()</code>，获得六维度分数和综合分数</li>
+  <li><strong>数据过滤</strong>：保留综合分数 \( &lt; 0.2 \)（差轨迹）和 \( &gt; 0.6 \)（好轨迹）的样本，丢弃中间区域的模糊样本</li>
+</ol>
+
+<h4>偏好对构造</h4>
+<p>对同一导航任务的轨迹集合，按以下规则构造偏好对：</p>
+<pre><code class="language-python">def construct_preference_pairs(trajectories_by_task, score_threshold=0.3):
+    pairs = []
+    for task_id, traj_scores in trajectories_by_task.items():
+        sorted_trajs = sorted(traj_scores, key=lambda x: x[1], reverse=True)
+        for i, (tau_pos, score_pos) in enumerate(sorted_trajs):
+            for tau_neg, score_neg in sorted_trajs[i+1:]:
+                if score_pos - score_neg >= score_threshold:
+                    pairs.append({
+                        "prompt": task_id,
+                        "trajectory_pos": tau_pos,
+                        "trajectory_neg": tau_neg,
+                        "score_diff": score_pos - score_neg,
+                        "step_scores_pos": tau_pos.step_scores,
+                        "step_scores_neg": tau_neg.step_scores,
+                    })
+    return pairs</code></pre>
+
+<h4>数据格式</h4>
+<pre><code class="language-json">{
+  "task_id": "nav_task_0042",
+  "prompt": "导航到厨房并检查冰箱状态",
+  "trajectory_tokens": [
+    {"role": "assistant", "content": "&lt;tool_call&gt;move_forward(distance=2.0)&lt;/tool_call&gt;"},
+    {"role": "tool", "content": "moved 2.0m, current_pos=(2.0, 0.0)"},
+    {"role": "assistant", "content": "&lt;tool_call&gt;check_obstacle(direction=front)&lt;/tool_call&gt;"},
+    {"role": "tool", "content": "no obstacle detected"}
+  ],
+  "reward_label": 0.78,
+  "step_labels": [0.9, 0.85, 0.7, 0.8, 0.75],
+  "dimension_scores": {
+    "sequence_loss": 0.85, "arg_loss": 0.80, "forbidden_loss": 1.0,
+    "final_text_loss": 0.70, "state_loss": 0.75, "behavior_loss": 0.80
+  }
+}</code></pre>
+
+<h3>4.2 推荐架构：混合 ORM + PRM</h3>
+<p>针对具身导航 Agent 的特点（多轮工具调用、状态依赖、顺序约束），推荐采用混合 ORM + PRM 架构：</p>
+
+<pre><code class="language-python">class HybridRewardModel(nn.Module):
+    def __init__(self, base_model, hidden_dim=768):
+        super().__init__()
+        self.encoder = base_model  # 共享 LLM 骨干（如 Qwen2.5-7B）
+        # PRM 头：对每步工具调用打分
+        self.prm_head = nn.Sequential(
+            nn.Linear(hidden_dim, 256), nn.ReLU(),
+            nn.Linear(256, 1), nn.Sigmoid()
+        )
+        # ORM 头：对完整轨迹打分
+        self.orm_head = nn.Sequential(
+            nn.Linear(hidden_dim, 256), nn.ReLU(),
+            nn.Linear(256, 1), nn.Sigmoid()
+        )
+
+    def forward(self, trajectory_tokens, step_boundaries):
+        """
+        trajectory_tokens: 完整轨迹的 token 序列
+        step_boundaries: 每步工具调用结束位置的 token 索引列表
+        """
+        hidden_states = self.encoder(trajectory_tokens).last_hidden_state
+        # PRM：提取每步工具调用结束位置的隐状态
+        step_rewards = []
+        for boundary_idx in step_boundaries:
+            step_hidden = hidden_states[:, boundary_idx, :]
+            step_rewards.append(self.prm_head(step_hidden))
+        # ORM：使用序列末尾的隐状态
+        r_episode = self.orm_head(hidden_states[:, -1, :])
+        return r_episode, step_rewards
+
+    def compute_combined_reward(self, trajectory_tokens, step_boundaries,
+                                 alpha=0.5, beta=0.5, gamma=0.9):
+        r_episode, step_rewards = self.forward(trajectory_tokens, step_boundaries)
+        T = len(step_rewards)
+        discounted = sum((gamma**(T-t-1)) * step_rewards[t] for t in range(T))
+        R = alpha * r_episode + beta * discounted
+        return R, r_episode, step_rewards</code></pre>
+
+<p>混合奖励的数学形式：</p>
+\[
+R(\tau) = \alpha \cdot r_{\text{episode}}(\tau) + \beta \cdot \sum_{t=1}^{T} \gamma^{T-t} \cdot r_{\text{step}}(s_t, a_t, o_t)
+\]
+<p>其中 \( \alpha + \beta = 1 \)，推荐初始值 \( \alpha = 0.5, \beta = 0.5, \gamma = 0.9 \)。随着训练进行，可逐渐增大 \( \alpha \)（更依赖 ORM 的全局判断）。</p>
+
+<h3>4.3 与 Sandbox 六维度的对应关系</h3>
+<table>
+  <thead>
+    <tr><th>Sandbox 维度</th><th>权重</th><th>奖励模型组件</th><th>建模方式</th><th>说明</th></tr>
+  </thead>
+  <tbody>
+    <tr><td><code>sequence_loss</code></td><td>0.35–0.40</td><td>PRM：工具选择分数</td><td>神经 PRM，步骤级</td><td>每步工具调用是否选择了正确的工具类型</td></tr>
+    <tr><td><code>arg_loss</code></td><td>0.25–0.30</td><td>PRM：参数质量分数</td><td>神经 PRM，步骤级</td><td>工具调用参数的精度，可用连续值建模</td></tr>
+    <tr><td><code>forbidden_loss</code></td><td>0.15</td><td>硬约束（保留规则式）</td><td>规则检查，二值</td><td>安全约束，不应被神经网络软化</td></tr>
+    <tr><td><code>final_text_loss</code></td><td>0.05</td><td>ORM：语义完成分数</td><td>神经 ORM，轨迹级</td><td>最终输出的语义质量，需要全局上下文</td></tr>
+    <tr><td><code>state_loss</code></td><td>0.10</td><td>ORM：状态一致性分数</td><td>神经 ORM，轨迹级</td><td>最终状态是否符合预期，依赖完整轨迹</td></tr>
+    <tr><td><code>behavior_loss</code></td><td>0.10</td><td>PRM：行为顺序分数</td><td>神经 PRM，步骤级</td><td>顺序约束可在每步后立即检查</td></tr>
+  </tbody>
+</table>
+
+<div class="note">
+  <strong>设计原则</strong>：<code>forbidden_loss</code> 保留为规则式硬约束，因为安全约束不应被神经网络"学习绕过"。其余五个维度均可用神经网络建模，以获得更好的泛化能力。
+</div>
+
+<h3>4.4 可微分接入 GRPO/PPO</h3>
+<p>混合奖励模型可通过三种方案接入 RL 训练，适用于不同的场景需求：</p>
+
+<h4>方案 A：ORM 作为 Verifier，接入标准 GRPO</h4>
+<p>ORM 产出 \([0,1]\) 的连续分数，通过组内归一化转为优势估计，接入标准 GRPO：</p>
+<pre><code class="language-python">def grpo_with_orm(policy, orm, prompts, group_size=8, beta=0.01):
+    """方案 A：ORM 作为 Verifier 接入 GRPO，适合短轨迹（&lt;10 turns）"""
+    all_losses = []
+    for prompt in prompts:
+        trajectories = [policy.generate(prompt) for _ in range(group_size)]
+        rewards = torch.tensor([orm(tau) for tau in trajectories])
+        # 组内归一化（GRPO 核心）
+        normalized = (rewards - rewards.mean()) / (rewards.std() + 1e-8)
+        for tau, A_hat in zip(trajectories, normalized):
+            log_probs = policy.log_prob(tau, prompt)
+            ref_log_probs = policy.ref_log_prob(tau, prompt)
+            kl = (log_probs - ref_log_probs).sum()
+            all_losses.append(-(A_hat * log_probs.sum()) + beta * kl)
+    return torch.stack(all_losses).mean()</code></pre>
+
+<h4>方案 B：PRM 产出 Dense Reward，接入 MT-GRPO</h4>
+<p>PRM 为每个 turn 提供步骤级奖励，接入 MT-GRPO（Multi-Turn GRPO）的 turn-level advantage 计算：</p>
+<pre><code class="language-python">def mt_grpo_with_prm(policy, prm, orm, prompts, group_size=8,
+                      alpha=0.5, beta_kl=0.01, gamma=0.9):
+    """方案 B：PRM Dense Reward 接入 MT-GRPO，适合长轨迹（10-30 turns）"""
+    all_losses = []
+    for prompt in prompts:
+        trajectories = [policy.generate_multiturn(prompt) for _ in range(group_size)]
+        for tau in trajectories:
+            T = len(tau.turns)
+            step_rewards = [prm(tau, t) for t in range(T)]
+            episode_reward = orm(tau)
+            combined = [alpha * episode_reward + (1-alpha) * step_rewards[t]
+                        for t in range(T)]
+            advantages = compute_gae(combined, gamma=gamma, lam=0.95)
+            for t, (turn, A_t) in enumerate(zip(tau.turns, advantages)):
+                log_probs = policy.log_prob_turn(turn, tau.context_up_to(t))
+                ref_log_probs = policy.ref_log_prob_turn(turn, tau.context_up_to(t))
+                kl = (log_probs - ref_log_probs).sum()
+                all_losses.append(-(A_t * log_probs.sum()) + beta_kl * kl)
+    return torch.stack(all_losses).mean()
+
+def compute_gae(rewards, gamma=0.9, lam=0.95):
+    """广义优势估计（Generalized Advantage Estimation, GAE）"""
+    T = len(rewards)
+    advantages, gae = [0.0]*T, 0.0
+    for t in reversed(range(T)):
+        next_val = rewards[t+1] if t &lt; T-1 else 0
+        delta = rewards[t] + gamma * next_val - rewards[t]
+        gae = delta + gamma * lam * gae
+        advantages[t] = gae
+    return advantages</code></pre>
+
+<h4>方案 C：GRADE 可微分奖励，端到端梯度传播</h4>
+<p>使用 Gumbel-Softmax 松弛，实现奖励模型梯度直接传回 policy 参数：</p>
+<pre><code class="language-python">def grade_differentiable_reward(policy, reward_model, prompts,
+                                  temperature=1.0, beta_kl=0.01):
+    """方案 C：GRADE 可微分奖励，适合端到端联合训练"""
+    all_losses = []
+    for prompt in prompts:
+        logits_seq = policy.forward(prompt)  # shape: (T, vocab_size)
+        soft_tokens = []
+        for logits in logits_seq:
+            # Gumbel-Softmax 松弛（保持可微分）
+            gumbel = -torch.log(-torch.log(torch.rand_like(logits) + 1e-20) + 1e-20)
+            soft_tokens.append(F.softmax((logits + gumbel) / temperature, dim=-1))
+        # 软化 token 嵌入
+        soft_embs = [(s.unsqueeze(0) @ reward_model.embedding_matrix)
+                     for s in soft_tokens]
+        soft_traj = torch.cat(soft_embs, dim=1)
+        reward = reward_model.score(soft_traj)  # 梯度可传回 logits
+        with torch.no_grad():
+            hard_tokens = logits_seq.argmax(dim=-1)
+        kl = (policy.log_prob(hard_tokens, prompt)
+              - policy.ref_log_prob(hard_tokens, prompt)).sum()
+        all_losses.append(-reward + beta_kl * kl)
+    return torch.stack(all_losses).mean()</code></pre>
+
+<table>
+  <thead>
+    <tr><th>方案</th><th>梯度质量</th><th>实现复杂度</th><th>适用轨迹长度</th><th>奖励信号密度</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>方案 A：ORM + GRPO</td><td>中（REINFORCE 估计）</td><td>低</td><td>短（&lt;10 turns）</td><td>稀疏（轨迹级）</td></tr>
+    <tr><td>方案 B：PRM + MT-GRPO</td><td>高（turn-level advantage）</td><td>中</td><td>中长（10-30 turns）</td><td>密集（步骤级）</td></tr>
+    <tr><td>方案 C：GRADE 可微分</td><td>最高（直接梯度）</td><td>高</td><td>任意</td><td>密集（token 级）</td></tr>
+  </tbody>
+</table>
+</section>
+<section id="training-pipeline">
+<h2>5. 完整训练流程设计</h2>
+
+<h3>5.1 离线阶段：奖励模型训练</h3>
+<p>奖励模型的训练分为数据生成、ORM 训练和 PRM 训练三个步骤：</p>
+
+<h4>步骤 1：用 Sandbox 生成训练数据</h4>
+<pre><code class="language-python">def generate_training_data(sandbox, policy, num_tasks=1000, samples_per_task=10):
+    """
+    离线数据生成流程
+    目标：生成 10k+ 条标注轨迹用于奖励模型训练
+    """
+    all_trajectories = []
+
+    for task in sandbox.get_tasks(num_tasks):
+        task_trajectories = []
+
+        # 多温度采样，确保轨迹多样性
+        for temperature in [0.3, 0.7, 1.0, 1.3]:
+            for _ in range(samples_per_task // 4):
+                tau = policy.generate(task.prompt, temperature=temperature)
+
+                # sandbox 自动标注
+                total_score, dim_scores = sandbox.score_trace(tau, task.reference)
+
+                # 步骤级标注（MC rollout）
+                step_labels = compute_step_labels_mc(
+                    sandbox, policy, tau, task, num_rollouts=5
+                )
+
+                task_trajectories.append({
+                    "trajectory": tau,
+                    "total_score": total_score,
+                    "dim_scores": dim_scores,
+                    "step_labels": step_labels,
+                })
+
+        all_trajectories.extend(task_trajectories)
+
+    return all_trajectories
+
+
+def compute_step_labels_mc(sandbox, policy, tau, task, num_rollouts=5):
+    """
+    蒙特卡洛 rollout 标注步骤级奖励（类 Math-Shepherd）
+    对轨迹中每个中间状态，从该状态出发采样 K 条完整轨迹
+    用最终成功率作为该步的 PRM 标签
+    """
+    step_labels = []
+    for t in range(len(tau.steps)):
+        # 从第 t 步的状态出发，继续采样
+        partial_context = tau.get_context_up_to(t)
+        success_count = 0
+        for _ in range(num_rollouts):
+            completion = policy.generate_from_context(partial_context, task.prompt)
+            full_tau = tau.steps[:t] + completion.steps
+            score, _ = sandbox.score_trace(full_tau, task.reference)
+            if score > 0.7:  # 成功阈值
+                success_count += 1
+        step_labels.append(success_count / num_rollouts)
+    return step_labels</code></pre>
+
+<h4>步骤 2：训练 ORM（Bradley-Terry 对比损失）</h4>
+<pre><code class="language-python">def train_orm(orm_model, preference_pairs, num_epochs=3, lr=1e-5):
+    """
+    ORM 训练：Bradley-Terry 偏好模型
+    输入：偏好对列表 [(tau_pos, tau_neg)]
+    """
+    optimizer = torch.optim.AdamW(orm_model.parameters(), lr=lr)
+
+    for epoch in range(num_epochs):
+        total_loss = 0
+        for batch in DataLoader(preference_pairs, batch_size=16, shuffle=True):
+            tau_pos = batch["trajectory_pos"]
+            tau_neg = batch["trajectory_neg"]
+
+            # 前向传播
+            r_pos = orm_model(tau_pos)  # shape: (batch,)
+            r_neg = orm_model(tau_neg)  # shape: (batch,)
+
+            # Bradley-Terry 损失
+            # L = -E[log sigma(r_pos - r_neg)]
+            loss = -F.logsigmoid(r_pos - r_neg).mean()
+
+            # 可选：加入分数差异加权
+            score_diff = batch["score_diff"]
+            loss = -(score_diff * F.logsigmoid(r_pos - r_neg)).mean()
+
+            optimizer.zero_grad()
+            loss.backward()
+            torch.nn.utils.clip_grad_norm_(orm_model.parameters(), 1.0)
+            optimizer.step()
+            total_loss += loss.item()
+
+        print(f"Epoch {epoch+1}: ORM Loss = {total_loss:.4f}")
+
+    return orm_model</code></pre>
+
+<h4>步骤 3：训练 PRM（步骤级回归损失）</h4>
+<pre><code class="language-python">def train_prm(prm_model, step_labeled_data, num_epochs=3, lr=1e-5):
+    """
+    PRM 训练：步骤级 MSE 回归
+    输入：带步骤标签的轨迹数据
+    """
+    optimizer = torch.optim.AdamW(prm_model.parameters(), lr=lr)
+
+    for epoch in range(num_epochs):
+        total_loss = 0
+        for batch in DataLoader(step_labeled_data, batch_size=8, shuffle=True):
+            trajectory_tokens = batch["trajectory_tokens"]
+            step_boundaries = batch["step_boundaries"]
+            step_labels = batch["step_labels"]  # shape: (batch, T)
+
+            # 前向传播
+            _, step_rewards = prm_model(trajectory_tokens, step_boundaries)
+            step_rewards_tensor = torch.stack(step_rewards, dim=1)  # (batch, T)
+
+            # MSE 损失（也可用 BCE）
+            loss = F.mse_loss(step_rewards_tensor.squeeze(-1), step_labels)
+
+            optimizer.zero_grad()
+            loss.backward()
+            torch.nn.utils.clip_grad_norm_(prm_model.parameters(), 1.0)
+            optimizer.step()
+            total_loss += loss.item()
+
+        print(f"Epoch {epoch+1}: PRM Loss = {total_loss:.4f}")
+
+    return prm_model</code></pre>
+
+<h4>步骤 4：验证奖励模型质量</h4>
+<p>用 Spearman 相关系数验证神经奖励模型与 <code>score_trace</code> 的一致性：</p>
+<pre><code class="language-python">from scipy.stats import spearmanr
+
+def validate_reward_model(orm_model, test_trajectories, sandbox):
+    orm_scores = [orm_model(tau).item() for tau in test_trajectories]
+    sandbox_scores = [sandbox.score_trace(tau, ref)[0]
+                      for tau, ref in test_trajectories]
+    corr, p_value = spearmanr(orm_scores, sandbox_scores)
+    print(f"Spearman correlation: {corr:.4f} (p={p_value:.4f})")
+    # 目标：corr > 0.8 表示奖励模型与 sandbox 高度一致
+    return corr</code></pre>
+
+<h3>5.2 在线阶段：RL 训练</h3>
+<p>根据轨迹长度和计算资源，选择不同的 RL 算法：</p>
+
+<h4>短轨迹（&lt; 10 turns）：GRPO with ORM Reward</h4>
+<p>标准 GRPO 适合短轨迹场景，实现简单，计算开销低：</p>
+\[
+\mathcal{L}_{\text{GRPO}} = -\frac{1}{G} \sum_{i=1}^{G} \hat{A}_i \log \pi_\theta(\tau_i | x) + \beta \cdot \text{KL}(\pi_\theta \| \pi_{\text{ref}})
+\]
+\[
+\hat{A}_i = \frac{r_{\text{ORM}}(\tau_i) - \mu_r}{\sigma_r}, \quad \mu_r = \frac{1}{G}\sum_j r_j, \quad \sigma_r = \sqrt{\frac{1}{G}\sum_j (r_j - \mu_r)^2}
+\]
+
+<h4>中长轨迹（10-30 turns）：MT-GRPO with PRM Reward</h4>
+<p>MT-GRPO（Multi-Turn GRPO，arXiv:2505.11821）在每个 turn 计算独立的优势估计，解决长轨迹中的信用分配问题：</p>
+\[
+\mathcal{L}_{\text{MT-GRPO}} = -\sum_{t=1}^{T} \hat{A}_t^{\text{turn}} \log \pi_\theta(a_t | s_t, c_t) + \beta \cdot \text{KL}_t
+\]
+<p>其中 \( \hat{A}_t^{\text{turn}} \) 为第 \( t \) 个 turn 的优势估计，由 PRM 的步骤级奖励通过 GAE 计算得到。</p>
+
+<h4>长序列（&gt; 30 turns）：GAGPO with Dense PRM</h4>
+<p>GAGPO（Group Advantage Guided Policy Optimization）通过组内对比和密集 PRM 奖励，在长序列场景下取得最优性能：</p>
+\[
+\mathcal{L}_{\text{GAGPO}} = -\sum_{t=1}^{T} \min\left(\rho_t \hat{A}_t, \text{clip}(\rho_t, 1-\epsilon, 1+\epsilon) \hat{A}_t\right) + \beta \cdot \text{KL}
+\]
+<p>其中 \( \rho_t = \pi_\theta(a_t) / \pi_{\text{old}}(a_t) \) 为重要性采样比，\( \epsilon \) 为 PPO clip 参数。</p>
+
+<h4>训练流程总览</h4>
+<pre><code class="language-python">def full_rl_training_pipeline(policy, orm, prm, sandbox,
+                               num_iterations=100, trajectory_length_threshold=10):
+    """
+    完整 RL 训练流程
+    自动根据轨迹长度选择合适的 RL 算法
+    """
+    for iteration in range(num_iterations):
+        # 1. 采样轨迹
+        prompts = sandbox.sample_tasks(batch_size=32)
+        trajectories = [policy.generate_multiturn(p) for p in prompts]
+
+        # 2. 计算奖励
+        rewards = []
+        for tau in trajectories:
+            r_episode = orm(tau)
+            r_steps = [prm(tau, t) for t in range(len(tau.turns))]
+            # forbidden_loss 保留为规则式硬约束
+            forbidden_penalty = sandbox.check_forbidden(tau)
+            r_combined = 0.5 * r_episode + 0.5 * sum(r_steps) / len(r_steps)
+            r_final = r_combined * (1 - forbidden_penalty)  # 违规则清零
+            rewards.append(r_final)
+
+        # 3. 根据轨迹长度选择 RL 算法
+        avg_length = sum(len(tau.turns) for tau in trajectories) / len(trajectories)
+        if avg_length &lt; trajectory_length_threshold:
+            loss = grpo_with_orm(policy, orm, prompts)
+        else:
+            loss = mt_grpo_with_prm(policy, prm, orm, prompts)
+
+        # 4. 反向传播
+        loss.backward()
+        optimizer.step()
+        optimizer.zero_grad()
+
+        # 5. 定期更新奖励模型（自进化课程，参考 WebRL）
+        if iteration % 10 == 0:
+            new_data = generate_training_data(sandbox, policy, num_tasks=100)
+            orm = train_orm(orm, construct_preference_pairs(new_data))
+            prm = train_prm(prm, new_data)
+
+        print(f"Iter {iteration}: loss={loss.item():.4f}, avg_reward={sum(rewards)/len(rewards):.4f}")</code></pre>
+
+<h3>5.3 奖励 Hacking 防御</h3>
+<p>奖励 Hacking（Reward Hacking）是 RL 训练中的核心风险：policy 学会欺骗奖励模型而非真正完成任务。以下三种防御策略可组合使用：</p>
+
+<h4>KL 惩罚</h4>
+<p>在 RL 目标中加入与参考策略的 KL 散度惩罚，防止 policy 过度偏离预训练分布：</p>
+\[
+\mathcal{L}_{\text{total}} = \mathcal{L}_{\text{RL}} + \beta \cdot \text{KL}(\pi_\theta \| \pi_{\text{ref}})
+\]
+<p>推荐 \( \beta \in [0.01, 0.05] \)。\( \beta \) 过大会限制 policy 的探索能力，\( \beta \) 过小则无法防止奖励 hacking。</p>
+
+<h4>PRIME：隐式 PRM（避免奖励过拟合）</h4>
+<p><strong>PRIME</strong>（arXiv:2502.01456）提出用语言模型本身的 token 概率作为隐式 PRM，避免显式训练 PRM 带来的过拟合风险：</p>
+\[
+r_t^{\text{PRIME}} = \log \frac{\pi_{\text{ref}}(a_t | s_t)}{\pi_{\text{base}}(a_t | s_t)}
+\]
+<p>其中 \( \pi_{\text{ref}} \) 为经过 SFT 的参考策略，\( \pi_{\text{base}} \) 为预训练基础模型。这个比值衡量了 SFT 训练对该 token 的"偏好程度"，可作为步骤级奖励信号，无需额外训练 PRM。</p>
+
+<h4>DataPRM：三元奖励（区分探索性试错）</h4>
+<p><strong>DataPRM</strong>（arXiv:2604.24198）提出三元奖励标签，区分三种步骤类型：</p>
+<ul>
+  <li><strong>正确步骤</strong>（+1）：直接推进任务完成的步骤</li>
+  <li><strong>探索性试错</strong>（0）：虽然不是最优路径，但展现了合理的探索行为</li>
+  <li><strong>错误步骤</strong>（-1）：导致任务失败或违反约束的步骤</li>
+</ul>
+<p>三元标签避免了将"探索性试错"惩罚为"错误"，鼓励 Agent 在不确定情况下进行合理探索。在 sandbox 场景中，可以通过分析步骤的最终影响来自动分配三元标签：</p>
+<pre><code class="language-python">def assign_ternary_label(step, trajectory, sandbox, task):
+    """
+    DataPRM 三元标签分配
+    +1: 正确步骤（该步后成功率显著提升）
+     0: 探索性试错（该步后成功率未变或轻微下降，但步骤本身合理）
+    -1: 错误步骤（该步后成功率显著下降，或违反约束）
+    """
+    # 计算该步前后的成功率变化
+    success_before = estimate_success_rate(sandbox, trajectory[:step], task)
+    success_after = estimate_success_rate(sandbox, trajectory[:step+1], task)
+    delta = success_after - success_before
+
+    # 检查是否违反约束
+    if sandbox.check_forbidden_at_step(trajectory[step]):
+        return -1  # 违反安全约束，直接标为错误
+
+    if delta &gt; 0.1:
+        return 1   # 显著提升，正确步骤
+    elif delta &gt; -0.1:
+        return 0   # 轻微变化，探索性试错
+    else:
+        return -1  # 显著下降，错误步骤</code></pre>
+</section>
+<section id="comparison">
+<h2>6. 方法对比与选择建议</h2>
+
+<p>针对具身机器人导航 Agent 的不同训练阶段和资源约束，以下表格对四种主要奖励模型方案进行系统对比：</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>方案</th>
+      <th>适用场景</th>
+      <th>数据需求</th>
+      <th>梯度质量</th>
+      <th>实现复杂度</th>
+      <th>推荐 Loss 组合</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong>仅 ORM</strong></td>
+      <td>短轨迹（&lt;10 turns），快速验证阶段</td>
+      <td>中（需要轨迹级偏好对，约 5k 对）</td>
+      <td>中（REINFORCE 估计，方差高）</td>
+      <td>低（单头 LLM + BT 损失）</td>
+      <td>BT Loss + GRPO + KL 惩罚</td>
+    </tr>
+    <tr>
+      <td><strong>仅 PRM</strong></td>
+      <td>步骤可独立评估的任务，信用分配困难场景</td>
+      <td>高（需要步骤级标注，MC rollout 成本高）</td>
+      <td>高（密集奖励，低方差）</td>
+      <td>中（MC rollout 标注 + 步骤级训练）</td>
+      <td>MSE/BCE Loss + MT-GRPO + GAE</td>
+    </tr>
+    <tr>
+      <td><strong>ORM + PRM 混合</strong>（推荐）</td>
+      <td>中长轨迹（10-30 turns），生产环境</td>
+      <td>高（需要两种标注，但可共享骨干模型）</td>
+      <td>高（密集 + 全局信号互补）</td>
+      <td>中（双头架构，联合训练）</td>
+      <td>BT + MSE + MT-GRPO/GAGPO + KL</td>
+    </tr>
+    <tr>
+      <td><strong>可微分 RM（GRADE）</strong></td>
+      <td>端到端优化，RM 与 policy 联合训练</td>
+      <td>低（无需显式标注，直接优化）</td>
+      <td>最高（直接梯度传播）</td>
+      <td>高（Gumbel-Softmax + 联合训练）</td>
+      <td>GRADE Loss + 直接梯度 + KL</td>
+    </tr>
+  </tbody>
+</table>
+
+<h3>6.1 针对 Sandbox 场景的具体建议</h3>
+
+<h4>阶段一：快速验证（1-2 周）</h4>
+<p>使用<strong>仅 ORM + 标准 GRPO</strong>方案：</p>
+<ol>
+  <li>用 sandbox 生成 5k 条轨迹，<code>score_trace</code> 自动标注</li>
+  <li>构造 2k 偏好对，训练 ORM（Qwen2.5-7B 骨干，Bradley-Terry 损失）</li>
+  <li>验证 ORM 与 <code>score_trace</code> 的 Spearman 相关性（目标 &gt; 0.75）</li>
+  <li>接入 GRPO 训练，观察 policy 在 sandbox 上的分数提升</li>
+</ol>
+
+<h4>阶段二：性能提升（3-4 周）</h4>
+<p>升级为<strong>混合 ORM + PRM + MT-GRPO</strong>方案：</p>
+<ol>
+  <li>在阶段一数据基础上，增加 MC rollout 步骤级标注（每条轨迹 5 次 rollout）</li>
+  <li>训练 PRM（与 ORM 共享骨干，双头架构）</li>
+  <li>切换到 MT-GRPO，使用 turn-level advantage</li>
+  <li>加入 PRIME 隐式 PRM 作为辅助奖励，防止奖励 hacking</li>
+</ol>
+
+<h4>阶段三：长序列优化（5-8 周）</h4>
+<p>针对 30+ turns 的复杂导航任务，升级为<strong>GAGPO + DataPRM</strong>方案：</p>
+<ol>
+  <li>引入 DataPRM 三元标签，区分探索性试错和真正错误</li>
+  <li>使用 GAGPO 的 clip 机制处理长序列的梯度稳定性</li>
+  <li>实现 WebRL 风格的自进化课程：每 10 次迭代更新奖励模型</li>
+  <li>可选：引入 BranPO 的分支对比采样，精确定位关键决策点</li>
+</ol>
+
+<h3>6.2 关键超参数建议</h3>
+<table>
+  <thead>
+    <tr><th>超参数</th><th>推荐值</th><th>说明</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>ORM 权重 \( \alpha \)</td><td>0.4–0.6</td><td>初始 0.5，随训练进行逐渐增大</td></tr>
+    <tr><td>PRM 权重 \( \beta \)</td><td>0.4–0.6</td><td>\( \alpha + \beta = 1 \)</td></tr>
+    <tr><td>时间折扣 \( \gamma \)</td><td>0.85–0.95</td><td>长轨迹用较小值（0.85），短轨迹用较大值（0.95）</td></tr>
+    <tr><td>KL 惩罚 \( \beta_{\text{KL}} \)</td><td>0.01–0.05</td><td>初始 0.01，若出现奖励 hacking 则增大</td></tr>
+    <tr><td>GRPO 组大小 \( G \)</td><td>8–16</td><td>计算资源允许时用 16，资源受限用 8</td></tr>
+    <tr><td>偏好对分数差阈值</td><td>0.25–0.35</td><td>差异太小的对训练信号弱，差异太大则样本稀少</td></tr>
+    <tr><td>MC rollout 次数</td><td>5–10</td><td>5 次可接受，10 次标签更准确但成本翻倍</td></tr>
+    <tr><td>Gumbel 温度（GRADE）</td><td>从 1.0 退火到 0.1</td><td>训练初期高温保证梯度流动，后期低温接近离散采样</td></tr>
+  </tbody>
+</table>
+
+<h3>6.3 与现有 Differentiable RL Loss 的集成</h3>
+<p>本报告的奖励模型方案与可微分 RL 损失报告中的各算法的集成关系如下：</p>
+<table>
+  <thead>
+    <tr><th>RL 算法</th><th>推荐奖励模型</th><th>集成方式</th><th>适用场景</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>GRPO</td><td>ORM</td><td>ORM 输出作为组内归一化的奖励</td><td>短轨迹，快速验证</td></tr>
+    <tr><td>Turn-PPO</td><td>PRM</td><td>PRM 输出作为每个 turn 的即时奖励</td><td>多轮对话，turn-level 优化</td></tr>
+    <tr><td>MT-GRPO</td><td>ORM + PRM 混合</td><td>混合奖励 + GAE 计算 turn-level advantage</td><td>中长轨迹，推荐方案</td></tr>
+    <tr><td>GAGPO</td><td>ORM + PRM 混合</td><td>密集 PRM 奖励 + GAGPO clip 机制</td><td>长序列，最优性能</td></tr>
+    <tr><td>FRPO</td><td>ORM（作为约束）</td><td>ORM 分数作为可行性约束，FRPO 优化策略</td><td>有安全约束的场景</td></tr>
+    <tr><td>GRADE</td><td>可微分 RM</td><td>Gumbel-Softmax 松弛，端到端梯度</td><td>端到端优化，高计算预算</td></tr>
+  </tbody>
+</table>
+
+</section>
+
+<section id="references">
+<h2>7. 参考文献（References）</h2>
+<ol>
+  <li>Wang et al., "Math-Shepherd: Verify and Reinforce LLMs Step-by-step without Human Annotations", 2023. <a href="https://arxiv.org/abs/2312.08935">arXiv:2312.08935</a></li>
+  <li>Lightman et al., "Let's Verify Step by Step", 2023. <a href="https://arxiv.org/abs/2310.10080">arXiv:2310.10080</a></li>
+  <li>Liao et al., "OmegaPRM: Omega Process Reward Model for Mathematical Reasoning", 2024. <a href="https://arxiv.org/abs/2406.06592">arXiv:2406.06592</a></li>
+  <li>Luo et al., "AgentPRM: Step-Wise Promise and Progress for Agent Process Reward Modeling", 2025. <a href="https://arxiv.org/abs/2511.08325">arXiv:2511.08325</a></li>
+  <li>Zhang et al., "AgentPRM: Actor-Critic Framework with Process Reward Model", 2025. <a href="https://arxiv.org/abs/2502.10325">arXiv:2502.10325</a></li>
+  <li>Wang et al., "Web-Shepherd: Advancing PRMs for Reinforcing Web Agents", 2025. <a href="https://arxiv.org/abs/2505.15277">arXiv:2505.15277</a></li>
+  <li>Liao et al., "DataPRM: Ternary Reward Strategy for Process Reward Models", 2026. <a href="https://arxiv.org/abs/2604.24198">arXiv:2604.24198</a></li>
+  <li>Cui et al., "PRIME: Process Reward Models via Implicit Rewards", 2025. <a href="https://arxiv.org/abs/2502.01456">arXiv:2502.01456</a></li>
+  <li>Chen et al., "iStar: Iterative Self-Training with Alternating PRM and Policy Optimization", 2025. <a href="https://arxiv.org/abs/2509.19199">arXiv:2509.19199</a></li>
+  <li>Qi et al., "WebRL: Training LLM Web Agents via Self-Evolving Online Curriculum Reinforcement Learning", 2024. <a href="https://arxiv.org/abs/2411.02337">arXiv:2411.02337</a></li>
+  <li>Shi et al., "ToolRM: Tool-Specific Outcome Reward Model for Tool-Augmented LLMs", 2025. <a href="https://arxiv.org/abs/2509.11963">arXiv:2509.11963</a></li>
+  <li>Qu et al., "ToolRL: Reward is All Tool Learning Needs", 2025. <a href="https://arxiv.org/abs/2504.13958">arXiv:2504.13958</a></li>
+  <li>Zeng et al., "MT-GRPO: Multi-Turn Group Relative Policy Optimization", 2025. <a href="https://arxiv.org/abs/2505.11821">arXiv:2505.11821</a></li>
+  <li>Liu et al., "BranPO: Branch Contrastive Preference Optimization for Multi-Turn Agents", 2026. <a href="https://arxiv.org/abs/2602.03719">arXiv:2602.03719</a></li>
+  <li>Chen et al., "PROF: Process Reward and Outcome Reward Filtering for Consistent RL Training", 2025. <a href="https://arxiv.org/abs/2509.03403">arXiv:2509.03403</a></li>
+  <li>Bai et al., "Constitutional AI: Harmlessness from AI Feedback", 2022. <a href="https://arxiv.org/abs/2212.08073">arXiv:2212.08073</a></li>
+  <li>Zhu et al., "Agent-RRM: Reasoning-based Reward Model for Agent Evaluation", 2026. <a href="https://arxiv.org/abs/2601.22154">arXiv:2601.22154</a></li>
+  <li>Li et al., "AgentV-RL: Forward-Backward Dual-Agent Verification for RL Training", 2026. <a href="https://arxiv.org/abs/2604.16004">arXiv:2604.16004</a></li>
+  <li>Zhao et al., "GRADE: Differentiable Reward via Gumbel-Softmax Relaxation", 2026. <a href="https://arxiv.org/abs/2601.11574">arXiv:2601.11574</a></li>
+  <li>Wang et al., "ABPT: Approximate Backpropagation Through Partial Differentiable Rewards", 2025. <a href="https://arxiv.org/abs/2501.14513">arXiv:2501.14513</a></li>
+  <li>Zeng et al., "TLCR: Token-Level Continuous Reward for Fine-grained Reinforcement Learning", 2024. <a href="https://arxiv.org/abs/2407.16574">arXiv:2407.16574</a></li>
+  <li>Liu et al., "GTPO: Dynamic Entropy-Weighted Token-Level Reward Shaping", 2025. <a href="https://arxiv.org/abs/2508.04349">arXiv:2508.04349</a></li>
+  <li>Shao et al., "DeepSeekMath: Pushing the Limits of Mathematical Reasoning in Open Language Models (GRPO)", 2024. <a href="https://arxiv.org/abs/2402.03300">arXiv:2402.03300</a></li>
+  <li>Schulman et al., "Proximal Policy Optimization Algorithms (PPO)", 2017. <a href="https://arxiv.org/abs/1707.06347">arXiv:1707.06347</a></li>
+  <li>Rafailov et al., "Direct Preference Optimization: Your Language Model is Secretly a Reward Model (DPO)", 2023. <a href="https://arxiv.org/abs/2305.18290">arXiv:2305.18290</a></li>
+  <li>Azar et al., "A General Theoretical Paradigm to Understand Learning from Human Feedback (IPO)", 2023. <a href="https://arxiv.org/abs/2310.12036">arXiv:2310.12036</a></li>
+  <li>Hu et al., "VerlTool: Extending veRL for Multi-Tool Agent RL Training", 2025. <a href="https://arxiv.org/abs/2509.01055">arXiv:2509.01055</a></li>
+  <li>Ziegler et al., "Fine-Tuning Language Models from Human Preferences (RLHF)", 2019. <a href="https://arxiv.org/abs/1909.08593">arXiv:1909.08593</a></li>
+</ol>
+</section>
+
+</article>
+</body>
+</html>
