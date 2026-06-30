@@ -1,0 +1,2269 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VLA / WM / VLN 本地项目可行性报告</title>
+    <script>
+    window.MathJax = {
+        tex: { inlineMath: [['\\(','\\)'], ['$', '$']], displayMath: [['\\[','\\]'], ['$$','$$']] },
+        options: { skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code'] }
+    };
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js" async></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Noto Sans SC", sans-serif;
+            font-size: 16px;
+            line-height: 1.8;
+            color: #1a1a1a;
+            background: #fff;
+            padding: 2rem 1rem;
+        }
+        article { max-width: 900px; margin: 0 auto; }
+        h1 { font-size: 2rem; margin-bottom: 0.75rem; border-bottom: 2px solid #333; padding-bottom: 0.6rem; line-height: 1.35; }
+        h2 { font-size: 1.5rem; margin-top: 2.5rem; margin-bottom: 1rem; color: #222; border-left: 4px solid #0066cc; padding-left: 0.75rem; line-height: 1.45; }
+        h3 { font-size: 1.25rem; margin-top: 1.8rem; margin-bottom: 0.8rem; color: #333; line-height: 1.5; }
+        h4 { font-size: 1.1rem; margin-top: 1.2rem; margin-bottom: 0.5rem; color: #444; }
+        p { margin-bottom: 1rem; }
+        ul, ol { margin-bottom: 1rem; padding-left: 1.5rem; }
+        li { margin-bottom: 0.35rem; }
+        a { color: #0066cc; text-decoration: none; overflow-wrap: anywhere; }
+        a:hover { text-decoration: underline; }
+        code { font-family: "Fira Code", Consolas, "Courier New", monospace; background: #f0f0f0; padding: 0.15rem 0.4rem; border-radius: 3px; font-size: 0.9em; }
+        pre { background: #f5f5f5; border-radius: 6px; padding: 1rem; overflow-x: auto; margin: 1rem 0; font-size: 0.9rem; line-height: 1.55; }
+        pre code { background: none; padding: 0; border-radius: 0; font-size: inherit; }
+        .table-wrap { overflow-x: auto; margin: 1.5rem 0; }
+        table { width: 100%; border-collapse: collapse; font-size: 0.92rem; }
+        th, td { border: 1px solid #ddd; padding: 0.6rem 0.8rem; text-align: left; vertical-align: top; }
+        th { background: #f8f8f8; font-weight: 600; }
+        tbody tr:nth-child(even) { background: #fafafa; }
+        .meta { color: #666; font-size: 0.92rem; margin-bottom: 1.5rem; }
+        .toc { background: #f8fbff; border: 1px solid #d9e8ff; border-left: 4px solid #0066cc; padding: 1rem 1.2rem; margin: 1.5rem 0 2rem; border-radius: 6px; }
+        .toc h2 { border: none; margin: 0 0 0.8rem; padding: 0; font-size: 1.2rem; color: #123; }
+        .toc ol { columns: 2; column-gap: 2rem; margin-bottom: 0; }
+        .toc li { break-inside: avoid; margin-bottom: 0.35rem; }
+        .toc .toc-sub { margin-left: 1rem; font-size: 0.92rem; color: #333; }
+        .toc .toc-sub2 { margin-left: 2rem; font-size: 0.88rem; color: #555; }
+        section { scroll-margin-top: 1rem; }
+        .math-block { overflow-x: auto; margin: 1rem 0; }
+        @media (max-width: 600px) {
+            body { padding: 1rem 0.5rem; }
+            h1 { font-size: 1.5rem; }
+            h2 { font-size: 1.25rem; }
+            table { font-size: 0.82rem; }
+            .toc ol { columns: 1; }
+        }
+    </style>
+</head>
+<body>
+<article>
+<h1>VLA / WM / VLN 本地项目可行性报告</h1>
+<p>生成日期：2026-06-08  </p>
+<p>本地范围：<code>C:\Users\mousongzhe\pryer\project</code>  </p>
+<p>排除范围：按要求不分析 <code>08_openpi_acebrain_grounding_and_experts</code> / “8bacebrain” 主线。</p>
+
+<nav class="toc" aria-label="目录">
+<h2>目录</h2>
+<ol>
+<li><a href="#问题-question">问题（Question）</a></li>
+<li><a href="#背景与动机-background-motivation">背景与动机（Background &amp; Motivation）</a></li>
+<li><a href="#0-判定口径">0. 判定口径</a></li>
+<li><a href="#1-总览判定">1. 总览判定</a></li>
+<li><a href="#2-公开来源核验">2. 公开来源核验</a></li>
+<li><a href="#3-vla-线-openpi-pizero-qwenvl-深拆">3. VLA 线：OpenPI / PiZero / QwenVL 深拆</a></li>
+<li class="toc-sub"><a href="#3-1-vla-本地证据">3.1 本地证据</a></li>
+<li class="toc-sub"><a href="#3-2-openpi-输入输出全流程">3.2 输入到输出全流程</a></li>
+<li class="toc-sub2"><a href="#3-2-1-张量契约">3.2.1 张量契约</a></li>
+<li class="toc-sub2"><a href="#3-2-2-三条信息流">3.2.2 三条信息流</a></li>
+<li class="toc-sub2"><a href="#3-2-3-训练监督信号">3.2.3 训练监督信号</a></li>
+<li class="toc-sub2"><a href="#3-2-4-flow-action-chunk">3.2.4 Flow 生成 action chunk</a></li>
+<li class="toc-sub2"><a href="#3-2-5-推理解码">3.2.5 推理解码</a></li>
+<li class="toc-sub2"><a href="#3-2-6-fast解码关系">3.2.6 FAST 解码关系</a></li>
+<li class="toc-sub"><a href="#3-3-openpi-模式逐项拆解">3.3 模式逐项拆解</a></li>
+<li class="toc-sub2"><a href="#mode-vlm-only">VLM-only</a></li>
+<li class="toc-sub2"><a href="#mode-pi0-flow">π0 / Flow Matching</a></li>
+<li class="toc-sub2"><a href="#mode-pi05-state">π0.5 / 离散 state</a></li>
+<li class="toc-sub2"><a href="#mode-fast-only">π0-FAST / fast_only</a></li>
+<li class="toc-sub2"><a href="#mode-fast-ce">FAST CE 辅助</a></li>
+<li class="toc-sub2"><a href="#mode-state-token">state token 监督</a></li>
+<li class="toc-sub2"><a href="#mode-slowfast">slowfast / fastobs</a></li>
+<li class="toc-sub2"><a href="#mode-vla-vlm-cotrain">VLA + VLM 混训</a></li>
+<li class="toc-sub"><a href="#3-4-vla-改造点动机风险">3.4 官方-本地设计差分与改造 pipeline</a></li>
+<li class="toc-sub2"><a href="#3-4-1-official-openpi-baseline">3.4.1 官方原型</a></li>
+<li class="toc-sub2"><a href="#3-4-2-local-design-delta">3.4.2 本地设计差分</a></li>
+<li class="toc-sub2"><a href="#3-4-3-joint-mixture">3.4.3 改造点一：joint mixture</a></li>
+<li class="toc-sub2"><a href="#3-4-4-flow-head">3.4.4 改造点二：flow action head</a></li>
+<li class="toc-sub2"><a href="#3-4-5-fast-ce-mask">3.4.5 改造点三：FAST CE 与防泄漏 mask</a></li>
+<li class="toc-sub2"><a href="#3-4-6-state-token">3.4.6 改造点四：state token</a></li>
+<li class="toc-sub2"><a href="#3-4-7-slowfast">3.4.7 改造点五：slowfast / fastobs</a></li>
+<li class="toc-sub2"><a href="#3-4-8-action-bidirectional">3.4.8 改造点六：action block 双向注意力</a></li>
+<li class="toc-sub2"><a href="#3-4-9-fp32-action-stream">3.4.9 改造点七：fp32 action stream</a></li>
+<li class="toc-sub2"><a href="#3-4-10-no-discrete-empty-action">3.4.10 改造点八：no-discrete-state / empty-action</a></li>
+<li class="toc-sub2"><a href="#3-4-11-cotrain-iql">3.4.11 改造点九：混训与 IQL</a></li>
+<li class="toc-sub2"><a href="#3-4-12-local-pipeline">3.4.12 本地 pipeline</a></li>
+<li class="toc-sub2"><a href="#3-4-13-target-runs-training">3.4.13 三条目标 run 的训练对象与 loss</a></li>
+<li class="toc-sub2"><a href="#3-4-14-eval-attribution">3.4.14 评估归因</a></li>
+<li class="toc-sub"><a href="#3-5-vla-落档评估">3.5 训练模型评估情况</a></li>
+<li class="toc-sub2"><a href="#3-5-2-20260621-houzhi-libero-parallel">3.5.2 Houzhi LIBERO 平行变体</a></li>
+<li><a href="#4-wm-线-dreamdojo-cosmos-vggt-omega-深拆">4. WM 线：DreamDojo / Cosmos / VGGT-Omega 深拆</a></li>
+<li><a href="#5-vln-线-janusvln-streamvln-uni-navid-generalvln-深拆">5. VLN 线：JanusVLN / StreamVLN / Uni-NaVid / GeneralVLN 深拆</a></li>
+<li><a href="#6-可复现性资源分析">6. 可复现性资源分析</a></li>
+<li><a href="#7-推荐复现路线">7. 推荐复现路线</a></li>
+<li><a href="#8-主要风险清单">8. 主要风险清单</a></li>
+<li><a href="#9-结论">9. 结论</a></li>
+<li><a href="#10-参考文献-references">10. 参考文献（References）</a></li>
+</ol>
+</nav>
+<section id="问题-question">
+<h2>问题（Question）</h2>
+<p>本报告回答的问题是：<code>C:\Users\mousongzhe\pryer\project</code> 下 VLA / WM / VLN 相关项目分别来自哪些公开来源，哪些只是官方复现或数据适配，哪些包含真正的模型、算法或训练设计改造；并进一步拆解这些改造的实现机制、数学目标、训练/评估流程和复现资源需求。</p>
+</section>
+<section id="背景与动机-background-motivation">
+<h2>背景与动机（Background &amp; Motivation）</h2>
+<p>当前工作区把多条具身智能项目线整理到同一目录树中，既包含 OpenPI、OpenVLA-OFT、DreamDojo、Cosmos、JanusVLN、StreamVLN、Uni-NaVid、OpenTrackVLA 等公开项目，也包含围绕 QwenVL/PiZero、GeneralVLN、VGGT-Omega 等方向的本地实验代码。由于“数据接入”“部署脚本”“官方配置复现”和“方法级改造”容易混在一起，本报告的核心动机是建立一份可追溯的边界账本，避免把公开上游或数据适配误判为本地算法创新。</p>
+</section>
+<section id="0-判定口径">
+<h2>0. 判定口径</h2>
+<p>本报告采用严格口径：</p>
+<ul>
+<li>“公源/公开来源”指能在公开 GitHub、论文或项目页找到上游项目、论文、模型说明或复现实验入口。</li>
+<li>“本地改造”只计入模型结构、训练目标、训练流程或推理算法的设计改动。</li>
+<li>官方模式复现、数据格式适配、RLDS/LeRobot/RoboCasa 接入、路径修正、部署脚本、评估脚本、环境修复，不单独算本地改造。</li>
+<li>目录 <code>project/</code> 是整理后的本地分析工作区，不等同于原始 upstream 仓库；结论以本地代码证据和公开来源交叉判断。</li>
+</ul>
+</section>
+<section id="1-总览判定">
+<h2>1. 总览判定</h2>
+<div class="table-wrap"><table>
+<thead><tr><th>线索</th><th>本地目录</th><th>公开来源判断</th><th>本地方法/训练改造判断</th><th>结论</th></tr></thead>
+<tbody>
+<tr><td>OpenPI / PiZero / QwenVL VLA</td><td><code>01_openpi_ace_vla_pretraining</code>, <code>03_openpi_qwen3_hf_trainer</code>, <code>04_openpi_fast_zhi_training</code>, <code>05_openpi_iql_training</code>, <code>09_openpi_navigation_websocket_system</code></td><td>上游 OpenPI / pi0 公开；本地大量复用 OpenPI/PiZero 思路</td><td>是。Qwen3-VL/PiZero 结合、FAST token、slowfast visual/action path、VLM+action 混合训练、Flow Matching 动作头、IQL 离线 RL 都是方法/训练设计层改造</td><td>主可复现对象</td></tr>
+<tr><td>OpenVLA-OFT</td><td><code>16_openvla_oft</code></td><td>OpenVLA-OFT 公开项目和论文</td><td>否。当前本地证据显示是官方 LoRA/OFT 微调、LIBERO/ALOHA 部署与评估入口；远端检查 diff 为空</td><td>作为成熟 baseline，不计本地改造</td></tr>
+<tr><td>DreamDojo / Cosmos WM</td><td><code>13_dreamdojo_world_model</code></td><td>DreamDojo、Cosmos Predict2.5、Cosmos Policy 公开</td><td>主世界模型训练本身目前多为官方方法 + RoboCasa/LeRobot 数据配置适配；不计核心本地改造。辅助 <code>vggt-omega</code> action regression 是模型改造，但不是 WM 主体</td><td>WM 主线可复现官方/数据适配；辅助改造可单列</td></tr>
+<tr><td>VLN public baselines</td><td><code>20_vln_vla_navigation_models/JanusVLN</code>, <code>StreamVLN</code>, <code>uni-navid_*</code>, <code>OpenTrackVLA</code></td><td>JanusVLN、StreamVLN、Uni-NaVid、OpenTrackVLA 均有公开项目/论文痕迹</td><td>单独这些目录多为上游或近上游代码、权重或部署入口</td><td>baseline 参考</td></tr>
+<tr><td>GeneralVLN</td><td><code>20_vln_vla_navigation_models/generalvln</code></td><td>本地框架；吸收 JanusVLN/Qwen2.5-VL 等公开组件</td><td>是。混合 QA+轨迹架构、JanusVLN 适配、diffusion/flow matching 轨迹头、anchor diffusion/anchor flow matching 训练目标</td><td>VLN 主可复现对象</td></tr>
+</tbody></table></div>
+</section>
+<section id="2-公开来源核验">
+<h2>2. 公开来源核验</h2>
+<p>主要公开来源如下：</p>
+<ul>
+<li>OpenPI：<a href="https://github.com/Physical-Intelligence/openpi" target="_blank" rel="noopener">https://github.com/Physical-Intelligence/openpi</a></li>
+<li>OpenVLA-OFT：项目页 <a href="https://openvla-oft.github.io/" target="_blank" rel="noopener">https://openvla-oft.github.io/</a>，论文 <a href="https://arxiv.org/abs/2502.19645" target="_blank" rel="noopener">https://arxiv.org/abs/2502.19645</a></li>
+<li>DreamDojo：<a href="https://github.com/NVIDIA/DreamDojo" target="_blank" rel="noopener">https://github.com/NVIDIA/DreamDojo</a></li>
+<li>Cosmos Predict2.5：<a href="https://github.com/nvidia-cosmos/cosmos-predict2.5" target="_blank" rel="noopener">https://github.com/nvidia-cosmos/cosmos-predict2.5</a></li>
+<li>Cosmos Policy：<a href="https://github.com/NVlabs/cosmos-policy" target="_blank" rel="noopener">https://github.com/NVlabs/cosmos-policy</a></li>
+<li>JanusVLN：<a href="https://github.com/MIV-XJTU/JanusVLN" target="_blank" rel="noopener">https://github.com/MIV-XJTU/JanusVLN</a>，论文页 <a href="https://arxiv.org/abs/2509.22548" target="_blank" rel="noopener">https://arxiv.org/abs/2509.22548</a></li>
+<li>StreamVLN：<a href="https://github.com/OpenRobotLab/StreamVLN" target="_blank" rel="noopener">https://github.com/OpenRobotLab/StreamVLN</a>，论文页 <a href="https://arxiv.org/abs/2507.05240" target="_blank" rel="noopener">https://arxiv.org/abs/2507.05240</a></li>
+<li>Uni-NaVid：<a href="https://github.com/jzhzhang/Uni-NaVid" target="_blank" rel="noopener">https://github.com/jzhzhang/Uni-NaVid</a>，论文页 <a href="https://arxiv.org/abs/2412.06224" target="_blank" rel="noopener">https://arxiv.org/abs/2412.06224</a></li>
+<li>OpenTrackVLA：<a href="https://github.com/om-ai-lab/OpenTrackVLA" target="_blank" rel="noopener">https://github.com/om-ai-lab/OpenTrackVLA</a></li>
+</ul>
+<p>注意：公开 GitHub 不总等价于宽松开源许可。复现阶段需要进一步核对许可证、模型权重使用条款和数据许可证。比如 StreamVLN 本地/公开仓库常见非商业许可约束，应按“公开研究代码”而不是“可商用开源”处理。</p>
+</section>
+<section id="3-vla-线-openpi-pizero-qwenvl-深拆">
+<h2>3. VLA 线：OpenPI / PiZero / QwenVL 深拆</h2>
+<h3 id="3-1-vla-本地证据">3.1 本地证据</h3>
+<p>核心证据：</p>
+<ul>
+<li><code>C:\Users\mousongzhe\pryer\project\01_openpi_ace_vla_pretraining\scripts\train_acebrain.py</code></li>
+<li><code>DataCollator</code> 从第 114 行开始，带 <code>use_fast</code>、<code>sample_fm_time</code>、<code>supervise_state_tokens</code> 等训练增强参数。</li>
+<li>第 357 行进入 FAST token prompt 构造；第 587 行支持 state token 监督；第 680-681 行采样 Flow Matching timestep。</li>
+<li>第 1469 行启用额外 VLM 数据；第 1769 行把 action loss 和 fast CE 相加；第 1801-1803 行把 action loss 与 VLM loss 按权重混合。</li>
+<li>第 898 行以后自建 DeepSpeed optimizer/scheduler；第 902 行按 <code>use_fast</code> 切参数组。</li>
+<li><code>C:\Users\mousongzhe\pryer\project\03_openpi_qwen3_hf_trainer\qwenvl\pizero_qwenvl_fast_fortrainer.py</code></li>
+<li>第 270 行实现 Flow Matching timestep sampler，支持 uniform/beta。</li>
+<li>第 302 行实现 FAST token 专用 causal mask。</li>
+<li>第 428 行定义 <code>PiZero</code>；第 562-569 行把 Qwen/VLM 层和 action expert 层接入 <code>joint_model.mixtures</code>。</li>
+<li>第 729 行加载 FAST action tokenizer；第 2486-2514 行加入 FAST CE 辅助分支。</li>
+<li>第 2455-2461 行以 vector field MSE 训练动作头；第 1464 行起是推理侧 <code>infer_action</code>；第 1787 行支持 Euler 以外的积分器。</li>
+<li><code>C:\Users\mousongzhe\pryer\project\05_openpi_iql_training\scripts\train_pytorch_qwen_IQL.py</code></li>
+<li>第 485 行调用模型的 <code>get_offline_rl_loss</code>。</li>
+<li><code>C:\Users\mousongzhe\pryer\project\04_openpi_fast_zhi_training\archives\remote_alignment_20260529\evidence\code\houzhi_fast_zhi\qwenvl\pizero_qwenvl_rl.py</code></li>
+<li>第 64-65 行新增 value model 和 target value model。</li>
+<li>第 244 行定义 offline RL loss；第 279-286 行计算 target value / advantage；第 294-301 行计算 expectile/value regularization；第 305-309 行做 advantage-weighted policy loss。</li>
+<li>第 309 行 <code>final_loss = policy_loss + policy_loss</code> 是明显风险：value loss 被计算和记录，但没有进入最终 loss。</li>
+</ul>
+<p>OpenVLA-OFT 对照：</p>
+<ul>
+<li><code>C:\Users\mousongzhe\pryer\project\16_openvla_oft\README.md</code> 第 3 行说明保留官方 OpenVLA-OFT 微调/部署入口；第 53 行列出官方常见 fine-tuning 配置。</li>
+<li><code>C:\Users\mousongzhe\pryer\project\16_openvla_oft\archives\remote_alignment_20260529\README.md</code> 第 5-9 行记录远端业务 diff 为空。</li>
+</ul>
+<p>因此，OpenVLA-OFT 不算本地方法改造，只适合作为 baseline。</p>
+<h3 id="3-2-openpi-输入输出全流程">3.2 OpenPI/QwenVL/PiZero VLA 的输入到输出全流程</h3>
+<p>先给一个总判断：本地 OpenPI VLA 主线不是把动作简单离散成文字 token 再让 LLM 吐出动作，而是以 <strong>PiZero/π0 风格的 flow matching 连续动作头</strong> 为主输出路径，再用 <strong>FAST action token CE</strong> 给 QwenVL 语言视觉分支提供额外动作语义监督。OpenPI 官方仓库也把 π0 标成 flow-based VLA，把 π0-FAST 标成 FAST-tokenizer autoregressive VLA；本地实现把二者揉到同一个 QwenVL/PiZero joint-mixture 训练框架里 [1][10][11]。</p>
+<h4 id="3-2-1-张量契约">3.2.1 输入与输出的张量契约</h4>
+<p>单个控制时刻的输入可以写成：</p>
+<div class="math-block">$$
+O_t=\{I_t^{base}, I_t^{left}, I_t^{right}, s_t, q\}
+$$</div>
+<p>其中 $I$ 是多视角图像，$s_t$ 是机器人 proprioception/state，$q$ 是自然语言任务指令。模型输出不是单步动作，而是一个动作块（action chunk）：</p>
+<div class="math-block">$$
+\hat A_t=
+[\hat a_t,\hat a_{t+1},\ldots,\hat a_{t+H-1}]
+\in \mathbb{R}^{H\times D}
+$$</div>
+<p>$H$ 对应 <code>action_horizon</code> / <code>horizon_steps</code>，$D$ 对应 <code>action_dim</code>。本地 <code>PiZero.__init__</code> 将 <code>cfg.horizon_steps = pi0_config.action_horizon</code>，并令 <code>num_action_tokens = horizon_steps + cond_steps - 1</code>；也就是说，action expert 里的“action token”本质上是每个未来时间步的连续动作隐状态，不是 Qwen 词表里的离散 token。</p>
+<h4 id="3-2-2-三条信息流">3.2.2 三条信息流：VLM、fastobs、action</h4>
+<p>本地模型有三条主要 mixture：</p>
+<ol>
+<li><strong>VLM mixture</strong>：QwenVL/Qwen3-VL 处理语言和主视觉 token。代码把 <code>pretrained_model.language_model.layers</code> 接到 <code>joint_model.mixtures.vlm.layers</code>。</li>
+<li><strong>fastobs mixture</strong>：slowfast 模式下，DINO/fast visual path 从多视角图像中抽取更紧凑的视觉 token，经 <code>multi_modal_projector</code> 对齐到 action expert hidden size。代码把 action expert layers 也接到 <code>joint_model.mixtures.fastobs.layers</code>。</li>
+<li><strong>action mixture</strong>：把 noisy action chunk 和时间 $t$ 编码为 action tokens，经 action expert layers 后由线性 <code>action_decoder</code> 解成连续速度场。</li>
+</ol>
+<p>抽象成公式就是：</p>
+<div class="math-block">$$
+E^{vlm}=E_Q(q,I_t),\quad
+E^{fo}=P_{\text{fast}}(F_{\text{DINO}}(I_t)),\quad
+E^a_\tau=E_A(X_\tau,\gamma(\tau))
+$$</div>
+<div class="math-block">$$
+H^a_\theta=
+J_\theta^{action}\left(E^a_\tau\mid E^{vlm},E^{fo},M\right),
+\qquad
+\hat V_\theta=W_{\text{dec}}H^a_\theta
+$$</div>
+<p>这里 $J_\theta$ 是 joint model，$M$ 是 causal/mixture attention mask，$\gamma(\tau)$ 是 sinusoidal time embedding。推理时 VLM/fastobs 条件会先 prefill 到 KV cache；每个 action denoising step 只更新 action mixture，同时通过 cache 读取图文条件。</p>
+<h4 id="3-2-3-训练监督信号">3.2.3 训练侧：如何把一个 GT action chunk 变成监督信号</h4>
+<p>训练 batch 中有真实动作块 $A^\star\in\mathbb{R}^{H\times D}$。本地 collator 做两件并行的事：</p>
+<ol>
+<li><strong>连续动作监督</strong>：把完整 $A^\star$ 送入 flow matching 路径。</li>
+<li><strong>FAST token 辅助监督</strong>：把动作按 left/right、base/camera 坐标等片段拆出来，用 <code>UniversalActionProcessor</code> 编成整数 token，再映射到 Qwen 词表里的 <code>&lt;robot_action_i&gt;</code>。</li>
+</ol>
+<p>FAST 辅助路径在 <code>train_acebrain.py</code> 中大致是：</p>
+<div class="math-block">$$
+A^\star
+\xrightarrow{\text{slice}}
+\{A^{left/base},A^{right/base},A^{left/cam},A^{right/cam}\}
+\xrightarrow{\text{FAST}}
+\{z^p_1,\ldots,z^p_{L_p}\}
+$$</div>
+<div class="math-block">$$
+z_i^p\in\{0,\ldots,2047\},
+\qquad
+\text{token\_id}(z_i^p)=151669+z_i^p
+$$</div>
+<p>这些 token 被渲染成文本片段，例如 <code>&lt;|action_start|&gt;&lt;robot_action_17&gt;...&lt;|action_end|&gt;</code>，再拼进 prompt。CE 标签不是全句监督，而是把非 FAST token 设成 <code>-100</code>；若启用 <code>supervise_state_tokens</code>，则额外保留 <code>&lt;|state_start|&gt;...&lt;|state_end|&gt;</code> span。这样做的目的不是让最终动作全靠语言 token 生成，而是强迫 QwenVL hidden states 学会“看到图像和任务时，应该在语言空间里对应哪类动作模式”。</p>
+<p>一个关键防泄漏细节：训练 prompt 里含有 GT FAST action token，如果 action expert 可以直接 attend 到这些 token，FM 动作头就可能抄答案。本地 collator 在 <code>use_fast</code> 训练时对 causal mask 做了额外处理，把 action 解码位置到 GT FAST action span 的注意力屏蔽掉。抽象写成：</p>
+<div class="math-block">$$
+M_{\text{action}\leftarrow \text{GT-FAST}}=-\infty
+$$</div>
+<p>这让 FAST CE 可以训练 VLM 分支，同时避免连续 action decoder 直接读取标签。</p>
+<h4 id="3-2-4-flow-action-chunk">3.2.4 Flow matching：action chunk 是怎样生成的</h4>
+<p>本地代码的 flow path 使用带 $\sigma_{\min}$ 的线性条件路径。令 $X_0\sim\mathcal{N}(0,I)$ 是噪声动作块，$X_1=A^\star$ 是真实动作块，采样 $\tau\in[0,1]$，本地 <code>psi_t</code> 实现为：</p>
+<div class="math-block">$$
+X_\tau =
+\left(1-(1-\sigma_{\min})\tau\right)X_0+\tau X_1
+$$</div>
+<p>当 $\tau=0$ 时，$X_\tau=X_0$；当 $\tau=1$ 时，$X_\tau\approx X_1+\sigma_{\min}X_0$。这条路径的真实速度场为常量：</p>
+<div class="math-block">$$
+V^\star=\frac{dX_\tau}{d\tau}
+=X_1-(1-\sigma_{\min})X_0
+$$</div>
+<p>模型看到的是 $O_t,q,X_\tau,\tau$，要预测 $V^\star$：</p>
+<div class="math-block">$$
+\hat V_\theta =
+W_{\text{dec}}
+J_\theta^{action}
+\left(
+E_A(X_\tau,\gamma(\tau))
+\mid E_Q(q,I_t), E^{fo}
+\right)
+$$</div>
+<p>动作损失只在有效动作维度上计算。本地代码先用数值范围和可选 <code>action_pad_mask</code> 得到 mask $m$，再做 masked MSE：</p>
+<div class="math-block">$$
+\mathcal{L}_{FM}
+=
+\frac{1}{\sum m}
+\sum_{b,h,d}
+m_{bhd}
+\left(
+\hat V_{\theta,bhd}-
+\left[X_{1,bhd}-(1-\sigma_{\min})X_{0,bhd}\right]
+\right)^2
+$$</div>
+<p>FAST CE 辅助项是标准自回归语言模型损失：</p>
+<div class="math-block">$$
+\mathcal{L}_{FAST}
+=
+-\sum_{i:y_i\ne -100}
+\log p_\theta(y_i\mid y_{&lt;i},O_t,q)
+$$</div>
+<p>总体训练目标应理解为：</p>
+<div class="math-block">$$
+\mathcal{L}
+=
+\mathcal{L}_{FM}
++\lambda_{\text{fast}}\mathcal{L}_{FAST}
++\lambda_{\text{vlm}}\mathcal{L}_{VLM}
+$$</div>
+<p>实现注意：当前可见训练循环中，<code>loss_action + loss_vlm * lambda_fast_ce</code> 先被构造出来，但随后又进入额外的 VLM loss 组合分支；在部分脚本路径下，最终反传的 <code>loss</code> 可能退化为 <code>loss_action</code> 或 <code>loss_action + lambda_vlm * loss_vlm_web</code>。因此复现前必须审计实际 backward 的标量，确认 FAST CE 是否真的进入最终 loss。</p>
+<h4 id="3-2-5-推理解码">3.2.5 推理侧：从噪声到可执行 action chunk 的解码</h4>
+<p>推理入口是 <code>sample_actions(...)</code>，它把 observation 和 prompt 重新送入 processor，构造 <code>input_ids</code>、图像张量、position ids 和 mask，然后调用 <code>infer_action</code>。这里没有 GT FAST action token；最终动作来自连续 flow 采样。</p>
+<p>推理分两阶段：</p>
+<ol>
+<li><strong>条件预填充</strong>：先跑 VLM/fastobs mixture，把图像、语言、fast visual tokens 写入 KV cache。</li>
+<li><strong>动作积分</strong>：初始化 $A^{(0)}\sim\mathcal{N}(0,I)$，把它当作 noisy action chunk；循环 $K=\texttt{num_inference_steps}$ 次，每次预测速度并做数值积分。</li>
+</ol>
+<div class="math-block">$$
+A^{(0)}\sim\mathcal{N}(0,I),\qquad
+\Delta \tau=\frac{1}{K},\qquad
+\tau_k=k\Delta \tau
+$$</div>
+<div class="math-block">$$
+H_k^a=
+J_\theta^{action}
+\left(
+E_A(A^{(k)},\gamma(\tau_k))
+\mid \text{KV}(E^{vlm},E^{fo})
+\right)
+$$</div>
+<div class="math-block">$$
+\hat V_k=W_{\text{dec}}H_k^a,\qquad
+A^{(k+1)}=A^{(k)}+\Delta \tau\,\hat V_k
+$$</div>
+<p>代码默认用 Euler；本地也放了 Heun/RK4 的 <code>integration_step</code> 入口。积分结束后，模型会按 <code>final_action_clip_value</code> 做 clamp，并返回最后 <code>cfg.horizon_steps</code> 个时间步：</p>
+<div class="math-block">$$
+\hat A_t=
+\operatorname{clip}
+\left(A^{(K)}_{-H:},-c,c\right)
+$$</div>
+<p>这就是 action chunk 的“解码”：<code>action_decoder</code> 不是直接输出最终动作，而是在每个去噪步把 action hidden state 解成速度场；真正的动作值是通过 ODE/flow 积分累积出来的。若部署栈对动作做过数据归一化，还需要在模型外部按数据统计量反归一化：</p>
+<div class="math-block">$$
+a_{\text{env}}=\sigma_{\text{data}}\odot \hat a+\mu_{\text{data}}
+$$</div>
+<p>这一步通常属于 OpenPI policy/data transform 层，不在当前 <code>pizero_qwenvl_fast_fortrainer.py</code> 的核心 forward/infer 里。</p>
+<h4 id="3-2-6-fast解码关系">3.2.6 FAST token 解码与主输出路径的关系</h4>
+<p>如果单独走 π0-FAST / <code>fast_only</code> 风格，动作生成可以写成：</p>
+<div class="math-block">$$
+\hat z_i=
+\arg\max_z
+p_\theta(z\mid \hat z_{&lt;i},O_t,q),
+\qquad
+\hat A_t=D_{\text{FAST}}(\hat z_{1:L})
+$$</div>
+<p>$D_{\text{FAST}}$ 是 FAST tokenizer 的 inverse decoder，把离散 action tokens 还原为连续 action chunk。但当前本地主线中，<code>fast_only=True</code> 会直接关闭 action expert/action decoder；而默认 VLA 路径仍是 <code>sample_actions -> infer_action -> action_decoder -> flow integration</code>。因此读本地代码时应把两件事分开：</p>
+<ul>
+<li><strong>FAST token CE</strong>：训练期辅助 QwenVL 对齐动作语义，提供离散动作语言监督。</li>
+<li><strong>FM action decoder</strong>：训练和推理期的主连续动作块生成器，负责最终 $\mathbb{R}^{H\times D}$ 输出。</li>
+</ul>
+<h4>3.2.7 训练伪代码</h4>
+<pre><code class="language-text">Algorithm OpenPI-QwenVL-PiZero-Train
+Input:
+    batch = {images: base/left/right, state s, prompt q, action chunk A*}
+    flags = {use_fast, slowfast, supervise_state_tokens, use_vlm_data}
+
+1. Build observation tokens
+    image_tensor = stack_and_uint8(images)
+    if use_fast:
+        for each sample:
+            split A* into left_base/right_base/left_cam/right_cam slices
+            z_part = FASTTokenizer(A*_part)
+            render z_part as &lt;robot_action_i&gt; tokens
+            optionally render discretized state spans
+            prompt = system + task + state spans + action-token spans
+    model_inputs = QwenVLAProcessor(prompt, image_tensor, state)
+
+2. Build masks and labels
+    labels = model_inputs.labels
+    labels[non_FAST_tokens] = -100
+    if supervise_state_tokens:
+        keep labels inside &lt;|state_start|&gt;...&lt;|state_end|&gt;
+    causal_mask = build_mixture_mask(attention_mask)
+    if use_fast:
+        mask action-token positions from attending to GT FAST action span
+
+3. Sample flow-matching training point
+    tau ~ Uniform(0, 1) or flipped/scaled Beta distribution
+    X0 ~ Normal(0, I), X1 = A*
+    X_tau = (1 - (1 - sigma_min) * tau) * X0 + tau * X1
+    V_star = X1 - (1 - sigma_min) * X0
+
+4. Run joint model
+    E_vlm = QwenVL(text/image tokens)
+    E_fastobs = DINO/image_fast_path(images) if slowfast else empty
+    E_action = ActionEncoder(X_tau, TimeEmbedding(tau))
+    H_action, H_vlm = JointModel(E_vlm, E_fastobs, E_action, causal_mask)
+
+5. Decode and compute losses
+    V_hat = ActionDecoder(H_action)[last H steps]
+    L_fm = masked_mse(V_hat, V_star)
+    L_fast = CE(LMHead(H_vlm), labels) if use_fast else 0
+    L_vlm = CE(extra_vlm_batch) if enabled else 0
+    L = L_fm + lambda_fast * L_fast + lambda_vlm * L_vlm
+    Backprop with grouped VLM/action optimizer</code></pre>
+<h4>3.2.8 推理伪代码</h4>
+<pre><code class="language-text">Algorithm OpenPI-QwenVL-PiZero-Infer
+Input:
+    observation O_t = {multi-view images, state}
+    prompt q
+Output:
+    continuous action chunk A_hat in R^{H x D}
+
+1. Processor pass
+    model_inputs = QwenVLAProcessor(q, images, state)
+    build image_text_proprio_mask, action_mask, position_ids
+
+2. Condition prefill
+    E_vlm = QwenVL embeddings for text + image
+    E_fastobs = fast visual embeddings if slowfast is enabled
+    kv_cache = JointModel.prefill(E_vlm, E_fastobs)
+
+3. Flow integration
+    A = Normal(0, I)              # [B, H, D]
+    delta = 1 / num_inference_steps
+    tau = 0
+    repeat num_inference_steps times:
+        E_action = ActionEncoder(A, TimeEmbedding(tau))
+        H_action = JointModel.action_step(E_action, kv_cache)
+        V = ActionDecoder(H_action)[last H steps]
+        A = A + delta * V          # Euler; Heun/RK4 are optional hooks
+        A[invalid_action_dims] = 0
+        tau = tau + delta
+
+4. Postprocess
+    A = clip(A, -final_action_clip_value, final_action_clip_value)
+    A_hat = A[:, -H:, :]
+    return A_hat</code></pre>
+<h3 id="3-3-openpi-模式逐项拆解">3.3 OpenPI/PiZero 模式逐项拆解：输入、拼接、输出</h3>
+<p>这一节把 OpenPI / PiZero / QwenVL 里容易混在一起的模式逐项拆开。下面的张量约定来自 OpenPI 官方 observation/action spec、π0 / π0.5 / π0-FAST 配置与实现，以及 π0、FAST 论文；本地 QwenVL/PiZero 的 <code>fastobs</code>、FAST CE、state token 与混训部分则对应前面列出的本地代码证据 [1][10][11][12][13][14][15][16]。统一记号如下：批大小为 \(B\)，视角数为 \(V\)，图像分辨率为 \(224\times224\)，文本长度为 \(L_q\)，action horizon 为 \(H\)，每步动作维度为 \(D_a\)，VLM hidden size 为 \(d_\ell\)，action expert hidden size 为 \(d_a\)。多视角图像写作 \(I_t^{(v)}\in\mathbb{R}^{B\times224\times224\times3}\)，文本 token 写作 \(P\in\mathbb{N}^{B\times L_q}\)，机器人状态写作 \(s_t\in\mathbb{R}^{B\times D_s}\)，动作块写作 \(A_t\in\mathbb{R}^{B\times H\times D_a}\)。其中 \(A_t=[a_t,\ldots,a_{t+H-1}]\) 是未来 \(H\) 个控制步的动作序列。</p>
+
+<div class="table-wrap"><table>
+<thead><tr><th>模式</th><th>输入承载</th><th>进入模型的方式</th><th>最终输出</th><th>用途</th></tr></thead>
+<tbody>
+<tr><td>VLM-only</td><td>图像 \(I\) + 文本 \(P\)</td><td>视觉 token 与文本 token 拼接</td><td>文本 logits \(O\in\mathbb{R}^{B\times L\times|\mathcal{V}|}\)</td><td>图文理解，不直接输出机器人动作。</td></tr>
+<tr><td>π0 / Flow Matching</td><td>图像 \(I\)、文本 \(P\)、连续 state \(s_t\)、noisy action chunk \(A_\tau\)</td><td>图文 prefix + state/action suffix</td><td>速度场 \(\hat u\)，积分成 \(\hat A_t\in\mathbb{R}^{B\times H\times D_a}\)</td><td>默认连续动作主路径。</td></tr>
+<tr><td>π0.5</td><td>图像 \(I\)、文本 \(P\)、离散 state token、noisy action chunk</td><td>state 进入 prompt，action 仍走 suffix</td><td>连续 action chunk</td><td>把 state 语言化，同时保留 flow 动作头。</td></tr>
+<tr><td>π0-FAST / fast_only</td><td>图像 \(I\)、文本/离散 state、FAST action token</td><td>像语言模型一样自回归生成动作 token</td><td>FAST decoder 反解码的 \(\hat A_t\)</td><td>纯 token 化动作生成。</td></tr>
+<tr><td>FAST CE 辅助</td><td>π0 输入 + 由 GT action 编出的 FAST token</td><td>训练 prompt 中加 action token span，并用 mask 防泄漏</td><td>默认仍是 continuous flow action chunk</td><td>训练期给 VLM 分支动作语义监督。</td></tr>
+<tr><td>state token 监督</td><td>连续 state 或离散 state span</td><td>state span 放进语言 token，或 state 向量投影为 action suffix token</td><td>state token logits / 更强 state-aware hidden</td><td>让 VLM 理解 proprioception。</td></tr>
+<tr><td>slowfast / fastobs</td><td>多视角图像 + action 输入</td><td>slow VLM 视觉路径 + fast action 视觉路径</td><td>通常仍是 flow action chunk</td><td>给动作头更直接的视觉细节。</td></tr>
+<tr><td>VLA + VLM co-train</td><td>机器人 action batch + 普通图文 batch</td><td>共享 VLM backbone，不同 batch 走不同 loss</td><td>action chunk 或文本 logits</td><td>学控制时维持图文能力。</td></tr>
+</tbody>
+</table></div>
+
+<h4 id="mode-vlm-only">3.3.1 VLM-only：图像与文本到文本 token</h4>
+<p>VLM-only 模式最接近普通视觉语言模型。图像先被视觉编码器变成 patch token，文本被 tokenizer 和 embedding 表变成语言 token：</p>
+<div class="math-block">$$
+E_I^{(v)}=\phi_{\mathrm{img}}(I_t^{(v)})\in\mathbb{R}^{B\times N_v\times d_\ell},
+\qquad
+E_q=\phi_{\mathrm{text}}(P)\in\mathbb{R}^{B\times L_q\times d_\ell}.
+$$</div>
+<div class="math-block">$$
+X_{\mathrm{vlm}}=[E_I^{(1)};\ldots;E_I^{(V)};E_q]
+\in\mathbb{R}^{B\times(VN_v+L_q)\times d_\ell}.
+$$</div>
+<p>分号表示沿 token 维拼接。输出是词表 logits：</p>
+<div class="math-block">$$
+O=\mathrm{LMHead}(\mathrm{Transformer}_\theta(X_{\mathrm{vlm}},M_{\mathrm{prefix}}))
+\in\mathbb{R}^{B\times L\times|\mathcal{V}|}.
+$$</div>
+<p>这里 \(|\mathcal{V}|\) 是词表大小。VLM-only 没有 \(\hat A_t\)，因此不能直接执行；它在本地项目里主要用于额外 VLM batch 或图文语义保持。</p>
+
+<h4 id="mode-pi0-flow">3.3.2 π0 / Flow Matching：连续 action chunk 主路径</h4>
+<p>π0 模式把图文作为 prefix，把机器人 state 和 noisy action chunk 作为 action suffix。图文 prefix 为：</p>
+<div class="math-block">$$
+X_{\mathrm{pre}}=[\phi_{\mathrm{img}}(I_t^{(1)});\ldots;\phi_{\mathrm{img}}(I_t^{(V)});\phi_{\mathrm{text}}(P)].
+$$</div>
+<p>连续 state 被投影成一个 state token：</p>
+<div class="math-block">$$
+E_s=(W_s s_t)[:,None,:]\in\mathbb{R}^{B\times1\times d_a}.
+$$</div>
+<p>训练时先从真实动作块 \(A_0\) 和高斯噪声块 \(\epsilon\) 构造 noisy action chunk：</p>
+<div class="math-block">$$
+\epsilon\sim\mathcal{N}(0,I),\qquad
+A_\tau=\tau\epsilon+(1-\tau)A_0,\qquad
+u_\tau=\epsilon-A_0.
+$$</div>
+<p>注意这里的 \(\epsilon\) 和 \(A_\tau\) 都是一整段未来动作，形状是 \(\mathbb{R}^{B\times H\times D_a}\)，不是单步动作。action token 和时间 token 为：</p>
+<div class="math-block">$$
+E_A=W_A A_\tau\in\mathbb{R}^{B\times H\times d_a},
+\qquad
+E_\tau=\mathrm{repeat}(\gamma(\tau),H)\in\mathbb{R}^{B\times H\times d_a}.
+$$</div>
+<div class="math-block">$$
+X_{\mathrm{suf}}=[E_s;\mathrm{MLP}(E_A,E_\tau)].
+$$</div>
+<p>模型输出不是最终动作，而是 action tensor 空间里的 flow velocity：</p>
+<div class="math-block">$$
+\hat u_\theta
+=W_o\,\mathrm{ActionExpert}_\theta(X_{\mathrm{suf}}\mid X_{\mathrm{pre}})
+\in\mathbb{R}^{B\times H\times D_a}.
+$$</div>
+<p>训练目标是让 \(\hat u_\theta\) 拟合 \(u_\tau\)：</p>
+<div class="math-block">$$
+\mathcal{L}_{\mathrm{FM}}
+=
+\mathbb{E}_{A_0,\epsilon,\tau}
+\left[
+\left\|
+v_\theta(A_\tau,\tau,I,q,s_t)-(\epsilon-A_0)
+\right\|_2^2
+\right].
+$$</div>
+<p>推理时从一整块随机动作开始，并用 Euler 积分逐步更新：</p>
+<div class="math-block">$$
+A^{(0)}\sim\mathcal{N}(0,I),\qquad
+A^{(k+1)}=A^{(k)}+\Delta\tau\,v_\theta(A^{(k)},\tau_k,I,q,s_t).
+$$</div>
+<p>最后得到 \(\hat A_t=A^{(K)}\)。每个积分步是串行的，但在同一次 forward 内，\(H\) 个未来动作 token 是并行更新的；部署时通常只执行前 1 步或前几步，再重新观测并重采样。</p>
+
+<h4 id="mode-pi05-state">3.3.3 π0.5：离散 state token + 连续 flow 动作头</h4>
+<p>π0.5 的关键区别是 state 不再只作为 \(W_s s_t\) 的连续 suffix，而是先离散化后写进 prompt。概念上可以写成：</p>
+<div class="math-block">$$
+\tilde s_{t,j}=\mathrm{clip}\left(\frac{s_{t,j}-\mu_j}{\sigma_j},-1,1\right),
+\qquad
+b_j=\mathrm{digitize}(\tilde s_{t,j})\in\{0,\ldots,255\}.
+$$</div>
+<div class="math-block">$$
+P_{\pi0.5}=\mathrm{Tok}(\text{Task: }q,\text{ State: }b_1,\ldots,b_{D_s},\text{ Action:}).
+$$</div>
+<p>因此 prefix 变成：</p>
+<div class="math-block">$$
+X_{\mathrm{pre}}=[\phi_{\mathrm{img}}(I);\phi_{\mathrm{text}}(P_{\pi0.5})].
+$$</div>
+<p>但动作输出仍是 continuous flow：模型仍接收 \(A_\tau\)，仍预测 \(\hat u_\theta\)，仍通过积分得到 \(\hat A_t\)。所以 π0.5 的“离散”主要发生在 state 承载方式上，不代表动作也一定由 FAST token 生成。</p>
+
+<h4 id="mode-fast-only">3.3.4 π0-FAST / fast_only：动作作为语言 token 自回归生成</h4>
+<p>FAST 模式把真实动作块编码成离散动作 token：</p>
+<div class="math-block">$$
+Z=T_{\mathrm{FAST}}(A_0)=[z_1,\ldots,z_{L_z}],
+\qquad
+z_i\in\{0,\ldots,K_{\mathrm{fast}}-1\}.
+$$</div>
+<p>这些 token 再映射到 VLM 词表中的预留动作 token 区域：</p>
+<div class="math-block">$$
+\tilde z_i=\psi(z_i)\in\mathcal{V}_{\mathrm{VLM}},
+\qquad
+P_{\mathrm{full}}=[P_{\mathrm{prefix}};\tilde z_1;\ldots;\tilde z_{L_z}].
+$$</div>
+<p>模型像语言模型一样预测下一个动作 token：</p>
+<div class="math-block">$$
+p_\theta(\tilde z_i\mid I,q,s_t,\tilde z_{&lt;i})
+=\mathrm{softmax}(O_i).
+$$</div>
+<div class="math-block">$$
+\mathcal{L}_{\mathrm{FAST}}
+=-\sum_{i=1}^{L_z}\log p_\theta(\tilde z_i\mid I,q,s_t,\tilde z_{&lt;i}).
+$$</div>
+<p>推理时可以 argmax，也可以按 temperature 采样：</p>
+<div class="math-block">$$
+\hat z_i=\arg\max_z p_\theta(z\mid I,q,s_t,\hat z_{&lt;i})
+\quad\text{or}\quad
+\hat z_i\sim p_\theta(\cdot\mid I,q,s_t,\hat z_{&lt;i}).
+$$</div>
+<p>最终由 FAST decoder 反解码成连续动作块：</p>
+<div class="math-block">$$
+\hat A_t=D_{\mathrm{FAST}}([\hat z_1,\ldots,\hat z_{\hat L}])
+\in\mathbb{R}^{B\times H\times D_a}.
+$$</div>
+<p>因此 fast_only 与 π0 flow 的区别非常清楚：fast_only 的生成顺序是 token 串行；π0 flow 的采样顺序是积分步串行、动作块内部并行。FAST token 不一定与每个原始动作维度一一对应，它是压缩后的动作序列表示。</p>
+
+<h4 id="mode-fast-ce">3.3.5 FAST CE 辅助：训练期动作语义监督，不等于最终输出路径</h4>
+<p>本地主线更常见的做法不是 fast_only，而是把 FAST token 作为辅助 CE。也就是同一个真实动作块 \(A_0\) 同时产生连续 flow 监督和离散 token 监督：</p>
+<div class="math-block">$$
+A_\tau=\tau\epsilon+(1-\tau)A_0,\qquad
+Z=T_{\mathrm{FAST}}(A_0).
+$$</div>
+<p>训练 prompt 中追加动作 token span，但 labels 只在 FAST span 上保留监督，其他位置置为 ignore：</p>
+<div class="math-block">$$
+\mu_i=
+\begin{cases}
+1,& i\in\text{FAST action span}\\
+0,& \text{otherwise}
+\end{cases}
+,\qquad
+\mathcal{L}_{\mathrm{FAST-CE}}
+=-\sum_i\mu_i\log p_\theta(y_i\mid y_{&lt;i},I,q).
+$$</div>
+<p>总损失可写为：</p>
+<div class="math-block">$$
+\mathcal{L}
+=
+\mathcal{L}_{\mathrm{FM}}
++\lambda_{\mathrm{fast}}\mathcal{L}_{\mathrm{FAST-CE}}
++\lambda_{\mathrm{vlm}}\mathcal{L}_{\mathrm{VLM}}.
+$$</div>
+<p>关键防泄漏约束是：action expert 不能 attend 到训练 prompt 里的 GT FAST token，否则 FM 动作头会抄答案：</p>
+<div class="math-block">$$
+M_{\mathrm{action}\leftarrow\mathrm{GT\text{-}FAST}}=-\infty.
+$$</div>
+<p>推理时若仍走默认路径，则没有 GT FAST token，最终动作仍来自 <code>sample_actions -> infer_action -> action_decoder -> flow integration</code>。</p>
+
+<h4 id="mode-state-token">3.3.6 state token 监督：让 VLM 分支理解机器人状态</h4>
+<p>state token 监督解决的是 proprioception 语义对齐问题。连续 state 可以走 action suffix：</p>
+<div class="math-block">$$
+E_s=(W_s s_t)[:,None,:],
+$$</div>
+<p>也可以离散成语言 token span：</p>
+<div class="math-block">$$
+P_{\mathrm{state}}=[\mathrm{Tok}(\text{state_start});\mathrm{Tok}(b_1),\ldots,\mathrm{Tok}(b_{D_s});\mathrm{Tok}(\text{state_end})].
+$$</div>
+<p>若启用 state token supervision，则额外对 state span 做 CE：</p>
+<div class="math-block">$$
+\mathcal{L}_{\mathrm{state}}
+=-\sum_{j=1}^{D_s}\log p_\theta(b_j\mid I,q,b_{&lt;j}).
+$$</div>
+<p>它本身不输出可执行动作，而是让 VLM hidden state 对关节角、夹爪、末端位姿等机器人状态更敏感。最终执行动作仍由 flow action chunk 或 FAST decoder 给出。</p>
+
+<h4 id="mode-slowfast">3.3.7 slowfast / fastobs：视觉语义路径与动作视觉路径分开</h4>
+<p>slowfast/fastobs 是本地 QwenVL/PiZero 的结构性改造。slow 路径给 VLM 做图文语义理解，fastobs 路径给 action expert 更直接的视觉特征：</p>
+<div class="math-block">$$
+X_{\mathrm{vlm}}=[\phi_{\mathrm{img}}^{slow}(I);\phi_{\mathrm{text}}(P)]
+\in\mathbb{R}^{B\times L_{\mathrm{vlm}}\times d_\ell},
+$$</div>
+<div class="math-block">$$
+X_{\mathrm{fastobs}}=W_f\,\phi_{\mathrm{img}}^{fast}(I)
+\in\mathbb{R}^{B\times N_f\times d_a},
+\qquad
+X_{\mathrm{action}}=[W_s s_t;\mathrm{MLP}(W_AA_\tau,\gamma(\tau))].
+$$</div>
+<p>联合 mixture transformer 可抽象为：</p>
+<div class="math-block">$$
+(Y_{\mathrm{vlm}},Y_{\mathrm{fastobs}},Y_{\mathrm{action}})
+=J_\theta(X_{\mathrm{vlm}},X_{\mathrm{fastobs}},X_{\mathrm{action}};M_{\mathrm{mix}}).
+$$</div>
+<p>最终动作仍通常来自 action path：</p>
+<div class="math-block">$$
+\hat u_\theta=W_oY_{\mathrm{action},-H:},
+\qquad
+\hat A_t=\mathrm{EulerIntegrate}(\hat u_\theta).
+$$</div>
+<p>它的动机是让动作头看到更接近控制的视觉细节，而不是完全依赖 VLM 语义 token。风险是 fast visual feature 的统计分布若没有和 action expert 对齐，可能出现“视觉更丰富、动作更差”的退化。</p>
+
+<h4 id="mode-vla-vlm-cotrain">3.3.8 VLA + VLM 混合训练：同一 backbone 上混两类任务</h4>
+<p>VLA + VLM co-train 是训练组织方式。action batch 形如 \((I,q,s_t,A_0)\)，普通 VLM batch 形如 \((I,q,Y)\)。前者监督动作，后者监督文本：</p>
+<div class="math-block">$$
+\mathcal{L}_{\mathrm{total}}
+=
+\mathbf{1}_{\mathrm{action}}
+\left(
+\mathcal{L}_{\mathrm{FM}}
++\lambda_{\mathrm{fast}}\mathcal{L}_{\mathrm{FAST}}
++\lambda_{\mathrm{state}}\mathcal{L}_{\mathrm{state}}
+\right)
++
+\mathbf{1}_{\mathrm{vlm}}\lambda_{\mathrm{vlm}}\mathcal{L}_{\mathrm{VLM}}.
+$$</div>
+<p>这里 \(\mathbf{1}_{\mathrm{action}}\) 和 \(\mathbf{1}_{\mathrm{vlm}}\) 表示当前 batch 类型。这个模式的输出取决于 batch：action batch 输出 \(\hat A_t\) 或 action token，VLM batch 输出文本 logits。它不是新的动作解码器，而是防止 VLA 训练把 VLM 的图文能力冲坏。</p>
+
+<pre><code class="language-text">读这些模式的最短路径:
+  if mode == "VLM-only":
+      images/text -> VLM tokens -> text logits
+  elif mode == "pi0 / flow":
+      images/text/state/noisy_action_chunk -> action velocity -> integrate -> continuous action chunk
+  elif mode == "pi0-FAST / fast_only":
+      images/text/state -> autoregressive FAST tokens -> FAST decoder -> continuous action chunk
+  elif mode == "FAST CE auxiliary":
+      use FAST tokens only as training labels; final execution usually still uses flow action chunk
+  elif mode == "slowfast":
+      add fast visual tokens as extra condition for the action expert
+</code></pre>
+
+<h3 id="3-4-vla-改造点动机风险">3.4 官方-本地设计差分与改造 pipeline</h3>
+<p>这一节专门回答“OpenPI VLA 本地实现到底改了什么”。先给边界结论：OpenPI 官方本来就公开了 π0 flow-based VLA、π0.5 和 π0-FAST/FAST tokenizer 路径；本地不是发明 flow matching 或 FAST，而是在官方思想之上，把 backbone、mixture 路由、FAST/state token 监督、slowfast 视觉路径、训练混合与部署评估链条重新组合到 QwenVL/PiZero 训练框架里。按当前可见证据，这些属于设计层改造；但其中每个子改造的有效性证据强弱不同，不能一概说“全部已被实验证明”。</p>
+<p>另一个证据边界：2026-06-21 重新查看 <code>C:\Users\mousongzhe\pryer\project</code> 的最新 <code>git diff --name-only</code>，当前未看到 <code>01_openpi_ace_vla_pretraining</code>、<code>03_openpi_qwen3_hf_trainer</code>、<code>04_openpi_fast_zhi_training</code>、<code>05_openpi_iql_training</code> 或 <code>07_openpi_eval_and_deployment_clients</code> 的新增直接改动；diff 主要集中在 workspace inventory、18/19/20 线和 <code>TECHNICAL_REPORT.md</code>。OpenPI 训练模型效果仍以已经落档的 <code>progress_20260613_remote</code> 和本地核心源码为证据，而不是把当前 18/19/20 目录的无关 diff 误算到 OpenPI 上。</p>
+
+<h4 id="3-4-1-official-openpi-baseline">3.4.1 官方 OpenPI 原型：π0 flow 与 π0-FAST 是两条不同输出路径</h4>
+<p>官方 OpenPI 中，π0 的主干可抽象成“PaliGemma 视觉语言 prefix + action expert suffix”。输入观测（observation）包含多视角图像、图像 mask、机器人状态和 tokenized prompt；输出是未来 \(H\) 步动作块 \(A_t\in\mathbb{R}^{H\times D_a}\)。π0 训练不是直接回归动作，而是先构造 noisy action chunk：</p>
+<div class="math-block">$$
+x_0\sim\mathcal{N}(0,I),\quad
+x_1=A^\star,\quad
+\tau\sim p(\tau),\quad
+x_\tau=\tau x_0+(1-\tau)x_1.
+$$</div>
+<p>官方实现里目标速度场是从干净动作指向噪声的方向：</p>
+<div class="math-block">$$
+u_\tau=x_0-x_1,\qquad
+\mathcal{L}_{\pi0}
+=
+\mathbb{E}_{x_0,x_1,\tau}
+\left[
+\left\|
+v_\theta(x_\tau,\tau\mid I,q,s_t)-u_\tau
+\right\|_2^2
+\right].
+$$</div>
+<p>推理时从高斯噪声开始，沿 \(\tau:1\rightarrow0\) 反向积分。若步数为 \(K\)，\(\Delta\tau=-1/K\)，则：</p>
+<div class="math-block">$$
+x^{(0)}\sim\mathcal{N}(0,I),\qquad
+x^{(k+1)}=x^{(k)}+\Delta\tau\,
+v_\theta(x^{(k)},\tau_k\mid I,q,s_t).
+$$</div>
+<p>因为 \(\Delta\tau&lt;0\)，虽然 \(v_\theta\) 学的是 \(x_0-x_1\)，积分仍会把噪声推回动作。官方 <code>pi0.py</code> 中的 <code>compute_loss</code>、<code>sample_actions</code>、prefix/suffix mask 和 action projection 基本对应这套流程 [14]。</p>
+<p>π0-FAST 则是另一条官方输出路径。它先把连续动作块编码成离散 token：</p>
+<div class="math-block">$$
+Z=T_{\mathrm{FAST}}(A^\star)=[z_1,\ldots,z_L],
+\qquad z_i\in\{0,\ldots,K_{\mathrm{fast}}-1\},
+$$</div>
+<p>再把 \(z_i\) 映射到 VLM 词表的动作 token 区间，像语言模型一样自回归预测下一个动作 token：</p>
+<div class="math-block">$$
+\mathcal{L}_{\pi0\text{-FAST}}
+=-\sum_{i=1}^{L}
+\log p_\theta(z_i\mid I,q,s_t,z_{&lt;i}).
+$$</div>
+<p>推理完成后再由 FAST decoder 得到连续动作 \(\hat A_t=D_{\mathrm{FAST}}(\hat Z)\)。因此官方边界非常清楚：π0 是 continuous flow action head；π0-FAST 是 autoregressive action-token head；FAST tokenizer 是官方已有组件，不应被误判为本地原创 [15][16]。</p>
+
+<h4 id="3-4-2-local-design-delta">3.4.2 本地设计差分：哪些是改造，哪些只是适配</h4>
+<div class="table-wrap"><table>
+<thead><tr><th>维度</th><th>官方 OpenPI 原做法</th><th>本地 OpenPI VLA 改法</th><th>为什么算设计改造</th><th>证据与效果边界</th></tr></thead>
+<tbody>
+<tr><td>Backbone / 运行时</td><td>官方核心实现围绕 PaliGemma/Gemma、JAX/nnx 与 OpenPI policy/config 体系展开 [12][14]。</td><td>本地 <code>pizero_qwenvl_fast_fortrainer.py</code> 通过 <code>get_pretrained_vl_model</code> 接入 QwenVL/Qwen3-VL/InternVL 风格 HF VLM，并在 PyTorch/Hydra/DeepSpeed 训练脚本中运行。</td><td>这不是路径或数据格式适配，而是把视觉语言 backbone、tokenizer、lm_head、processor、训练循环和 action expert 的张量契约整体重接。</td><td>代码证据强；效果不能单独归因给 backbone，因为同时启用了 slowfast、mask、right-wrist fix、数据与训练配置。</td></tr>
+<tr><td>Joint mixture 路由</td><td>官方 π0 可以理解为 prefix 条件和 action suffix 的双路 transformer，其中 action expert 负责 noisy action tokens。</td><td>本地显式构造 <code>joint_model.mixtures.vlm</code>、<code>joint_model.mixtures.fastobs</code>、<code>joint_model.mixtures.action</code>：VLM layers 接入 vlm，action expert layers 同时接入 fastobs/action，norm 和缓存策略也分 mixture 设置。</td><td>模型内部的信息流和参数路由被重新定义，动作头不再只是官方 action suffix 的直接复现，而是多 mixture 条件交互。</td><td>代码证据强；LIBERO 最强 run 的配置日志包含 <code>mixture.vlm/action/fastobs</code> 与 <code>sf2</code>，支持这条组合可用。</td></tr>
+<tr><td>Flow action chunk</td><td>官方 π0 使用 flow matching 训练 velocity，再从噪声积分生成 \(H\)-step action chunk [14]。</td><td>本地保留 flow 主路径，定义 <code>psi_t</code>、<code>sample_fm_time_fn</code>、<code>action_decoder</code>，并支持 uniform/beta 时间采样、Euler/Heun/RK4 积分器。</td><td>flow 不是本地原创；本地改造在于把 flow action head 移植到 QwenVL joint mixture，并扩展积分器和 mask/processor 入口。</td><td>效果证据强于其他改造：高分 LIBERO run 必须依赖连续 action chunk 输出。</td></tr>
+<tr><td>FAST token</td><td>官方 π0-FAST 把动作 token 作为最终输出，解码后执行 [15][16]。</td><td>本地主线多数情况下把 FAST 作为训练期 CE 辅助：真实动作被切成 left/right、base/camera 四类片段，经 <code>UniversalActionProcessor</code> 编码，再映射到 Qwen 词表 <code>&lt;robot_action_i&gt;</code>；默认最终动作仍由 flow action head 输出。</td><td>这把官方“FAST 作为主输出路径”改成“FAST 作为 VLM 动作语义辅助监督”，训练目标和信息隔离方式都变了。</td><td>机制证据强；效果证据弱。当前可见训练循环中，<code>loss_action + loss_vlm * lambda_fast_ce</code> 后又可能被后续 loss 组合覆盖为 <code>loss_action</code> 或 action+普通 VLM loss，复现前必须确认 FAST CE 是否真的参与反传。</td></tr>
+<tr><td>FAST 防泄漏 mask</td><td>官方 π0-FAST 自回归预测 token，训练标签在语言序列里是自然的 teacher forcing。</td><td>本地同一 batch 里既有 GT FAST token 又有 continuous flow action head，因此新增 <code>build_causal_mask_and_position_ids_fast</code>：FAST token 可看文本和历史 FAST；action token 可看文本/proprio/action，但不能读取 GT FAST span。</td><td>这是混合训练必须有的结构性 mask，否则 flow action head 可能直接抄训练 prompt 中的动作答案。</td><td>代码注释和 mask 结构证据强；应在复现时额外打印 action row 到 FAST columns 是否为 \(-\infty\)。</td></tr>
+<tr><td>State token</td><td>官方 π0.5 引入 state token/prompt 变体，但动作仍可保持 flow 输出。</td><td>本地 collator 把 state 归一化后 bucketize 到 256 桶，并按 left/right、base/camera 分段生成 <code>&lt;|state_start|&gt;...&lt;|state_end|&gt;</code> 可监督 span；也支持 no-discrete-state。</td><td>如果启用，它改变了状态信息进入 VLM 的方式和 CE 监督范围；不是简单数据字段搬运。</td><td>效果证据不支持贸然说有效：LIBERO 最强路径名包含 <code>no_discrete_state_input</code>，说明至少在该锚点上“去掉离散 state”没有阻碍高分。</td></tr>
+<tr><td>No-discrete-state / empty-action 输入</td><td>官方 OpenPI observation 里保留连续 state；π0.5 可以把 state/prompt 变体作为条件，但不会在训练 prompt 里故意放入无效 action 占位再用 flow 解码。</td><td>本地高分锚点启用 <code>--model.no_discrete_state_input</code> 与 <code>--model.empty_action_inputs</code>：离散 state span 不进入 VLM prompt；训练/评估 collator 用 <code>INVALID_MIN_ACTION_VALUE</code> 替换 action 输入占位，真实动作只作为 flow target。</td><td>它改变了信息可见性：VLM 不再通过离散 state/action token 看到答案，action expert 必须从图像、任务、连续 state 与噪声动作块中恢复动作。</td><td>强组合证据：<code>224_h10_40000</code> 与 <code>448_wo_pretrain_15000</code> 路径均含 <code>no_discrete_state_input</code>；但不能单独证明 empty-action 比非 empty 更优。</td></tr>
+<tr><td>slowfast / fastobs</td><td>官方 OpenPI 主要由 PaliGemma 视觉 token 条件 action head；没有本地这种 DINO fast visual mixture。</td><td>本地 slowfast 下额外用 DINO 抽取多视角 fast visual tokens，经 projector 对齐到 action hidden size，作为 <code>fastobs</code> mixture 条件动作头。</td><td>这是模型结构级改造：视觉语义理解路径和动作控制视觉路径分开，动作头可以读取更局部、更控制相关的视觉特征。</td><td>中强证据：最强 LIBERO run 名包含 <code>sf2</code>；但需要关掉 slowfast 的 ablation 才能量化其单独贡献。</td></tr>
+<tr><td>Action block 双向注意力</td><td>官方 π0 的 suffix/action block 有 prefix/suffix mask；动作 token 通常按既定 mask 读取 prefix 与 action 条件。</td><td>本地在 mask builder 中新增 <code>bidirectional_action_attention</code>，把最后 \(H\) 个 action token 的 \([action,action]\) 子块置零，使整段 action chunk 内部互相可见；还可选 <code>bidirectional_image_action_attention</code> 让 image/text 与 action 双向互读。</td><td>这改变了 \(H\)-step chunk 的条件独立性：每个未来步不再只由历史或单步位置决定，而能显式协调整段动作轨迹。</td><td>高分 224 shell 明确启用 <code>--model.bidirectional_action_attention</code>；448/pretrain 路径名出现 <code>bidirectionalimage</code>，但精确训练脚本未完整对齐，需按 serve/config 再复核。</td></tr>
+<tr><td>fp32 action stream / action expert</td><td>官方 OpenPI/JAX 路径对 action projection 与 flow loss 有自己的数值精度策略；普通 HF/PyTorch VLM 训练常会整体用 bf16/AMP。</td><td>本地新增 <code>action_stream_fp32</code> 与 <code>action_expert_fp32</code>：action encoder、time embedding、action decoder、action expert、multi-modal projector 与部分 norm/vision embedding 在 fp32 中运行或保存梯度。</td><td>这是数值设计改造，不是硬件参数：flow target 和 velocity MSE 对小量连续动作很敏感，bf16 可能让 action residual、LayerNorm 或 projector 出现精度损失。</td><td>三条 serve log 都记录 <code>action_expert_fp32</code> 和 <code>_ensure_action_stream_fp32</code>；它支撑训练/评估稳定性，但仍缺少 fp32 on/off 消融。</td></tr>
+<tr><td>训练混合</td><td>官方训练以 OpenPI 数据 transforms、行为克隆/flow objective 和官方配置组织。</td><td>本地训练脚本同时组织 action batch、FAST CE、可选 state CE、普通 VLM batch、DeepSpeed 参数组和 VLM/action 分学习率。</td><td>训练目标和 batch composition 改变模型行为，因此算训练设计改造。</td><td>代码证据强；但 loss 组合有覆盖风险，需复现实验中记录 <code>loss_action</code>、<code>fast_ce</code>、<code>vlm_loss</code> 是否都进入最终 <code>loss.backward()</code>。</td></tr>
+<tr><td>评估/部署 harness</td><td>官方提供 policy serving、数据配置和 eval 入口。</td><td>本地落档包含 LIBERO batch prediction server、RoboCasa client/logs、<code>max_batch_size=4</code>、<code>max_wait_time=0.030s</code> 等部署评估流水。</td><td>这是工程 pipeline/评估改造，不是模型算法本身；但它决定可复现性和吞吐。</td><td>LIBERO/RoboCasa 结果是训练模型可用性的主要证据，不能当作每个子模块的消融证明。</td></tr>
+</tbody></table></div>
+
+<h4 id="3-4-3-joint-mixture">3.4.3 改造点一：QwenVL/PiZero joint mixture 重接线</h4>
+<p><strong>一句话直觉：</strong>官方 OpenPI/π0 的关键思想是“视觉语言模型看懂场景，action expert 生成连续动作”；本地第一大改造是把这个结构从官方 PaliGemma/OpenPI 体系重接到 QwenVL/PiZero/HF-PyTorch 体系，并显式拆成 <code>vlm</code>、<code>action</code>、<code>fastobs</code> 三个 mixture。它不是简单换模型名，而是改变了 hidden states 如何流动、哪些层共享、哪些层缓存、动作头从哪里读条件。</p>
+<p><strong>官方原型抽象。</strong>官方 π0 可被写成 prefix/suffix 两块。视觉语言 prefix 是图像和任务文本：</p>
+<div class="math-block">$$
+X_{\mathrm{pre}}
+=
+\left[
+\phi_{\mathrm{img}}^{\mathrm{PG}}(I_t),
+\phi_{\mathrm{text}}^{\mathrm{Gemma}}(q)
+\right]
+\in\mathbb{R}^{B\times L_{\mathrm{pre}}\times d_\ell}.
+$$</div>
+<p>action suffix 是机器人状态、noisy action chunk 与时间嵌入：</p>
+<div class="math-block">$$
+X_{\mathrm{suf}}
+=
+\left[
+W_s s_t,\,
+E_A(x_\tau,\gamma(\tau))
+\right]
+\in\mathbb{R}^{B\times (1+H)\times d_a}.
+$$</div>
+<p>模型输出 action suffix 的最后 \(H\) 个 hidden states，并线性投影到动作速度场：</p>
+<div class="math-block">$$
+Y_{\mathrm{suf}}
+=
+T_\theta(X_{\mathrm{pre}},X_{\mathrm{suf}};M)_{\mathrm{suf}},
+\qquad
+\hat u_\theta
+=
+W_o\,Y_{\mathrm{suf},-H:}.
+$$</div>
+<p>这里的 \(M\) 是 prefix/suffix attention mask。这个设计的含义是：语言视觉模型负责提供条件表示，动作 expert 负责连续控制；动作不是从普通文本 logits 里直接抽出来。</p>
+<p><strong>本地改造的数学形式。</strong>本地把上面的两块拆成三路 mixture：</p>
+<div class="math-block">$$
+X_v=\Phi_{\mathrm{QwenVL}}(I_t,q)
+\in\mathbb{R}^{B\times L_v\times d_\ell},
+\qquad
+X_f=P_f\,\Phi_{\mathrm{DINO}}(I_t)
+\in\mathbb{R}^{B\times N_f\times d_a},
+$$</div>
+<div class="math-block">$$
+X_a=
+\left[
+E_s(s_t),\,
+E_A(x_\tau,\gamma(\tau))
+\right]
+\in\mathbb{R}^{B\times (1+H)\times d_a}.
+$$</div>
+<p>联合模型不再只是“一个 prefix 加一个 suffix”，而是显式维护三组 mixture：</p>
+<div class="math-block">$$
+(Y_v,Y_f,Y_a)
+=
+J_\theta^{\mathrm{mix}}
+\left(
+X_v,X_f,X_a;\,
+M_{\mathrm{mix}}
+\right),
+\qquad
+\hat u_\theta=W_o\,Y_{a,-H:}.
+$$</div>
+<p>其中 \(X_v\) 是语义慢路径，\(X_f\) 是动作视觉快路径，\(X_a\) 是连续动作路径。这个改造的核心不在“用了 QwenVL”这一个事实，而在于本地把不同来源的 hidden states 重新放进一个 mixture transformer，让 action path 可以同时读取 QwenVL 的任务语义和 fastobs 的视觉细节。</p>
+<p><strong>本地代码证据。</strong>在 <code>pizero_qwenvl_fast_fortrainer.py:562-569</code>，本地直接把预训练 VLM 和 action expert 的层接到 joint model 的三个 mixture 上：</p>
+<pre><code class="language-python"># 本地核心重接线：不同 mixture 复用不同来源的层与 norm
+self.joint_model.mixtures.vlm.layers = pretrained_model.language_model.layers
+self.joint_model.mixtures.fastobs.layers = pretrained_model.action_expert.layers
+self.joint_model.mixtures.action.layers = pretrained_model.action_expert.layers
+
+self.joint_model.mixtures.vlm.norm = pretrained_model.language_model.norm
+self.joint_model.mixtures.fastobs.norm = pretrained_model.action_expert.norm
+self.joint_model.mixtures.action.norm = pretrained_model.action_expert.norm
+</code></pre>
+<p>这段代码说明两件事。第一，VLM mixture 不是新训练一个空 transformer，而是复用 Qwen/VLM 的语言层；第二，fastobs 与 action mixture 共享 action expert 的层结构，使视觉快路径和动作路径天然处在 action hidden size 的控制空间里。写成参数集合就是：</p>
+<div class="math-block">$$
+\theta_{\mathrm{local}}
+=
+\left\{
+\theta_{\mathrm{QwenVL}}^{\mathrm{layers}},
+\theta_{\mathrm{action\_expert}}^{\mathrm{layers}},
+W_f,W_A,W_o
+\right\},
+$$</div>
+<p>而不是官方固定的 \(\theta_{\mathrm{PaliGemma}}+\theta_{\mathrm{action}}\)。这种参数重组会影响训练的梯度路径：</p>
+<div class="math-block">$$
+\nabla_{\theta_{\mathrm{QwenVL}}}\mathcal{L}
+\leftarrow
+\mathcal{L}_{\mathrm{FM}}
++\lambda_{\mathrm{FAST}}\mathcal{L}_{\mathrm{FAST}}
++\lambda_{\mathrm{VLM}}\mathcal{L}_{\mathrm{VLM}},
+\qquad
+\nabla_{\theta_{\mathrm{action}}}\mathcal{L}
+\leftarrow
+\mathcal{L}_{\mathrm{FM}}
++\mathcal{L}_{\mathrm{fastobs}}.
+$$</div>
+<p>这里 \(\mathcal{L}_{\mathrm{fastobs}}\) 不是单独写出的 loss，而是指 fastobs hidden states 作为 action 条件参与 \(\mathcal{L}_{\mathrm{FM}}\) 的梯度链路。直观地说：QwenVL 被训练成“看懂任务并给动作头可用条件”，action expert 被训练成“读条件并输出连续动作速度”。</p>
+<p><strong>训练 forward 里的实际拼接。</strong>在 <code>pizero_qwenvl_fast_fortrainer.py:2390-2447</code>，本地训练根据 <code>slowfast</code> 开关决定是否把 <code>fastobs</code> 放进 joint model：</p>
+<pre><code class="language-python">joint_outputs = self.joint_model(
+    attention_mask=causal_mask,
+    position_ids_all={
+        "vlm": vlm_position_ids,
+        "fastobs": img_position_ids,
+        "action": action_position_ids,
+    } if self.slowfast else {
+        "vlm": vlm_position_ids,
+        "action": action_position_ids,
+    },
+    embeds_all={
+        "vlm": inputs_embeds,
+        "fastobs": fast_obs_embeds,
+        "action": action_embeds,
+    } if self.slowfast else {
+        "vlm": inputs_embeds,
+        "action": action_embeds,
+    },
+    final_layer_post_attn_skip_names=["fastobs"],
+    time_cond=time_cond,
+    kv_caches={},
+)
+action_embeds = joint_outputs["action"]
+v_psi = self.action_decoder(action_embeds)[:, -self.horizon_steps:, :]
+</code></pre>
+<p>这段代码给出了本地 pipeline 的“拼接点”：<code>inputs_embeds</code> 是 QwenVL 的图文 token，<code>fast_obs_embeds</code> 是 fast visual token，<code>action_embeds</code> 是 noisy action chunk token。三者进入同一个 <code>JointModel</code> 后，只取 <code>joint_outputs["action"]</code> 通过 <code>action_decoder</code> 输出速度场。因此，模型的最终动作输出仍是连续 action expert，而不是 Qwen 的 <code>lm_head</code> 文本 logits。</p>
+<p><strong>为什么要这么做。</strong>这个改造解决的是“视觉语言理解”和“连续控制精度”之间的错配：</p>
+<ul>
+<li>如果只用 VLM 的普通词表输出动作，动作维度、坐标系、夹爪状态和连续小数精度都会受离散 token 表达限制。</li>
+<li>如果只训练 action expert，不训练或不接入强 VLM，模型容易缺任务语义、物体语义和跨场景泛化。</li>
+<li>joint mixture 把这两者分开：QwenVL 负责语义条件，action expert 负责连续控制，fastobs 负责更贴近控制的视觉细节。</li>
+</ul>
+<p>形式化地说，原本希望学习的是策略分布：</p>
+<div class="math-block">$$
+\pi(a_{t:t+H-1}\mid I_t,q,s_t).
+$$</div>
+<p>本地把它分解成“条件编码 + 动作生成”两步：</p>
+<div class="math-block">$$
+c_t=g_{\theta_v,\theta_f}(I_t,q,s_t),
+\qquad
+\pi_\theta(A_t\mid O_t)
+\approx
+\mathrm{FlowDecode}_{\theta_a}(A^{(0)},c_t),
+$$</div>
+<p>其中 \(c_t\) 同时包含 QwenVL 语义条件和 fastobs 控制视觉条件。这样的好处是：可以复用强 VLM 的开放词汇理解，又不牺牲 action chunk 的连续精度。</p>
+<p><strong>有什么用与效果。</strong>从落档评估看，最强 <code>224_h10_40000</code> 在 LIBERO goal/object/spatial/libero10 达到 0.99/0.995/0.98/0.93，说明“QwenVL/PiZero joint mixture + flow action chunk + slowfast/修正配置”作为组合是有效的。严格说，这个结果不能证明 joint mixture 单独贡献多少，因为没有只替换 joint mixture 的 ablation；但它能证明本地重接线不是停留在代码层，已经支撑了可用策略。相反，448/pretrain 没有单调变好，说明 joint mixture 对 token 分布、norm stats、视觉分辨率和训练步数敏感，后续复现要优先对齐 224 高分锚点，而不是盲目放大图像分辨率。</p>
+
+<h4 id="3-4-4-flow-head">3.4.4 改造点二：把 π0 flow action head 移植到 QwenVL/PiZero</h4>
+<p>Flow matching 不是本地原创；本地真正的改造是把官方 π0 的连续 action chunk 头移植到 QwenVL joint mixture 上，并扩展了时间采样、mask 与积分器。训练时，本地 <code>psi_t</code> 使用如下插值：</p>
+<div class="math-block">$$
+x_\tau=
+\psi_\tau(x_0,x_1)
+=
+\left(1-(1-\sigma_{\min})\tau\right)x_0+\tau x_1,
+\qquad
+d_\psi=x_1-(1-\sigma_{\min})x_0.
+$$</div>
+<p>模型要学习的是：</p>
+<div class="math-block">$$
+\hat d_\theta
+=
+W_o\,J_\theta^{action}
+\left(
+E_A(x_\tau,\gamma(\tau))
+\mid X_v,X_f
+\right)_{-H:},
+\qquad
+\mathcal{L}_{\mathrm{FM}}
+=
+\left\|
+\hat d_\theta-d_\psi
+\right\|_2^2.
+$$</div>
+<p>代码证据在 <code>pizero_qwenvl_fast_fortrainer.py:2455-2461</code>：</p>
+<pre><code class="language-python"># action path 输出 velocity field，而不是直接输出动作 token
+v_psi = self.action_decoder(action_embeds)[:, -self.horizon_steps:, :]
+d_psi = x1 - (1 - self.flow_sig_min) * x0
+loss_action = torch.mean((v_psi[action_mask] - d_psi[action_mask]) ** 2)
+</code></pre>
+<p>推理时，本地 <code>infer_action</code> 先缓存 VLM/fastobs 条件，然后只循环 action path。代码证据在 <code>pizero_qwenvl_fast_fortrainer.py:1690-1780</code>：</p>
+<pre><code class="language-python"># 先用条件 mixture 建 KV cache，再从整段动作噪声开始积分
+action = torch.randn((bsz, self.horizon_steps, self.action_dim), device=device, dtype=dtype)
+delta_t = 1.0 / self.num_inference_steps
+t = torch.zeros(bsz, device=device, dtype=dtype)
+
+for step_idx in range(self.num_inference_steps):
+    time_cond = self.time_embedding(t)
+    action_embeds = self.action_encoder(action, time_cond)
+    action_embeds = self.joint_model(
+        attention_mask=action_mask,
+        embeds_all={"action": action_embeds},
+        cache_mode="append_non_active",
+        kv_caches=kv_caches,
+    )["action"]
+    action_vel = self.action_decoder(action_embeds)
+    action += delta_t * action_vel
+    t += delta_t
+</code></pre>
+<p>这个设计的作用是让 \(H\) 步动作在同一次 forward 中并行更新，只在 flow 积分步上串行。它比逐 token 自回归动作生成更适合连续控制，因为模型直接在 \(\mathbb{R}^{H\times D_a}\) 空间里修正动作块。效果上，LIBERO 高分最能支撑这一点：没有连续 flow action head，就无法解释 <code>224_h10_40000</code> 这种默认 flow 输出路径的成功率。</p>
+
+<h4 id="3-4-5-fast-ce-mask">3.4.5 改造点三：FAST CE 从“主输出”改成“动作语义辅助”，并加防泄漏 mask</h4>
+<p>官方 π0-FAST 是把动作 token 当主输出：预测 FAST token，再由 FAST decoder 还原动作。本地更有意思的改法是把 FAST 变成训练期辅助监督：GT action 被编码成 token span 放进 prompt，但默认最终输出仍是 flow action chunk。这相当于额外给 VLM 分支一个“动作语言对齐”目标：</p>
+<div class="math-block">$$
+Z=T_{\mathrm{FAST}}(A^\star),
+\qquad
+\mathcal{L}_{\mathrm{FAST-CE}}
+=
+-\sum_i
+\mu_i\log p_\theta(z_i\mid I,q,z_{&lt;i}),
+$$</div>
+<p>其中 \(\mu_i=1\) 只在 FAST action span 上成立，普通 prompt token 被置为 <code>-100</code> 忽略。代码证据在 <code>train_acebrain.py:349-618</code>：动作被拆成 left/right、base/camera 多个片段，映射到 <code>151669 + fast_token</code> 的 Qwen action token 区间，然后只保留 FAST token 或 state token 的 labels。</p>
+<pre><code class="language-python">FAST_TOKEN_START_ID = 151669
+token_fast_token_ids = [FAST_TOKEN_START_ID + i for i in fast_tokens_single]
+
+# 只监督 FAST token；若开启 state token，则额外保留 state span
+if self.supervise_state_tokens:
+    labels[(labels &lt; FAST_TOKEN_START_ID) &amp; ~state_supervision_mask] = -100
+else:
+    labels[labels &lt; FAST_TOKEN_START_ID] = -100
+</code></pre>
+<p>为什么需要防泄漏？因为同一个训练样本里同时有：</p>
+<div class="math-block">$$
+\text{GT FAST span }Z=T_{\mathrm{FAST}}(A^\star)
+\quad\text{和}\quad
+\text{flow target }A^\star.
+$$</div>
+<p>如果 action mixture 可以 attend 到 \(Z\)，那 \(\mathcal{L}_{\mathrm{FM}}\) 可能学成“抄 prompt 里的 GT 动作 token”，而不是从图像和任务条件预测动作。因此本地新增 <code>build_causal_mask_and_position_ids_fast</code>，其语义是：</p>
+<div class="math-block">$$
+M_{\mathrm{fast}\leftarrow \mathrm{text}}=0,\quad
+M_{\mathrm{fast}_i\leftarrow \mathrm{fast}_{\le i}}=0,\quad
+M_{\mathrm{action}\leftarrow \mathrm{text/proprio/action}}=0,\quad
+M_{\mathrm{action}\leftarrow \mathrm{GT\text{-}FAST}}=-\infty.
+$$</div>
+<p>代码证据在 <code>pizero_qwenvl_fast_fortrainer.py:302-374</code>：</p>
+<pre><code class="language-python"># fast rows 可以看 text 和历史 fast token
+causal_mask[idx, row, :text_cnt] = 0
+causal_mask[idx, row, fast_start : fast_start + fast_idx + 1] = 0
+
+# action rows 从 proprio_start 开始可见，避开中间 GT FAST span
+causal_mask[idx, action_start:, proprio_start:] = 0
+</code></pre>
+<p>这个改造的思想是“让 VLM 学动作语义，但不让 action head 抄答案”。它的作用是潜在增强 QwenVL hidden states 对动作模式的可分性，尤其是把连续轨迹压缩成可语言建模的离散结构。但效果边界必须写清楚：当前训练循环存在 loss 覆盖风险，<code>loss_action + loss_vlm * lambda_fast_ce</code> 在后续分支可能被 <code>loss_action</code> 或 <code>loss_action + lambda_vlm * loss_vlm_web</code> 覆盖。因此目前不能把 LIBERO 高分归因给 FAST CE；它是明确改造点，但需要单独审计和 ablation。</p>
+
+<h4 id="3-4-6-state-token">3.4.6 改造点四：state token 监督与 no-discrete-state 对照</h4>
+<p>state token 的目标是让 VLM 分支理解机器人状态，而不是只把 state 作为 action expert 的连续输入。数学上，连续 state \(s_t\in\mathbb{R}^{D_s}\) 先归一化再量化：</p>
+<div class="math-block">$$
+\bar s_j=\mathrm{clip}\left(\frac{s_j-\mu_j}{\sigma_j},-1,1\right),
+\qquad
+b_j=\mathrm{bucketize}(\bar s_j;256)\in\{0,\ldots,255\}.
+$$</div>
+<p>然后把 \(b_j\) 放进 <code>&lt;|state_start|&gt;...&lt;|state_end|&gt;</code>，并在 labels 中保留对应 span。代码证据在 <code>train_acebrain.py:587-615</code>，本地通过 <code>state_supervision_mask</code> 决定哪些 state token 进入 CE：</p>
+<pre><code class="language-python">if self.supervise_state_tokens:
+    state_supervision_mask = ...
+    labels[(labels &lt; FAST_TOKEN_START_ID) &amp; ~state_supervision_mask] = -100
+</code></pre>
+<p>改造思想是：proprio/state 对机器人策略非常重要，但连续 state 只进入 action expert 时，VLM hidden states 未必知道“当前夹爪开合、末端位姿、左右臂状态”这些语义。state token 让 VLM 也被迫预测或解释状态，从而形成跨模态对齐：</p>
+<div class="math-block">$$
+\mathcal{L}_{\mathrm{state}}
+=-\sum_{j}
+\log p_\theta(b_j\mid I,q,b_{&lt;j}).
+$$</div>
+<p>作用上，它可能帮助需要状态辨识的任务，比如“已经抓住物体后移动”或“双臂状态不同步”的场景。但最新效果边界很关键：当前 LIBERO 最强 run 名称包含 <code>no_discrete_state_input</code>，说明在该高分锚点上离散 state token 不是必要条件。更合理的结论是：state token 是一个值得做消融的设计分支，而不是已证明有效的默认配置。</p>
+
+<h4 id="3-4-7-slowfast">3.4.7 改造点五：slowfast / fastobs 给动作头一条控制视觉快路径</h4>
+<p>slowfast 的思想是把视觉分成两类：QwenVL 的慢路径负责语义，DINO/fastobs 的快路径负责局部视觉和控制细节。数学上：</p>
+<div class="math-block">$$
+X_v=\Phi_{\mathrm{QwenVL}}(I,q),
+\qquad
+X_f=P_f\,\Phi_{\mathrm{DINO}}(I),
+\qquad
+X_a=E_A(x_\tau,\tau,s_t).
+$$</div>
+<p>动作输出依赖二者：</p>
+<div class="math-block">$$
+\hat u_\theta
+=
+W_o\,J_\theta^{action}
+\left(
+X_a\mid X_v,X_f
+\right).
+$$</div>
+<p>代码证据在 <code>pizero_qwenvl_fast_fortrainer.py:704</code> 和 <code>1515-1595</code>：本地加载 DINO 模型，把多视角图像 flatten 后提特征，再对 patch token 做池化和 projector 对齐到 1024 hidden size：</p>
+<pre><code class="language-python">self.dino_model = AutoModel.from_pretrained(pretrained_model_name, dtype=self.dtype)
+
+img_feats = self.dino_model(img_pixel_values.flatten(0, 1))["last_hidden_state"]
+global_img1 = F.max_pool2d(global_img1, kernel_size=2, stride=2)
+single_img_feats = torch.cat([global_img, left_img, right_img], dim=2)
+img_feats_align = self.multi_modal_projector(img_feats).reshape(
+    action_embeds.shape[0], self.num_image_token_fast, 1024
+)
+</code></pre>
+<p>为什么这样做？VLM 图像 token 往往服务于语言理解，未必保留足够直接的位姿、边缘、局部接触几何；动作控制却非常依赖这些低层视觉细节。fastobs 相当于给 action expert 加一条更短的视觉通道，减少“语义懂了但动作不准”的问题。效果上，最强 LIBERO run 的路径中包含 <code>sf2</code>，这是 slowfast 组合有效的中强证据；但仍需要关掉 fastobs 的公平消融，才能定量说明它单独带来多少提升。</p>
+
+<h4 id="3-4-8-action-bidirectional">3.4.8 改造点六：action block 双向注意力，把 action chunk 当作一整段轨迹建模</h4>
+<p><strong>一句话直觉：</strong>官方 π0 的 action suffix 已经能让动作 token 读取视觉语言条件；本地进一步把最后 \(H\) 个 action token 的内部 attention 改成全连接。这样每个未来步 \(a_{t+h}\) 在预测速度时，不只知道自己的 noisy token 或历史 token，还能看到同一个 action chunk 内的其他未来步，从而把“10 步动作”当成一段协同轨迹，而不是 10 个近似独立的点。</p>
+<p>用 mask 写最清楚。设最终 joint 序列长度为 \(L\)，action block 的索引集合为</p>
+<div class="math-block">$$
+\mathcal{A}=\{L-H,\ldots,L-1\}.
+$$</div>
+<p>若保持普通 causal action mask，action block 内常见形式是：</p>
+<div class="math-block">$$
+M^{\mathrm{causal}}_{ij}=
+\begin{cases}
+0, & i,j\in\mathcal{A},\, j\le i,\\
+-\infty, & i,j\in\mathcal{A},\, j>i.
+\end{cases}
+$$</div>
+<p>本地 <code>bidirectional_action_attention</code> 做的事情是直接把 action-action 子块全部放开：</p>
+<div class="math-block">$$
+M^{\mathrm{bi}}_{ij}=0,\qquad \forall i,j\in\mathcal{A}.
+$$</div>
+<p>于是第 \(h\) 个动作速度不再只是</p>
+<div class="math-block">$$
+\hat u_h=f_\theta(x_{\tau,h},c_t),
+$$</div>
+<p>而是可以显式依赖整段 noisy action chunk：</p>
+<div class="math-block">$$
+\hat u_h=f_\theta(x_{\tau,1:H},c_t,h),
+\qquad
+\hat U=\left[\hat u_1,\ldots,\hat u_H\right].
+$$</div>
+<p>这对机器人控制很关键：轨迹需要满足速度连续、夹爪开合时序、靠近-接触-抓取-抬起等跨步约束。如果每个未来步只在很弱的条件下独立预测，容易出现局部动作合理但整段轨迹不连贯的问题。</p>
+<p><strong>本地代码证据。</strong><code>pizero_qwenvl_fast_fortrainer.py:215-232</code> 中的 helper 明确把 action 子块置零：</p>
+<pre><code class="language-python">def _apply_bidirectional_action_attention(causal_mask, num_action_tokens):
+    # action tokens occupy the last num_action_tokens rows/cols
+    L = causal_mask.shape[-1]
+    action_start = L - num_action_tokens
+    action_end = L
+
+    # every action token can attend to every other action token
+    causal_mask[:, :, action_start:action_end, action_start:action_end] = 0
+</code></pre>
+<p>同一文件 <code>build_causal_mask_and_position_ids</code> 在 <code>bidirectional_action_attention=True</code> 时调用该 helper；<code>sample_actions</code> 的评估入口也把 <code>self.bidirectional_action_attention</code> 继续传入 mask builder，说明训练/评估使用的是同一类 action block 结构，而不是只在训练里打开。训练 shell <code>train_sf_libero_cyx_bidirectional_fix_zero_right_wrist_no_discrete_state_vlm.sh</code> 第 45 行显式包含 <code>--model.bidirectional_action_attention</code>。</p>
+<pre><code class="language-text">Algorithm Action-Block-Bidirectional-Mask
+Input:
+  M                  # joint attention mask, shape [B, 1, L, L]
+  H                  # action_horizon / num_action_tokens
+
+# 1. 找到最后 H 个 action token
+A = range(L - H, L)
+
+# 2. 保持文本、图像、fastobs、proprio 的原始可见性约束
+keep_existing_mask_for_non_action_blocks(M)
+
+# 3. 只改 action-action 子块
+for i in A:
+    for j in A:
+        M[:, :, i, j] = 0      # action chunk 内部双向可见
+
+return M
+</code></pre>
+<p><strong>它和官方路径的差异。</strong>这不是普通的“多跑几步推理”或“改 batch size”。它改的是 transformer 内部的可见性图 \(G=(V,E)\)：官方/基础 causal suffix 更像一条从 prefix 到 suffix 的有向图；本地 action block 在 \(\mathcal{A}\) 内形成完全图。也就是说，本地把 \(H\)-step action chunk 的建模假设从弱自回归改成了块级协同。</p>
+<p><strong>效果边界。</strong><code>224_h10_40000</code> 的 checkpoint 名和训练 shell 都把 <code>bidirectional</code> 作为核心配置，同时 LIBERO 四套评估达到 0.99/0.995/0.98/0.93。因此可以说“高分组合启用了 action block 双向注意力”。但还不能说“提升全部来自双向注意力”，因为同一 run 还同时启用了 slowfast-DINO、fp32 action stream、no-discrete-state、empty-action、mask-pad-image 和 right-wrist fix。复现实验应做 <code>bidirectional_action_attention=True/False</code> 的单变量 ablation，并记录每个 suite 的失败类型。</p>
+
+<h4 id="3-4-9-fp32-action-stream">3.4.9 改造点七：fp32 action stream，保护连续 flow 速度场的数值精度</h4>
+<p><strong>一句话直觉：</strong>VLM 主干用 bf16/AMP 很常见，因为语言视觉 token 对少量舍入误差相对鲁棒；但 flow action head 学的是连续动作速度场，目标通常是很小的实数残差。把 action encoder、time embedding、action decoder、action expert 和 projector 的关键路径提升到 fp32，是为了让连续控制的误差不要被低精度吞掉。</p>
+<p>本地训练的核心损失是：</p>
+<div class="math-block">$$
+\mathcal{L}_{\mathrm{FM}}
+=
+\frac{1}{|\Omega|}
+\sum_{(h,d)\in\Omega}
+\left(
+\hat u_{h,d}-u_{h,d}
+\right)^2,
+\qquad
+\hat u=W_oY_a.
+$$</div>
+<p>如果 \(u_{h,d}\) 和 \(\hat u_{h,d}\) 的差值本来就在 \(10^{-3}\sim10^{-2}\) 量级，bf16 的尾数精度可能让微小差异、LayerNorm 统计或 projector 输出变得不稳定。因此本地把 action-side dtype 设计成：</p>
+<div class="math-block">$$
+\mathrm{dtype}(x_\tau,t,E_A,W_o,\hat u,u,\mathcal{L}_{\mathrm{FM}})
+=\mathrm{float32},
+\qquad
+\mathrm{dtype}(X_v)\approx\mathrm{bf16}.
+$$</div>
+<p>这里不是全模型 fp32，而是“动作流 fp32、VLM 主干保持低精度”的折中：</p>
+<div class="math-block">$$
+Y_a =
+J_\theta^{\mathrm{action}}
+\left(
+\mathrm{fp32}(E_A(x_\tau,t)),
+\mathrm{fp32}(X_f),
+\mathrm{bf16}(X_v)
+\right),
+\quad
+\hat u=\mathrm{fp32}(W_oY_a).
+$$</div>
+<p><strong>本地代码证据。</strong><code>pizero_qwenvl_fast_fortrainer.py:977-979</code> 读取两个开关，<code>2627-2688</code> 定义 fp32 helper：</p>
+<pre><code class="language-python">self.action_stream_fp32 = getattr(pi0_config, "action_stream_fp32", False)
+self.action_expert_fp32 = getattr(pi0_config, "action_expert_fp32", False)
+
+def _action_stream_torch_dtype(self):
+    return torch.float32 if self.action_stream_fp32 else self.dtype
+
+def _ensure_action_stream_fp32(self):
+    # action-side MLPs and flow matching tensors run in fp32
+    self._ensure_action_expert_fp32_if_configured()
+    if not self.action_stream_fp32:
+        return
+    for mod in [self.action_encoder, self.time_embedding, self.action_decoder]:
+        mod.to(torch.float32)
+    self._ensure_numerics_fp32()
+</code></pre>
+<p>训练脚本 <code>train_pytorch_qwen3_fast_zhi.py:3308-3314</code> 还有一个容易忽略但很重要的细节：如果开了 <code>action_stream_fp32</code> 或 <code>action_expert_fp32</code>，最终反传的 scalar loss 不再被强制 cast 到 bf16，而是保持 fp32：</p>
+<pre><code class="language-python">action_stream_fp32 = getattr(config.model, "action_stream_fp32", False)
+action_expert_fp32 = getattr(config.model, "action_expert_fp32", False)
+if action_stream_fp32 or action_expert_fp32:
+    loss_for_backward = loss_for_backward.to(torch.float32)
+else:
+    loss_for_backward = loss_for_backward.to(model_train_dtype)
+</code></pre>
+<p>serve 日志给出评估侧证据：三条目标 run 都打印了 <code>action_expert_fp32: cast pretrained_model.action_expert to float32</code>、<code>action_expert_fp32: cast multi_modal_projector to float32</code> 与 <code>Applied _ensure_action_stream_fp32 before torch.compile</code>。这说明评估时用的不是纯 bf16 action head，而是 fp32 action/action-expert 路径。</p>
+<p><strong>为什么有用。</strong>连续 action chunk 的 flow 积分会累积误差：</p>
+<div class="math-block">$$
+A^{(k+1)}=A^{(k)}+\Delta t\,\hat u_\theta(A^{(k)},t_k,c_t).
+$$</div>
+<p>若每一步速度场都有舍入误差 \(\epsilon_k\)，则 \(K\) 步后的动作误差近似为：</p>
+<div class="math-block">$$
+\Delta A^{(K)}
+\approx
+\sum_{k=0}^{K-1}\Delta t\,\epsilon_k
++ \text{higher-order terms}.
+$$</div>
+<p>这类误差在语言生成里可能只影响一个 logit 排序，但在机器人控制里会直接变成末端位姿偏差、夹爪开合时机偏差或接触点偏差。fp32 action stream 的思想就是把数值预算优先给最接近控制输出的那条路径。</p>
+<p><strong>效果边界。</strong>fp32 action stream 是稳定性设计，serve 日志能证明三条目标 run 评估时启用了它；但当前报告没有发现 fp32/bf16 的单变量消融，不能定量说它提升了多少成功率。复现时建议至少记录 <code>loss_action</code> 是否出现 NaN/Inf、action velocity 的范数分布，以及 fp32 关闭时 LIBERO10 是否更容易退化。</p>
+
+<h4 id="3-4-10-no-discrete-empty-action">3.4.10 改造点八：no-discrete-state / empty-action，训练和评估都减少“答案泄漏”</h4>
+<p><strong>一句话直觉：</strong>这组策略的核心不是“少给模型信息”，而是“不给 VLM prompt 里那些可能让模型走捷径的信息”。真实 state 和真实 action 仍然存在：state 可以作为连续 proprio/action 条件进入模型，真实动作 \(A^\star\) 作为 flow target 训练；但离散 state token 和动作输入占位不再把答案以 token 或连续值的形式暴露给 VLM/action prompt。</p>
+<p>先看 no-discrete-state。启用前，状态可能同时以连续向量和离散 token 两种方式进入：</p>
+<div class="math-block">$$
+c_t =
+g_\theta(I_t,q,E_s(s_t),T_s(s_t)),
+$$</div>
+<p>其中 \(T_s(s_t)\) 是 bucketized state token span。启用 <code>no_discrete_state_input</code> 后，条件变成：</p>
+<div class="math-block">$$
+c_t =
+g_\theta(I_t,q,E_s(s_t)),
+\qquad
+T_s(s_t)\notin \mathrm{prompt}.
+$$</div>
+<p>这让 VLM 不再通过文本 token 记忆某些状态模板，而是让状态信息走连续 proprio/action 条件通道。对 LIBERO 这种短时程操作任务，最强 run 表明这个约束没有阻碍高分。</p>
+<p>再看 empty-action。训练 collator 仍然拿到真实动作 \(A^\star\)，但它把“作为模型输入的动作占位”替换成无效常数：</p>
+<div class="math-block">$$
+\tilde A_{\mathrm{input}}=
+\begin{cases}
+A^\star, & \text{ordinary action input},\\
+c_{\mathrm{invalid}}\mathbf{1}, & \text{empty-action input}.
+\end{cases}
+$$</div>
+<p>flow matching 的 target 仍然来自 \(A^\star\)：</p>
+<div class="math-block">$$
+x_1=A^\star,\quad
+x_\tau=\psi_\tau(x_0,x_1),\quad
+u_\tau=x_1-(1-\sigma_{\min})x_0.
+$$</div>
+<p>也就是说，<code>empty_action_inputs</code> 不是“没有动作监督”，而是“不给 prompt/action input 一个可抄的真实动作”。代码证据在 <code>train_pytorch_qwen3_fast_zhi.py:494-497</code>：</p>
+<pre><code class="language-python">actions_for_input = actions.clone()
+if self.empty_action_inputs:
+    actions_for_input = torch.ones_like(actions_for_input) * INVALID_MIN_ACTION_VALUE
+</code></pre>
+<p>评估时也保持同一思想。<code>pizero_qwenvl_fast_fortrainer.py:4902-5017</code> 的 <code>sample_actions</code> 重新构造 eval DataCollator，并固定 <code>empty_action_inputs=True</code>；真实动作在推理时本来不可得，dummy action 只作为形状和 mask 占位：</p>
+<pre><code class="language-python">dummy_actions = torch.ones(batch_size, 1, self.action_dim) * INVALID_MIN_ACTION_VALUE
+
+data_collator = DataCollatorClass(
+    train=False,
+    split_mask=True,
+    sample_fm_time=False,
+    force_fast_tokens=False,
+    empty_action_inputs=True,
+    discrete_state_input=getattr(self.model_config_struct, "discrete_state_input", True),
+)
+</code></pre>
+<p>这组策略的 pipeline 可以写成：</p>
+<pre><code class="language-text">Algorithm No-Discrete-State-And-Empty-Action
+Input:
+  observation O_t = {images, continuous_state, instruction}
+  ground_truth action chunk A*              # 训练期可见，评估期不可见
+  flags = {no_discrete_state_input, empty_action_inputs}
+
+# 1. prompt 中不放离散 state span
+if no_discrete_state_input:
+    prompt = render(instruction, images)
+else:
+    prompt = render(instruction, images, bucketized_state_tokens)
+
+# 2. action 输入占位不使用真实 A*
+if empty_action_inputs:
+    action_input = INVALID_MIN_ACTION_VALUE * ones_like(A*)
+else:
+    action_input = A*
+
+# 3. 真实动作只进入 flow supervision，不进入可抄的 prompt/action placeholder
+x0 = Normal(0, I)
+x1 = A*
+x_tau = psi_t(x0, x1, tau)
+target_velocity = x1 - (1 - sigma_min) * x0
+
+# 4. 模型必须从图像、文本、连续 state 和 noisy action 中恢复速度场
+condition = JointModel.prefill(vlm_tokens=prompt, proprio=continuous_state)
+velocity = ActionDecoder(JointModel.action(action_input, x_tau, condition))
+loss = mse(velocity, target_velocity)
+</code></pre>
+<p><strong>和官方路径的差异。</strong>官方 OpenPI 数据 transform 会把 observation/action 规范化成 policy 需要的字段；本地这里的改造不是“字段名适配”，而是改变训练时哪些信息进入 prompt、哪些信息只能作为监督目标。它更接近一种 anti-leakage / modality-isolation 设计：把答案从输入侧移走，把监督留在 loss 侧。</p>
+<p><strong>效果边界。</strong><code>224_h10_40000</code> 的精确训练 shell 同时包含 <code>--model.no_discrete_state_input</code> 与 <code>--model.empty_action_inputs</code>，并且对应 LIBERO 平均成功率约 0.974；<code>448_wo_pretrain_15000</code> serve path 也含 <code>no_discrete_state_input</code>。这说明 no-discrete/empty-action 至少与高分 flow 输出路径兼容。更强的结论需要四组对照：离散 state on/off \(\times\) empty-action on/off，且保持 checkpoint step、slowfast、fp32、bidirectional 和数据完全一致。</p>
+
+<h4 id="3-4-11-cotrain-iql">3.4.11 改造点九：VLA/VLM 混训与 IQL/offline RL 扩展</h4>
+<p>混训的目的不是改变动作解码器，而是避免 VLA 训练把 QwenVL 的图文能力冲坏，同时让 VLM hidden states 保持可解释的动作语义。理想损失应为：</p>
+<div class="math-block">$$
+\mathcal{L}_{\mathrm{total}}
+=
+\mathcal{L}_{\mathrm{FM}}
++\lambda_{\mathrm{fast}}\mathcal{L}_{\mathrm{FAST}}
++\lambda_{\mathrm{state}}\mathcal{L}_{\mathrm{state}}
++\lambda_{\mathrm{vlm}}\mathcal{L}_{\mathrm{VLM}}.
+$$</div>
+<p>但当前训练循环需要重点审计。<code>train_acebrain.py:1768-1805</code> 显示，FAST CE 被加到 <code>loss</code> 后，后面又根据 <code>use_vlm_data</code> 重新赋值：</p>
+<pre><code class="language-python">loss_action, loss_vlm = model_engine(**inputs)
+loss = loss_action + loss_vlm * lambda_fast_ce
+
+if use_vlm_data and loss_vlm is not None:
+    loss = loss_action + vlm_loss_weight * loss_vlm
+else:
+    loss = loss_action
+</code></pre>
+<p>这意味着“设计上有 FAST CE 和 VLM 混训”，但“实际反传是否包含 FAST CE”需要跑时确认。复现时应打印最终 backward 标量的分解：</p>
+<div class="math-block">$$
+\mathrm{log}\left(
+\mathcal{L}_{\mathrm{backward}},
+\mathcal{L}_{\mathrm{FM}},
+\mathcal{L}_{\mathrm{FAST}},
+\mathcal{L}_{\mathrm{VLM}}
+\right),
+\qquad
+\frac{\partial \mathcal{L}_{\mathrm{backward}}}
+{\partial \mathcal{L}_{\mathrm{FAST}}}
+\stackrel{?}{=}\lambda_{\mathrm{fast}}.
+$$</div>
+<p>IQL/offline RL 分支是另一条训练设计扩展：它试图用 advantage-weighted policy loss 把行为克隆改造成偏向高价值动作的离线 RL。代码证据显示 <code>pizero_qwenvl_rl.py:309</code> 中 <code>final_loss = policy_loss + policy_loss</code>，这会把预期的 value loss 丢掉。它的思想是有价值的，但当前实现更像“待修正实验分支”，不能作为可靠效果来源。</p>
+
+<h4 id="3-4-12-local-pipeline">3.4.12 本地端到端 pipeline：从输入到 action chunk</h4>
+<p>本地训练时，一个样本从机器人观测到损失的完整路径可以写成：</p>
+<div class="math-block">$$
+\left(I_t^{base},I_t^{left},I_t^{right},s_t,q,A^\star_{t:t+H-1}\right)
+\longrightarrow
+\left(X_{\mathrm{vlm}},X_{\mathrm{fastobs}},X_{\mathrm{action}}\right)
+\longrightarrow
+\left(\hat u_\theta,\ell_{\mathrm{FAST}},\ell_{\mathrm{VLM}}\right).
+$$</div>
+<p>其中 \(X_{\mathrm{vlm}}\) 负责图文语义，\(X_{\mathrm{fastobs}}\) 负责快速视觉条件，\(X_{\mathrm{action}}\) 负责 noisy action chunk。训练伪代码如下：</p>
+<pre><code class="language-text">Algorithm Local-OpenPI-VLA-Train-OneBatch
+Input:
+  images = {base, left_wrist, right_wrist}       # 多视角图像
+  state s_t                                     # 机器人当前 proprio/state
+  instruction q                                 # 自然语言任务
+  ground_truth_actions A* in R[H, D_a]          # 未来 H 步动作块
+  flags = {
+    use_fast, supervise_state_tokens, no_discrete_state_input,
+    empty_action_inputs, slowfast, bidirectional_action_attention,
+    action_stream_fp32, action_expert_fp32, use_vlm_data
+  }
+
+# 1. 构造 VLM prompt 与视觉输入
+if no_discrete_state_input:
+    prompt = QwenVLAProcessor.render(q, images)                 # 不拼 bucketized state span
+else:
+    prompt = QwenVLAProcessor.render(q, images, state_tokens)
+X_vlm = QwenVL.image_text_embedding(prompt, images)
+
+# 1b. empty-action：真实动作不作为输入占位，只保留为 flow target
+if empty_action_inputs:
+    actions_for_input = INVALID_MIN_ACTION_VALUE * ones_like(A*)
+else:
+    actions_for_input = A*
+
+# 2. 可选 FAST 辅助监督：注意它不是默认最终输出
+if use_fast:
+    parts = split_actions(A*, ["left_base", "right_base", "left_cam", "right_cam"])
+    for each part p:
+        z_p = UniversalActionProcessor.encode(parts[p])        # 连续动作 -> FAST token index
+        token_ids_p = 151669 + z_p                             # 映射到 &lt;robot_action_i&gt;
+        prompt.append("&lt;|action_start|&gt;", token_ids_p, "&lt;|action_end|&gt;")
+    labels = -100 everywhere
+    labels[FAST_action_spans] = token_ids[FAST_action_spans]    # 只监督 FAST span
+
+# 3. 可选 state token 监督
+if supervise_state_tokens:
+    b = bucketize(clip(normalize(s_t), -1, 1), 256)             # state -> 0..255
+    prompt.append("&lt;|state_start|&gt;", b, "&lt;|state_end|&gt;")
+    labels[state_span] = token_ids[state_span]
+
+# 4. 构造防泄漏 mask 与 action block 双向注意力
+M = build_causal_mask_and_position_ids_fast(...)
+# 关键：action rows 不能 attend 到 GT FAST span，只能看文本/proprio/action 自身
+if bidirectional_action_attention:
+    M[action_rows, action_cols] = 0                              # H-step action chunk 内部全可见
+
+# 5. Flow matching noisy action chunk
+tau = sample_fm_time_fn(B)                                      # uniform 或 beta
+x0 = Normal(0, I).sample_like(A*)
+x1 = A*
+x_tau = psi_t(x0, x1, tau)
+target_velocity = x1 - (1 - sigma_min) * x0                     # 本地代码的 d_psi
+if action_stream_fp32:
+    x_tau, tau, target_velocity = to_float32(x_tau, tau, target_velocity)
+
+# 6. slowfast 视觉路径
+if slowfast:
+    X_fastobs = projector(DINO(images))                         # DINO token -> action hidden size
+    if action_expert_fp32:
+        X_fastobs = to_float32(X_fastobs)                        # fastobs/action expert 同精度
+else:
+    X_fastobs = empty
+
+# 7. joint mixture 前向
+X_action = ActionEncoder(x_tau, tau, state, actions_for_input)
+Y_vlm, Y_fastobs, Y_action = JointModel(X_vlm, X_fastobs, X_action, mask=M)
+u_hat = ActionDecoder(Y_action[-H:])
+if action_stream_fp32:
+    u_hat = to_float32(u_hat)
+
+# 8. 损失
+L_fm = mean_square_error(u_hat[action_mask], target_velocity[action_mask])
+L_fast = cross_entropy(LMHead(Y_vlm), labels, ignore_index=-100) if use_fast else 0
+L_web = VLMTextLoss(extra_vlm_batch) if use_vlm_data else 0
+
+# 9. 当前实现需要审计：最终反传是否包含 L_fast
+L_total_should_be = L_fm + lambda_fast * L_fast + lambda_vlm * L_web
+backward(actual_loss_in_training_script)
+</code></pre>
+<p>上面第 5 步和官方公式的符号略有不同，是因为本地 <code>psi_t</code> 写成：</p>
+<div class="math-block">$$
+\psi_\tau(x_0,x_1)
+=\left(1-(1-\sigma_{\min})\tau\right)x_0+\tau x_1,
+$$</div>
+<p>并把监督速度写成：</p>
+<div class="math-block">$$
+d_\psi=x_1-(1-\sigma_{\min})x_0.
+$$</div>
+<p>若 \(\tau=0\)，\(\psi_\tau=x_0\) 接近噪声；若 \(\tau=1\)，\(\psi_\tau=\sigma_{\min}x_0+x_1\) 接近真实动作。这和官方从 \(\tau=1\) 噪声反向走到 \(\tau=0\) 动作的记号方向不同，但本质仍是在学习一条从噪声到动作的条件 vector field。读代码时要看 <code>psi_t</code>、<code>d_psi</code> 和积分器的符号是否配套，而不要只按论文符号机械代入。</p>
+<p>推理时没有真实动作，也不会把 GT FAST token 放进 prompt。默认路径是：</p>
+<pre><code class="language-text">Algorithm Local-OpenPI-VLA-Infer
+Input:
+  current observation O_t = {images, state, instruction}
+  K = num_inference_steps
+
+# 1. 处理图像、文本、连续 state；eval DataCollator 固定 empty_action_inputs=True
+processor_inputs = QwenVLAProcessor(O_t)
+processor_inputs.actions = INVALID_MIN_ACTION_VALUE              # 只有占位，没有真实动作
+X_vlm = QwenVL.image_text_embedding(processor_inputs)
+X_fastobs = projector(DINO(images)) if slowfast else empty
+if action_expert_fp32:
+    X_fastobs = to_float32(X_fastobs)
+
+# 1b. 构造 action mask；若启用双向 action block，H 个 action token 内部全可见
+M = build_causal_mask_and_position_ids(...)
+if bidirectional_action_attention:
+    M[action_rows, action_cols] = 0
+
+# 2. 条件预填充
+kv_cache = JointModel.prefill(vlm=X_vlm, fastobs=X_fastobs, mask=M)
+
+# 3. 初始化整段动作噪声，而不是一个一个动作维度生成
+A = Normal(0, I).sample(shape=[B, H, D_a])
+if action_stream_fp32:
+    A = to_float32(A)
+
+# 4. 数值积分生成 action chunk
+for k in 1..K:
+    tau = schedule(k)
+    X_action = ActionEncoder(A, tau, state)
+    Y_action = JointModel.decode_action(X_action, kv_cache)
+    velocity = ActionDecoder(Y_action[-H:])
+    if action_stream_fp32:
+        velocity = to_float32(velocity)
+    A = integration_step(A, tau, delta_tau, velocity, method=euler/heun/rk4)
+
+# 5. 后处理
+A = clip_or_unnormalize(A)
+execute first m steps, then re-observe and replan
+Output:
+  action chunk A_hat in R[B, H, D_a]
+</code></pre>
+<p>这个流程解释了为什么本地 VLA 不是“LLM 输出一串动作文字”。主输出是连续 action chunk；FAST token 只有在 <code>fast_only</code> 模式下才变成最终动作输出，在默认 flow 路径里更像一种动作语义辅助监督。</p>
+
+<h4 id="3-4-13-target-runs-training">3.4.13 三条目标 run 的训练对象、输入输出与 loss：224_h10_40000 / 448_wo_pretrain_15000 / 448_pretrain_15000</h4>
+<p>这一节专门回答“这三条 run 训练时到底在拟合什么”。核心结论先写在前面：三条目标评估 run 的执行输出都不是 FAST token 串，而是 <strong>continuous flow action chunk</strong>，即 \(\hat A\in\mathbb{R}^{B\times 10\times 72}\)。训练时拟合的主对象是动作速度场（action velocity field）\(\hat v_\theta\)，监督来自 LIBERO 未来 10 步、72 维动作块 \(A^\star\)。<code>use_fast=2</code> / <code>slowfast=2</code> 说明启用了 fast visual/action pathway；但 <code>lambda_fast_ce=0</code> 且代码里的 FAST CE 分支只在 <code>self.use_fast == 1</code> 时触发，所以这三条目标配置不能被解释成“FAST-token CE 训练出来的策略”。</p>
+<p>先把证据边界钉住：</p>
+<ul>
+<li><code>224_h10_40000</code>：可定位到精确训练 shell <code>train_sf_libero_cyx_bidirectional_fix_zero_right_wrist_no_discrete_state_vlm.sh</code>，并且 serve log 加载同名 checkpoint 的 step 40000；但没有找到完整 W&amp;B 0-40000 曲线。</li>
+<li><code>448_wo_pretrain_15000</code>：W&amp;B 新落档有 exact exp-name match 的早期 OOM 记录，config 精确命中 eval checkpoint 名；serve log 加载 step 15000。由于 exact W&amp;B 只到 step 0/2，不能把它当成最终 15000 checkpoint 的完整训练曲线。</li>
+<li><code>448_pretrain_15000</code>：serve/eval 证据完整，但没有找到完全同名训练 config；只能用相邻 448/pretrain shell 与候选 W&amp;B loss 解释训练机制，不能做强归因。</li>
+</ul>
+
+<div class="table-wrap"><table>
+<thead><tr><th>Run</th><th>确认的 base/config</th><th>训练入口与关键开关</th><th>实际拟合对象</th><th>FAST / CE / VLM loss 状态</th><th>评估输出</th></tr></thead>
+<tbody>
+<tr><td><code>224_h10_40000</code></td><td><code>pi05_agx_qwenvl_libero_ft</code>；配置侧 <code>qwen_vl=True</code>、<code>action_horizon=10</code>、<code>action_dim=72</code>、<code>discrete_state_input=False</code>。serve 侧仍打印旧 Hydra 字段 <code>pretrained_model_path=OpenGVLab/InternVL3-2B</code>，因此 VLM base 的最终权重来源要以 checkpoint 内 metadata 再核。</td><td>精确 shell：batch size 512，<code>num_train_steps=80000</code>，<code>resume</code>，<code>save_interval=10000</code>，<code>eval_step_freq=10000</code>，<code>model_fast_input_size=224</code>，<code>train_vlm=1</code>，<code>slowfast=2</code>，<code>use_fast=2</code>，<code>no_discrete_state_input</code>，<code>empty_action_inputs</code>，<code>bidirectional_action_attention</code>，<code>action_stream-fp32</code>，<code>action_expert_fp32</code>，<code>adaLN</code>。</td><td>LIBERO batch 的未来 \(H=10\) 步、\(D_a=72\) 维动作块 \(A^\star\)，经 flow matching 变成速度场 target \(d_\psi\)。</td><td><code>lambda_fast_ce=0</code>；<code>use_fast=2</code> 不进入 <code>use_fast == 1</code> 的 FAST CE 分支；脚本未打开 <code>use_vlm_data</code>，所以没有额外 web/VLM batch CE。<code>train_vlm=1</code> 更准确理解为 VLM/QwenVL 参数可参与 action loss 反传，而不是额外语言 loss 已确认进入。</td><td>serve log 输出 \(\hat A\in\mathbb{R}^{B\times10\times72}\)，LIBERO goal/object/spatial/libero10 为 0.99/0.995/0.98/0.93。</td></tr>
+<tr><td><code>448_wo_pretrain_15000</code></td><td>eval checkpoint 名为 <code>debug_448_maskpadimage...10k100k_wo_pretrain...vlm_no_discrete_state_input_cyx/15000</code>；exact W&amp;B config 显示 <code>qwen_model_name=Qwen/Qwen3-VL-2B-Instruct</code>、<code>vlm_model_path=/data/models/Qwen3-VL-2B-Instruct</code>、<code>action_dim=72</code>、<code>action_horizon=10</code>。</td><td>exact W&amp;B OOM run：batch size 512、16 卡 DDP、<code>model_fast_input_size=448</code>、<code>train_vlm=1</code>、<code>slowfast=2</code>、<code>use_fast=2</code>、<code>no_discrete_state_input</code>、<code>empty_action_inputs</code>、<code>bidirectional_action_attention</code>、<code>action_stream_fp32=true</code>、<code>action_expert_fp32=true</code>、<code>use_vlm_data=false</code>。注意：该 exact OOM config 还含 <code>pytorch_weight_path_action=...biimgaction/60000/</code>，与 run 名里的 <code>wo_pretrain</code> 存在命名/配置张力，不能据名字单独断言“完全无 action 初始化”。</td><td>同样拟合 \(A^\star\in\mathbb{R}^{B\times10\times72}\) 对应的 flow velocity；exact OOM summary 只记录 step 0 的 <code>loss=flow_matching_loss=1.3211</code>。</td><td><code>lambda_fast_ce=0</code>、<code>fast_only=false</code>、<code>use_fast=2</code>、<code>use_vlm_data=false</code>，因此 effective backward loss 仍是 flow matching。FAST tokenizer 名称存在于 config，但不是最终动作解码器，也不是有效 CE 监督。</td><td>serve log 加载 step 15000，输出连续动作块；评估 goal/object/spatial/libero10 为 0.93/0.96/0.98/0.87。</td></tr>
+<tr><td><code>448_pretrain_15000</code></td><td>serve checkpoint 为 <code>debug_448_maskpadimage...sf2_pretrain_bidirectionalimage...nostateinput_pretrain_2.5e-5/15000</code>。serve 侧确认 <code>PiZero</code>、<code>action_horizon=10</code>、<code>use_fast=2</code>、DINO fast vision 与 fp32 action/expert 路径；精确训练 config 未找到。</td><td>相邻 448/pretrain shell 显示：<code>model_fast_input_size=448</code>、<code>train_vlm=1</code>、<code>vlm_model_path=$VLM_MODEL_PATH</code>、<code>pytorch_weight_path_action=...biimgaction/60000/</code>、<code>slowfast=2</code>、<code>use_fast=2</code>、<code>no_discrete_state_input</code>、<code>empty_action_inputs</code>、<code>bidirectional_action_attention</code>、<code>lambda_fast_ce=0</code>。但 exp-name 不等于 eval 目标，因此只能作为 candidate 训练机制证据。</td><td>若沿相邻 shell，则仍是 \(H=10,D_a=72\) 的 flow velocity 拟合；候选 W&amp;B loss 可说明相邻 448/pretrain 代码路径能下降，但不能证明目标 checkpoint 的完整曲线。</td><td>按 serve 与相邻 shell，仍不是 FAST token 自回归策略；<code>lambda_fast_ce=0</code> 表明 FAST CE 不提供训练信号。<code>pretrain</code> 更可能指 action/VLM 初始化或预训练权重路径，而不是额外 CE 目标。</td><td>serve log 加载 step 15000，输出连续动作块；评估 goal/object/spatial/libero10 为 0.91/0.96/0.915/0.76。</td></tr>
+</tbody></table></div>
+
+<p>把三条 run 的训练样本记为</p>
+<div class="math-block">$$
+\mathcal{B}
+=
+\left\{
+\left(I_t^{high},I_t^{left},I_t^{right},s_t,q,A^\star_{t:t+9},m_A\right)_b
+\right\}_{b=1}^{B}.
+$$</div>
+<p>其中 \(I_t^{high},I_t^{left},I_t^{right}\) 是 high/left wrist/right wrist 多视角图像，\(s_t\) 是连续机器人状态，\(q\) 是 LIBERO 任务文本，\(A^\star_{t:t+9}\in\mathbb{R}^{10\times72}\) 是未来 10 步动作块，\(m_A\in\{0,1\}^{10\times72}\) 是由 pad/invalid action 产生的有效维度 mask。<code>use_eef_pos_only</code> 让数据侧更关注 end-effector pose/action 字段，但模型张量仍被 pad 到 72 维契约。</p>
+
+<p>目标 run 的 DataCollator 首先做两类“不要把答案放进输入”的处理：</p>
+<div class="math-block">$$
+\tilde s_t =
+\begin{cases}
+\operatorname{bucket}(s_t), & \text{if discrete-state prompt is enabled},\\
+\varnothing, & \text{if no\_discrete\_state\_input is enabled},
+\end{cases}
+\qquad
+A_{\mathrm{in}} =
+\begin{cases}
+A^\star, & \text{if empty\_action\_inputs is false},\\
+c_{\mathrm{invalid}}\mathbf{1}, & \text{if empty\_action\_inputs is true}.
+\end{cases}
+$$</div>
+<p>这里 \(c_{\mathrm{invalid}}\) 对应代码里的 <code>INVALID_MIN_ACTION_VALUE</code>。直觉上，prompt 里不再塞离散 state token，action 输入占位也不再携带真实 \(A^\star\)。真实动作只作为 flow target 进入 loss。对应代码证据是 <code>DataCollator.__call__</code> 中 <code>state_for_prompt=None</code> 与 <code>actions_for_input = INVALID_MIN_ACTION_VALUE</code>，以及 eval <code>sample_actions</code> 里强制 <code>empty_action_inputs=True</code>。</p>
+
+<p>在 target runs 的 <code>flow_match_mode=default</code> 下，训练 forward 使用本地默认参数化：</p>
+<div class="math-block">$$
+x_0\sim\mathcal{N}(0,I),\qquad x_1=A^\star,
+$$</div>
+<div class="math-block">$$
+\psi_\tau(x_0,x_1)
+=
+\left(1-(1-\sigma_{\min})\tau\right)x_0+\tau x_1,
+\qquad
+d_\psi=x_1-(1-\sigma_{\min})x_0.
+$$</div>
+<p>\(\psi_\tau\) 是送入 action encoder 的 noisy action chunk，\(d_\psi\) 是要拟合的速度场。代码中对应 <code>x0=torch.randn_like(actions)</code>、<code>x1=actions</code>、<code>psi_t=self.psi_t(x0,x1,t)</code>、<code>d_psi=x1-(1-self.flow_sig_min)*x0</code>。如果后续实验改成 <code>flow_match_mode=pi0_flowmatch</code>，则 <code>forward1</code> 的公式会变成 \(x_t=t\epsilon+(1-t)A^\star\)、\(u_t=\epsilon-A^\star\)；但目前 exact 448_wo config 和 224 目标 shell 对应的是 default path。</p>
+
+<p>模型前向可以写成：</p>
+<div class="math-block">$$
+E_{\mathrm{vlm}} = f_{\mathrm{QwenVL}}(I_t,q;\tilde s_t),\qquad
+E_{\mathrm{fastobs}} = P_{\mathrm{fast}}\!\left(f_{\mathrm{DINO}}(I_t)\right),
+$$</div>
+<div class="math-block">$$
+E_{\mathrm{act}}=\operatorname{ActionEncoder}(\psi_\tau,t),
+\qquad
+H_{\mathrm{act}}
+=
+J_\theta(E_{\mathrm{vlm}},E_{\mathrm{fastobs}},E_{\mathrm{act}};M)_{\mathrm{action}},
+$$</div>
+<div class="math-block">$$
+\hat v_\theta=\operatorname{ActionDecoder}(H_{\mathrm{act}})_{1:H}
+\in\mathbb{R}^{B\times10\times72}.
+$$</div>
+<p>\(J_\theta\) 是本地 QwenVL/PiZero joint mixture，\(M\) 是包含 causal、slowfast 与 bidirectional action block 的 attention mask。若 <code>bidirectional_action_attention=True</code>，代码把最后 \(H\) 个 action token 的子块 mask 置零，使一个 action chunk 内部互相可见；这改变的是轨迹块建模方式，不是只改一个训练超参。</p>
+
+<p>有效 flow loss 是带 mask 的 MSE：</p>
+<div class="math-block">$$
+\mathcal{L}_{\mathrm{FM}}
+=
+\frac{
+\sum_{b=1}^{B}\sum_{h=1}^{10}\sum_{d=1}^{72}
+m_{bhd}\left(\hat v_{\theta,bhd}-d_{\psi,bhd}\right)^2
+}{
+\max\left(1,\sum_{b,h,d}m_{bhd}\right)
+}.
+$$</div>
+<p>这正对应代码里的 <code>diff2 = torch.square(v_psi - d_psi)</code>、<code>mask_f = action_mask.to(diff2.dtype)</code>、<code>loss_action = (diff2 * mask_f).sum() / denom</code>。因此训练日志里的 <code>flow_matching_loss</code> 就是这条动作块速度场监督，不是 rollout success，也不是 token perplexity。</p>
+
+<p>完整训练脚本的反传标量可抽象为：</p>
+<div class="math-block">$$
+\mathcal{L}_{\mathrm{backward}}
+=
+\mathcal{L}_{\mathrm{FM}}
++\lambda_{\mathrm{fast}}\mathbf{1}[\texttt{use\_fast}=1]\mathcal{L}_{\mathrm{FAST}}
++\mathbf{1}[\texttt{use\_vlm\_data}]\lambda_{\mathrm{web}}\mathcal{L}_{\mathrm{VLMweb}}
++\mathbf{1}[\texttt{online\_distill}]\lambda_{\mathrm{kd}}\mathcal{L}_{\mathrm{KD}}.
+$$</div>
+<p>对三条目标 run，证据给出的实际组合是 <code>lambda_fast_ce=0</code>、<code>fast_only=false</code>、<code>use_fast=2</code>、<code>use_vlm_data=false</code>、<code>online_distill_pi05=false</code>。因此可复现时最重要的结论是：</p>
+<div class="math-block">$$
+\boxed{
+\mathcal{L}_{\mathrm{backward}}=\mathcal{L}_{\mathrm{FM}}
+}
+\quad
+\text{for the audited target-run configurations.}
+$$</div>
+<p>这不是说 FAST 相关代码没写；相反，collator、tokenizer、label mask、<code>forward_fast_token</code> 和 CE 分支都存在。但在这三条目标配置里，FAST token 不是最终动作输出，FAST CE 也没有有效权重。更准确的表述是：它们使用了本地 slowfast/fastobs/action-expert 结构，而不是使用 FAST-token CE 作为训练目标。</p>
+
+<pre><code class="language-text">Algorithm Target-LIBERO-Run-TrainStep
+Input:
+  batch from LIBERO:
+    images = {cam_high, cam_left_wrist, cam_right_wrist}
+    state s_t
+    instruction q
+    future actions A_star in R[B, 10, 72]
+  flags:
+    no_discrete_state_input=True
+    empty_action_inputs=True
+    slowfast=2
+    use_fast=2
+    bidirectional_action_attention=True
+    action_stream_fp32=True
+    action_expert_fp32=True
+    lambda_fast_ce=0
+
+# 1. Build prompt/processor inputs without leaking target action.
+state_for_prompt = None                       # no_discrete_state_input
+action_placeholder = INVALID_MIN_ACTION_VALUE # empty_action_inputs
+input_ids, pixel_values, image_grid = QwenVLProcessor(q, images, state_for_prompt)
+
+# 2. Build masks and positions.
+M = build_causal_mask(input_ids, image_grid, slowfast=True)
+M[action_block, action_block] = 0             # bidirectional action chunk
+
+# 3. Sample flow time and noisy action chunk.
+x0 = Normal(0, I).sample_like(A_star)
+x1 = A_star
+tau = sample_fm_time(B)
+psi = (1 - (1 - sigma_min) * tau) * x0 + tau * x1
+target_velocity = x1 - (1 - sigma_min) * x0
+
+# 4. Encode conditions.
+E_vlm = QwenVL(image/text tokens)
+E_fastobs = Projector(DINO(images))           # slowfast fast visual branch
+E_action = ActionEncoder(psi, tau)
+
+# 5. Joint mixture and action decoder.
+H_action = JointModel(E_vlm, E_fastobs, E_action, mask=M)["action"]
+v_hat = ActionDecoder(H_action)[last_10_steps]
+
+# 6. Effective loss for audited target runs.
+L_FM = masked_mse(v_hat, target_velocity, valid_action_mask)
+L_FAST = 0                                    # lambda_fast_ce=0 and use_fast=2
+L_VLMweb = 0                                  # use_vlm_data=False
+loss = L_FM
+loss.backward()
+
+Output artifacts:
+  checkpoint/model.safetensors, optimizer state if saved,
+  logs: loss, flow_matching_loss, action_lr, fastvision_lr, grad_norm,
+  optional train-side eval L1, later LIBERO rollout success via serve/eval logs.
+</code></pre>
+
+<p>推理时的输入输出也应按连续动作块理解：</p>
+<pre><code class="language-text">Algorithm Target-LIBERO-Run-InferAction
+Input:
+  current observation O_t = {images, state, instruction}
+  checkpoint = step 40000 or step 15000
+  K = num_inference_steps = 10
+
+# 1. Eval collator again uses empty action placeholders.
+processor_inputs = QwenVLProcessor(O_t, actions=INVALID_MIN_ACTION_VALUE)
+prefill_cache = JointModel.prefill(vlm_tokens, fastobs_tokens)
+
+# 2. Initialize a whole action chunk with Gaussian noise.
+A = Normal(0, I).sample([B, 10, 72])
+
+# 3. Integrate the learned velocity field.
+for k in 0..K-1:
+    tau = k / K
+    E_action = ActionEncoder(A, tau)
+    H_action = JointModel.decode_action(E_action, cache=prefill_cache)
+    v = ActionDecoder(H_action)
+    A = A + (1 / K) * v
+
+# 4. Clip/unnormalize and return to LIBERO policy client.
+return action_chunk A_hat in R[B, 10, 72]
+</code></pre>
+<p>所以，三条 run 的“输出什么”可以分两层说：训练 forward 输出 \(\hat v_\theta\) 并用它计算 <code>flow_matching_loss</code>；serve/inference 输出积分后的 \(\hat A\)，再由 LIBERO client 逐步执行/重规划。评估表里的 0.99、0.995、0.98、0.93 等，是 rollout 成功率，不是训练 loss。</p>
+
+<h4 id="3-4-14-eval-attribution">3.4.14 改造效果：能证明什么，不能证明什么</h4>
+<div class="table-wrap"><table>
+<thead><tr><th>改造点</th><th>当前效果证据</th><th>可下的结论</th><th>还不能下的结论</th></tr></thead>
+<tbody>
+<tr><td>QwenVL/PiZero + continuous flow action chunk</td><td><code>224_h10_40000</code> 在 LIBERO goal/object/spatial/libero10 达到 0.99/0.995/0.98/0.93。</td><td>本地 OpenPI VLA 主线已经具备可用策略能力，flow action chunk 是最稳的复现锚点。</td><td>不能说所有子改造都有效；这是组合结果。</td></tr>
+<tr><td>slowfast-DINO / fastobs</td><td>三条目标 serve log 均打印 <code>slowfast fast vision: DINO</code>；最强 224 run 名含 <code>sf2</code>。</td><td>DINO fastobs 是这三条评估共同启用的动作视觉条件分支，说明本地高分路径不是纯 QwenVL 视觉 token。</td><td>缺少关掉 slowfast 的同配置 ablation，不能量化 DINO fastobs 单独贡献。</td></tr>
+<tr><td>action block 双向注意力</td><td><code>224_h10_40000</code> 训练 shell 明确启用 <code>--model.bidirectional_action_attention</code>；三条 checkpoint 路径都出现 <code>bidirectional</code> 或 <code>bidirectionalimage</code> 关键词。</td><td>高分组合把 \(H=10\) 的 action chunk 当作块级轨迹建模，而不是逐步独立预测。</td><td>448 两条精确训练 shell 未完全落档；仍需以 serve config / checkpoint metadata 复核具体是 action-only 双向还是 image-action 双向。</td></tr>
+<tr><td>fp32 action stream / action expert</td><td>三条 serve log 均记录 <code>action_expert_fp32</code> cast 与 <code>_ensure_action_stream_fp32</code> 已应用。</td><td>评估时输出头不是纯 bf16，而是对 action expert、projector、action-side MLP 与 loss/backward 精度做了保护。</td><td>没有 fp32 关闭消融，不能单独说 fp32 带来多少成功率；但复现时必须打开，否则数值路径不一致。</td></tr>
+<tr><td>no-discrete-state / empty-action</td><td><code>224_h10_40000</code> 的精确训练 shell 含 <code>no_discrete_state_input</code> 与 <code>empty_action_inputs</code>；<code>448_wo_pretrain_15000</code> checkpoint path 也含 <code>no_discrete_state_input</code>。</td><td>当前最强锚点依赖“真实动作只做 target、不作为输入答案”的 anti-leakage pipeline。</td><td>不能证明离散 state 一定有害；需要 state on/off 与 empty-action on/off 的二乘二消融。</td></tr>
+<tr><td>448 分辨率与 pretrain</td><td><code>448_pretrain_15000</code> 的 LIBERO10 为 0.76，低于 <code>448_wo_pretrain_15000</code> 的 0.87，也低于 224/40k 的 0.93。</td><td>更高分辨率或预训练不是单调收益；视觉 token 分布、norm stats、state/action 模板和训练步数可能更重要。</td><td>不能直接否定 448；需要同训练步数、同数据、同 mask 的公平对比。</td></tr>
+<tr><td>FAST CE 辅助</td><td>代码存在 FAST token 构造、label mask 和 CE 分支；但训练脚本中最终 loss 可能覆盖掉 FAST CE。</td><td>这是明确的训练设计改造，值得单独审计和复现。</td><td>目前不能把 LIBERO 高分归因给 FAST CE；最佳锚点甚至可能主要是 flow/no-discrete-state 路径。</td></tr>
+<tr><td>state token 监督</td><td>代码支持离散 state span 与监督；但 224 最强配置名显示 no-discrete-state input。</td><td>state token 是可选实验分支，适合做对照。</td><td>不能声称 state token 已提升性能；在当前高分锚点上它不是必要条件。</td></tr>
+<tr><td>RoboCasa / Cosmos-Qwen-PaliGemma 分支</td><td>kitchen24 总体 \(168/280=0.60\)，CloseDoubleDoor/CloseDrawer 较强，PnP 与 OpenDoubleDoor 较弱；wandb summary 记录 action_expert_loss 和 future_frame_loss。</td><td>本地 OpenPI 评估已进入更难的长时程厨房交互，能暴露 LIBERO 看不到的抓取放置和重规划瓶颈。</td><td>RoboCasa 分支与 Houzhi QwenVL fast-zhi 不是完全同一模型线，不能把其 0.60 直接作为 FAST/slowfast 的消融结论。</td></tr>
+</tbody></table></div>
+<p>三条 LIBERO 目标 run 的输出头和改造启用情况可以单独列成下面这张“复现对齐表”。这里把“eval 已确认”和“从 checkpoint 名/相邻 shell 推断”分开写，避免把相邻实验误判成本地事实：</p>
+<div class="table-wrap"><table>
+<thead><tr><th>Run</th><th>评估时输出头</th><th>eval 已确认</th><th>训练/配置侧改造证据</th><th>归因边界</th></tr></thead>
+<tbody>
+<tr><td><code>224_h10_40000</code></td><td><strong>continuous flow action chunk</strong>：<code>JointModel["action"]</code> 经 <code>action_decoder</code> 输出 \(\hat A\in\mathbb{R}^{B\times10\times72}\)。</td><td><code>Using PiZero: pizero_qwenvl_fast_fortrainer.PiZero</code>、<code>action_horizon: 10</code>、<code>use_fast: 2 2</code>、<code>slowfast fast vision: DINO</code>、<code>action_expert_fp32</code>、<code>_ensure_action_stream_fp32</code>、<code>[infer_action] Joint model forward pass time</code>。</td><td>精确 shell <code>train_sf_libero_cyx_bidirectional_fix_zero_right_wrist_no_discrete_state_vlm.sh</code> 启用 <code>slowfast=2</code>、<code>use_fast=2</code>、<code>train_fastvision=1</code>、<code>no_discrete_state_input</code>、<code>empty_action_inputs</code>、<code>bidirectional_action_attention</code>、<code>action_stream-fp32</code>、<code>action_expert_fp32</code>、<code>action_expert_adaptive_mode=adaLN</code>、<code>lambda_fast_ce=0</code>、<code>model_fast_input_size=224</code>。</td><td>最强证据：训练入口、serve checkpoint、eval 成功率三者能对齐；但仍是组合效果。</td></tr>
+<tr><td><code>448_wo_pretrain_15000</code></td><td><strong>continuous flow action chunk</strong>，同样不是 FAST token 自回归输出。</td><td>serve log 确认同一 <code>PiZero</code> 类、<code>action_horizon: 10</code>、<code>use_fast: 2 2</code>、DINO slowfast、fp32 action/action-expert 路径和 <code>infer_action</code> JointModel 前向。</td><td>checkpoint path 含 <code>debug_448_maskpadimage...</code>、<code>sf2</code>、<code>10k100k_wo_pretrain</code>、<code>bidirectional</code>、<code>fix_zero_right_wrist</code>、<code>vlm_no_discrete_state_input_cyx</code>；但未找到与该 run 完全匹配的训练曲线历史。</td><td>可确认评估输出头与关键 serve 配置；对训练期每个开关的精确归因弱于 224。</td></tr>
+<tr><td><code>448_pretrain_15000</code></td><td><strong>continuous flow action chunk</strong>，同样不是官方 <code>pi0_fast.py</code> 的离散 FAST token 主头。</td><td>serve log 确认同一 <code>PiZero</code> 类、<code>action_horizon: 10</code>、<code>use_fast: 2 2</code>、DINO slowfast、fp32 action/action-expert 路径和 <code>infer_action</code> JointModel 前向。</td><td>checkpoint path 含 <code>debug_448_maskpadimage...</code>、<code>sf2_pretrain</code>、<code>bidirectionalimage</code>、<code>fix_zero_right_wrist</code>、<code>nostateinput_pretrain_2.5e-5</code>；本地仅找到相邻 448/pretrain shell，未找到完全同名训练曲线。</td><td>可确认评估头和 serve 侧 slowfast/fp32；<code>bidirectionalimage</code> 更可能指 image-action 双向注意力，需 checkpoint config 进一步钉死。</td></tr>
+</tbody></table></div>
+<p>因此，最稳的复现策略不是“一次打开所有开关”，而是以 <code>224_h10_40000</code> 的 flow action chunk 作为锚点，逐步做 ablation：</p>
+<ol>
+<li>先复现 <code>224_h10_40000</code> 的 exact switch set，确认 <code>JointModel + action_decoder</code> 连续 flow 输出路径可达到同量级 LIBERO 成功率。</li>
+<li>再做 <code>slowfast-DINO</code> on/off，对比 fastobs 是否主要改善 spatial/object 这类依赖局部视觉的任务。</li>
+<li>单独做 <code>bidirectional_action_attention</code> on/off，检查失败是否从“轨迹不连贯/夹爪时序错”变成其他类型。</li>
+<li>单独做 <code>action_stream_fp32</code>/<code>action_expert_fp32</code> on/off，记录 NaN/Inf、velocity norm、action MSE 和最终 success rate。</li>
+<li>做 <code>no_discrete_state_input</code> 与 <code>empty_action_inputs</code> 的二乘二实验，确认 anti-leakage 输入策略是否只是防止过拟合，还是确实提升评估稳定性。</li>
+<li>最后再比较 224 vs 448、pretrain vs wo-pretrain；若这一步先做，很容易把视觉分辨率效应和前面四个结构开关混在一起。</li>
+</ol>
+<p>IQL/offline RL 分支也属于明确训练设计改造。其目标应为 advantage-weighted policy loss 加 value/expectile loss：</p>
+<div class="math-block">$$
+Q_{\text{target}}(s,a)=r+\gamma \mathbf{1}_{r&lt;0} V_{\bar\phi}(s'),\qquad
+A=Q_{\text{target}}-V_{\bar\phi}(s),
+$$</div>
+<div class="math-block">$$
+\mathcal{L}_{V} =
+\mathbb{E}\left[
+|\tau-\mathbf{1}_{Q-V&lt;0}|(Q-V)^2
+\right]
++
+\left\|V_\phi(s)-\hat V_{\text{data}}\right\|^2,
+\qquad
+\mathcal{L}_{\pi} =
+\mathbb{E}
+\left[
+\exp(\beta A)\mathcal{L}_{BC}
+\right].
+$$</div>
+<p>预期总损失应类似：</p>
+<div class="math-block">$$
+\mathcal{L}_{IQL}=\mathcal{L}_{\pi}+\lambda_V\mathcal{L}_{V}.
+$$</div>
+<p>但当前实现中 <code>final_loss = policy_loss + policy_loss</code>，实际变成 \(2\mathcal{L}_{\pi}\)。这说明它是训练设计层改造，但复现时必须先确认这是不是 bug；在修正前，不应把该分支结果视作可靠 IQL。</p>
+<h3 id="3-5-vla-落档评估">3.5 2026-06-13 / 2026-06-21 落档：训练模型评估情况</h3>
+<p>OpenPI 训练模型的评估证据现在分成两批：第一批是 2026-06-13 落档的 <code>progress_20260613_remote</code>，它提供 <code>224_h10_40000</code>、<code>448_pretrain_15000</code>、<code>448_wo_pretrain_15000</code> 三条目标 run 的高分 LIBERO 日志；第二批是 2026-06-21 新落档的 <code>eval_20260621_remote</code> 与 <code>00_workspace_review\eval_alignment_20260621_205714</code>，它把四个 Houzhi OpenPI/LIBERO 平行变体的 <code>success_rate.txt</code> 解析为 <code>houzhi_libero_success_rates.csv</code> 和 <code>houzhi_libero_variant_summary.csv</code>。这里必须先划清边界：6 月 21 日的 <code>h4b_x_new_10000</code>、<code>h4b_image_x_40000</code>、<code>h4b_image_x_a5_40000</code>、<code>h8b_x_10000</code> 不是前面三条目标 run 的同名 checkpoint，也不能替代旧高分表；它们是同一 Houzhi/OpenPI 评估体系下的新一轮平行变体证据。本节只更新 VLA/OpenPI 相关结果，不把 RoboCasa、Cap-X agentic loop、WM 或 VLN 线混入本次新增结论。</p>
+<h4>3.5.1 Houzhi OpenPI / LIBERO 评估</h4>
+<p>LIBERO 评估日志位于 <code>07_openpi_eval_and_deployment_clients\progress_20260613_remote\evidence\logs\houzhi_openpi\libero_eval_short\</code>。三组模型/配置的成功率如下：</p>
+<div class="table-wrap"><table>
+<thead><tr><th>Run</th><th>libero_goal</th><th>libero_object</th><th>libero_spatial</th><th>libero_10</th><th>判断</th></tr></thead>
+<tbody>
+<tr><td><code>224_h10_40000</code></td><td>0.99</td><td>0.995</td><td>0.98</td><td>0.93</td><td>当前最强，四套 LIBERO 都稳定高分</td></tr>
+<tr><td><code>448_pretrain_15000</code></td><td>0.91</td><td>0.96</td><td>0.915</td><td>0.76</td><td>448 输入 + pretrain 并未带来 LIBERO10 提升</td></tr>
+<tr><td><code>448_wo_pretrain_15000</code></td><td>0.93</td><td>0.96</td><td>0.98</td><td>0.87</td><td>同为 448/15k，去掉 pretrain 反而更好</td></tr>
+</tbody></table></div>
+<p>这组结果把本地 VLA 主线从“训练设计可行”推进到了“已有较强仿真基准表现”。特别是 <code>224_h10_40000</code> 的 <code>libero_10=0.93</code> 已经不是 smoke test，而是可作为主要复现实验目标的模型配置。相反，448 分辨率线并没有单调变好：<code>448_pretrain_15000</code> 的 LIBERO10 只有 0.76，低于 <code>448_wo_pretrain_15000</code> 的 0.87。这提示问题可能不在“视觉分辨率越大越好”，而在预训练数据分布、state/action token 模板、right-wrist/action slicing、eval task 失败样本等更细的对齐环节。</p>
+<p>从模型机制角度看，这个现象也合理：OpenPI/PiZero 的最终动作由 flow integration 输出，视觉 token 只是条件。如果高分辨率或预训练改变了视觉 token 的统计分布，却没有同步校准 FAST token、state token、action expert 与 norm stats，动作头可能得到更“丰富”但更难用的条件表示，最终在 LIBERO10 这种综合任务上退化。</p>
+<h4 id="3-5-2-20260621-houzhi-libero-parallel">3.5.2 2026-06-21 Houzhi LIBERO 平行变体评估</h4>
+<p>2026-06-21 新落档的 Houzhi LIBERO evidence 位于 <code>07_openpi_eval_and_deployment_clients\eval_20260621_remote\evidence\houzhi_libero\</code>。本地 <code>README.md</code> 说明远端侧只读，通过 <code>scp</code> 拉取 <code>serve.log</code>、suite worker logs、group logs 与 <code>success_rate.txt</code>；派生表位于 <code>00_workspace_review\eval_alignment_20260621_205714\derived\houzhi_libero_success_rates.csv</code> 和 <code>houzhi_libero_variant_summary.csv</code>。每个变体都在 <code>libero_goal</code>、<code>libero_object</code>、<code>libero_spatial</code>、<code>libero_10</code> 四个 suite 上评估，每个 suite 200 次 rollout，内部再切成 5 个 group，每组 40 次。<code>scp_manifest.csv</code> 还显示这些变体的远端源目录分别来自 <code>debug_224_4b_..._x_new/10000</code>、<code>debug_224_4b_..._bidirectionalimage_..._x/40000</code>、<code>debug_224_4b_..._x_a5/40000</code> 和 <code>debug_224_8b_..._x/10000</code>，因此它们在命名和 checkpoint 系列上都不能等同于 6 月 13 日的 <code>224_h10_40000</code>、<code>448_pretrain_15000</code>、<code>448_wo_pretrain_15000</code>。</p>
+<p>成功率的聚合方式可以写成：</p>
+<div class="math-block">$$
+\operatorname{SR}_{v,d}=
+\frac{N^{\mathrm{success}}_{v,d}}{N^{\mathrm{rollout}}_{v,d}},
+\qquad
+\operatorname{SR}_{v}=
+\frac{\sum_{d\in\mathcal{D}}N^{\mathrm{success}}_{v,d}}
+{\sum_{d\in\mathcal{D}}N^{\mathrm{rollout}}_{v,d}},
+\quad
+\mathcal{D}=\{\mathrm{goal},\mathrm{object},\mathrm{spatial},\mathrm{libero10}\}.
+$$</div>
+<p>其中 \(v\) 表示模型变体（variant），\(d\) 表示 LIBERO suite，\(N^{\mathrm{success}}\) 是成功 episode 数，\(N^{\mathrm{rollout}}\) 是 rollout 总数。由于本批每个 suite 都是 200 次 rollout，\(\operatorname{SR}_{v}\) 等价于四个 suite 成功率的加权平均；代码上就是解析所有 suite 级 <code>success_rate.txt</code>，再对成功数和 episode 数求和。</p>
+<pre><code class="language-text"># 2026-06-21 Houzhi LIBERO 指标解析逻辑
+for variant in ["h4b_x_new_10000", "h4b_image_x_40000", "h4b_image_x_a5_40000", "h8b_x_10000"]:
+    total_successes = 0
+    total_episodes = 0
+    for suite in ["libero_goal", "libero_object", "libero_spatial", "libero_10"]:
+        # 每个 suite 的 success_rate.txt 已经汇总 5 个 group，每组 40 次 rollout
+        metrics = parse_success_rate_txt(variant, suite)
+        record_suite_row(variant, suite, metrics.successes, metrics.episodes)
+        total_successes += metrics.successes
+        total_episodes += metrics.episodes
+    record_variant_row(variant, total_successes / total_episodes)
+</code></pre>
+<div class="table-wrap"><table>
+<thead><tr><th>平行变体</th><th>libero_goal</th><th>libero_object</th><th>libero_spatial</th><th>libero_10</th><th>总计</th><th>相对旧高分锚点</th><th>证据路径</th></tr></thead>
+<tbody>
+<tr><td><code>h4b_x_new_10000</code></td><td>12/200 = 0.06</td><td>130/200 = 0.65</td><td>141/200 = 0.705</td><td>79/200 = 0.395</td><td><strong>362/800 = 0.4525</strong></td><td>低于 <code>224_h10_40000</code> 总体约 52.1 个百分点</td><td><code>eval_20260621_remote\evidence\houzhi_libero\h4b_x_new_10000\</code></td></tr>
+<tr><td><code>h4b_image_x_40000</code></td><td>24/200 = 0.12</td><td>9/200 = 0.045</td><td>96/200 = 0.48</td><td>0/200 = 0</td><td>129/800 = 0.1613</td><td>低于 <code>224_h10_40000</code> 总体约 81.2 个百分点</td><td><code>eval_20260621_remote\evidence\houzhi_libero\h4b_image_x_40000\</code></td></tr>
+<tr><td><code>h8b_x_10000</code></td><td>16/200 = 0.08</td><td>9/200 = 0.045</td><td>52/200 = 0.26</td><td>2/200 = 0.01</td><td>79/800 = 0.0988</td><td>低于 <code>224_h10_40000</code> 总体约 87.5 个百分点</td><td><code>eval_20260621_remote\evidence\houzhi_libero\h8b_x_10000\</code></td></tr>
+<tr><td><code>h4b_image_x_a5_40000</code></td><td>22/200 = 0.11</td><td>2/200 = 0.01</td><td>44/200 = 0.22</td><td>0/200 = 0</td><td>68/800 = 0.0850</td><td>低于 <code>224_h10_40000</code> 总体约 88.9 个百分点</td><td><code>eval_20260621_remote\evidence\houzhi_libero\h4b_image_x_a5_40000\</code></td></tr>
+</tbody></table></div>
+<p>这组平行评估的关键叙述不是“又有一个更强模型”，而是“同一评估体系下新增了一组能帮助判别设计方向的负向/中间证据”。旧高分锚点 <code>224_h10_40000</code> 的四套 LIBERO 合计为 \(779/800=0.97375\)，而本批最高的 <code>h4b_x_new_10000</code> 只有 \(362/800=0.4525\)。因此它不能替代旧锚点；更合适的用法是解释新变体在哪些能力上掉队。</p>
+<p>分 suite 看，<code>h4b_x_new_10000</code> 在 <code>libero_spatial</code> 和 <code>libero_object</code> 上还能达到 0.705/0.65，但 <code>libero_goal</code> 只有 0.06，<code>libero_10</code> 也只有 0.395。这说明该变体可能仍保留了一部分空间关系和物体操作能力，但对目标状态、任务组合或长链条任务的条件对齐明显不足。<code>h4b_image_x_40000</code> 与 <code>h4b_image_x_a5_40000</code> 更像“空间类尚有残余、综合类几乎塌掉”的模式：二者 <code>libero_10</code> 都是 0，object 也分别只有 0.045/0.01。<code>h8b_x_10000</code> 没有因为 8B 命名而自然变强，整体只有 0.0988，提示当前瓶颈不应简单归因于参数规模，而更可能在训练步数、checkpoint 系列、输入模板、action head 对齐或 policy serving 配置上。</p>
+<p>因此，报告中对这批新结果的定位应是：它们证明 Houzhi/OpenPI 的 LIBERO 评估流水已经能并行落档、分 suite 汇总、分 group 追溯；同时也给出一个明确信号，即 <code>224_h10_40000</code> 仍是当前最可靠的复现锚点。后续若要把这些变体用于算法结论，必须补齐它们各自的训练配置、checkpoint 来源、是否启用 FAST CE、是否启用 <code>empty_action_inputs</code>/<code>no_discrete_state_input</code>/<code>bidirectional_action_attention</code>，以及 policy server 端的 action horizon、归一化和 wrist/action slicing 设置；否则只能说它们是“评估平行证据”，不能把低分直接归因到某一个局部改造。</p>
+<h4>3.5.3 三条目标 run 的训练曲线记录边界</h4>
+<p>针对用户指定的 <code>224_h10_40000</code>、<code>448_wo_pretrain_15000</code>、<code>448_pretrain_15000</code>，2026-06-21 后 <code>pryer</code> 下新增了一批 Houzhi OpenPI W&amp;B 训练日志落档：<code>04_openpi_fast_zhi_training\progress_20260613_remote\evidence\logs\houzhi_openpi\wandb_training_requested\</code>。该目录的 <code>README.md</code> 明确说明远端只读检查了 <code>/data/users/houzhi/Code/openpi/wandb/</code>，并同步 <code>config.yaml</code>、<code>wandb-summary.json</code>、<code>output.log</code> 等文件；同时 <code>/mnt/inspurfs/ebench_t/houzhi/train/debug_joint_0825_individualimg/</code> 返回 <code>MISSING</code>。因此本节结论从“完全没有训练日志”更新为：<strong>已有新训练日志证据，但必须按 exact / candidate 分层使用</strong>。这里的训练曲线指随训练步数 \(s\) 变化的序列</p>
+<div class="math-block">$$
+\mathcal{C}_{r}=\{(s_i,\mathcal{L}_i,\mathcal{L}^{flow}_i,\mathcal{L}^{vlm}_i,\eta^{act}_i,\eta^{vlm}_i,g_i)\}_{i=1}^{N_r},
+$$</div>
+<p>其中 \(r\) 是 run 名，\(\mathcal{L}^{flow}\) 是 flow matching/action loss，\(\mathcal{L}^{vlm}\) 是 VLM token loss，\(\eta^{act},\eta^{vlm}\) 是 action/VLM 学习率，\(g\) 是梯度范数。判断一条 W&amp;B run \(u\) 能否作为目标 eval run \(r\) 的训练曲线，不能只看分辨率、pretrain 字样或相近日期，而要先比对训练配置里的 <code>exp_name</code> 与 eval/serve checkpoint 目录名：</p>
+<div class="math-block">$$
+E(r,u)=
+\begin{cases}
+\mathrm{exact}, & \operatorname{exp}_{train}(u)=\operatorname{exp}_{eval}(r),\\
+\mathrm{candidate}, & \operatorname{exp}_{train}(u)\neq\operatorname{exp}_{eval}(r)\ \land\ K(u)\cap K(r)\neq\varnothing,\\
+\mathrm{reject}, & \text{otherwise}.
+\end{cases}
+$$</div>
+<div class="math-block">$$
+\operatorname{PlotOK}(r,u)=\mathbf{1}\{E(r,u)=\mathrm{exact}\ \land\ s_{\max}(u)\ge s_{\mathrm{ckpt}}(r)\ \land\ N_u>1\}.
+$$</div>
+<p>这里 \(K(\cdot)\) 是从 run 名、config 和路径里抽取的关键词集合，例如 <code>448</code>、<code>pretrain</code>、<code>wo_pretrain</code>、<code>no_discrete_state_input</code>、<code>h10</code>。这个判据的目的很朴素：<strong>只有 exp-name 精确命中且 step 覆盖目标 checkpoint，才允许把曲线画成该目标 run 的训练曲线</strong>；候选日志只能作为相邻实现/失败重启/局部曲线证据。</p>
+<div class="table-wrap"><table>
+<thead><tr><th>目标 run</th><th>新增 W&amp;B 证据</th><th>匹配级别</th><th>可见训练指标</th><th>报告应如何使用</th></tr></thead>
+<tbody>
+<tr><td><code>224_h10_40000</code></td><td><code>224_h10_40000_candidate\run-20260601_134910-qzjng0gu</code>；config exp 为 <code>debug_224_maskpadimage_libero_eefpose_5e-5_sf2_10k100k_wo_pretrain_bidirectional_fix_zero_right_wrist_with_pretrain</code>。</td><td><strong>candidate</strong>。它是 224、<code>action_horizon=10</code>、<code>empty_action_inputs=true</code>、<code>no_discrete_state_input</code>、<code>bidirectional_action_attention=true</code> 的相邻训练，但 exp-name 不等于目标 eval 的 <code>debug_224_maskpadimage_libero_eefpose_5e-5_sf2_10k100k_wo_pretrain_bidirectional_fix_zero_right_wrist_vlm_no_discrete_state_input_cyx/40000</code>，且路径里多了 <code>with_pretrain</code>。</td><td>stdout 显示从 step 10000 resume；step 10000 记录 <code>loss=0.0500</code>、<code>flow_matching_loss=0.0500</code>、<code>action_lr=9.06e-05</code>、<code>grad_norm=0.51</code>；LIBERO train-side eval L1 为 <code>0.01</code>，unorm L1 为 <code>0.05</code>；保存 step 10000 后 OOM，尝试分配 4.29 GiB。</td><td>可作为 224/h10/no-discrete/empty-action 训练路径的候选快照，不能作为 <code>224_h10_40000</code> 高分 checkpoint 的 0-40000 完整曲线。</td></tr>
+<tr><td><code>448_pretrain_15000</code></td><td><code>448_pretrain_15000_candidate</code> 下有三条候选：两个 <code>run-20260522_*_9flpn6b7</code> 和一个 <code>run-20260602_061340-in5kq9ia</code>。</td><td><strong>candidate</strong>。落档 <code>README.md</code> 明确写到：未找到与 eval 输出目录 <code>debug_448_maskpadimage_libero_eefpose_1e-4_5e-5_sf2_pretrain_bidirectionalimage_fix_zero_right_wrist_nostateinput_pretrain_2.5e-5</code> 完全同名的 W&amp;B config。两个 20260522 run 的 exp 是 <code>bridge_wo_act_lrschedule_defaultopti_freezevlm_freezeembed_tokens_loadrobot400k_step2_fp32_newaug_withmixup_448</code>，数据域为 <code>BRIDGE_V2_DATA</code>，不是 LIBERO eval exp。</td><td>20260522 候选 summary 在 step 55500 有 <code>loss=0.04501695</code>、<code>flow_matching_loss=0.04501695</code>、<code>action_learning_rate=2.5e-05</code>、<code>grad_norm≈0.6557</code>，并从 checkpoint 55000 resume；stdout 记录 <code>BRIDGE_V2_DATA eval_l1_loss=0.04</code>、unorm <code>0.08</code>。20260602 候选只有 partial stdout：step 0/100/200/2800/3200/3300/3400 的 flow loss 约为 0.8022/0.3610/0.1574/0.0739/0.0701/0.0665/0.0666，最后 tqdm 到 step 3427。</td><td>这些日志能说明相邻 448/pretrain 或同代码路径的 loss 下降形态，但不能解释 <code>448_pretrain_15000</code> 的 LIBERO10=0.76；报告中只能列为候选曲线/候选 loss 证据。</td></tr>
+<tr><td><code>448_wo_pretrain_15000</code></td><td><code>448_wo_pretrain_15000_exact\run-20260613_101900-trdhudr6</code> 与 <code>run-20260613_104001-5qbuiagv</code>；config exp 精确等于 <code>debug_448_maskpadimage_libero_eefpose_5e-5_sf2_10k100k_wo_pretrain_bidirectional_fix_zero_right_wrist_vlm_no_discrete_state_input_cyx</code>。</td><td><strong>exact exp-name match，但不是完整训练曲线</strong>。两条 run 都打开 <code>model_fast_input_size=448</code>、<code>action_horizon=10</code>、<code>empty_action_inputs=true</code>、<code>no_discrete_state_input</code>、<code>bidirectional_action_attention=true</code>、<code>train_vlm=1</code>、<code>use_vlm_data=false</code>、<code>lambda_fast_ce=0</code>。同时 config 里 <code>pretrained_model_path=null</code> 但 <code>pytorch_weight_path_action=...biimgaction/60000/</code>，所以 <code>wo_pretrain</code> 不能被机械理解为“无任何 action 初始化”。</td><td>W&amp;B summary 只有 <code>step=0</code>：<code>loss=1.3211317</code>、<code>flow_matching_loss=1.3211317</code>、<code>action_learning_rate=1e-07</code>、<code>fastvision_learning_rate=1e-07</code>、<code>grad_norm=29.0569</code>。stdout 显示 DDP <code>world_size=16</code>，step 2 即 OOM，尝试分配 1.44 GiB，单卡 79.25 GiB 中只剩约 322.94 MiB。</td><td>可证明 <code>448_wo_pretrain_15000</code> 对应的本地改造开关组合确实被启动过；但这两条都是早期失败重启，不能作为 step 15000 checkpoint 的训练过程证据。</td></tr>
+</tbody></table></div>
+<p>从这批新落档看，真正能安全落进报告的不是“把三条目标 run 都画出曲线”，而是如下证据边界：<code>448_wo_pretrain_15000</code> 有 exact exp-name 失败记录；<code>224_h10_40000</code> 和 <code>448_pretrain_15000</code> 只有 candidate 训练日志；三条最终评估 checkpoint 的完整 history 仍未落档。换句话说，新增日志显著提高了训练适配线的可审计性，但没有消除“目标 checkpoint 的训练过程不可完整追溯”这一复现风险。</p>
+<pre><code class="language-text"># 新落档中的候选曲线点，只能作为相邻证据使用，不能画成目标 eval run 的最终训练曲线
+224_h10_40000_candidate / run-20260601_134910-qzjng0gu:
+    # resume at 10000; then OOM after saving the same step
+    step 10000: loss=0.0500, flow_matching_loss=0.0500, action_lr=9.06e-05, grad_norm=0.51
+
+448_pretrain_15000_candidate / run-20260602_061340-in5kq9ia:
+    # partial stdout curve; exp/config is not exact target eval exp
+    step    0: flow_matching_loss=0.8022, grad_norm=14.39
+    step  100: flow_matching_loss=0.3610, grad_norm=4.46
+    step  200: flow_matching_loss=0.1574, grad_norm=1.12
+    step 2800: flow_matching_loss=0.0739, grad_norm=0.63
+    step 3200: flow_matching_loss=0.0701, grad_norm=0.63
+    step 3300: flow_matching_loss=0.0665, grad_norm=0.64
+    step 3427: tqdm loss_action=0.0685
+
+448_wo_pretrain_15000_exact / run-20260613_101900-trdhudr6 and run-20260613_104001-5qbuiagv:
+    # exact exp name, but early failed attempts
+    step 0: loss=1.3211317, flow_matching_loss=1.3211317, action_lr=1e-07, grad_norm=29.06
+    step 2: CUDA OOM, no usable curve to checkpoint step 15000
+</code></pre>
+<p>本地还有一组容易误判的训练日志：<code>07_openpi_eval_and_deployment_clients\progress_20260613_remote\evidence\logs\luoshuang_openpi\wandb\</code> 中的 2026-06 W&amp;B/output 日志。它们确实有 step 30000-40000 附近的 loss 曲线，例如 <code>loss</code>、<code>action_expert_loss</code>、<code>future_frame_loss</code>、<code>grad_norm</code>，但其 <code>config.yaml</code> 明确是 <code>pi05_robocasa_qwen_vl_cosmos</code>、<code>project_name=qwen_vl_robocasa_0101</code>、<code>asset_id=nvidia/robocasa_cosmos_policy_success_only</code>。因此它属于 Luoshuang RoboCasa/Cosmos 线，不能作为这三条 Houzhi LIBERO run 的训练曲线。</p>
+<p>三条目标 run 的评估结果可以用 eval 日志末尾的成功次数复核。每个 suite 为 200 次 rollout，成功率定义为</p>
+<div class="math-block">$$
+\operatorname{SR}(r,d)=\frac{1}{200}\sum_{j=1}^{200}\mathbf{1}\{\mathrm{success}_{r,d,j}=1\}.
+$$</div>
+<div class="table-wrap"><table>
+<thead><tr><th>Run</th><th>goal</th><th>object</th><th>spatial</th><th>LIBERO10</th><th>证据路径</th></tr></thead>
+<tbody>
+<tr><td><code>224_h10_40000</code></td><td>198/200 = 0.99</td><td>199/200 = 0.995</td><td>196/200 = 0.98</td><td>186/200 = 0.93</td><td><code>libero_eval_short\224_h10_40000_*_eval.log</code></td></tr>
+<tr><td><code>448_pretrain_15000</code></td><td>182/200 = 0.91</td><td>192/200 = 0.96</td><td>183/200 = 0.915</td><td>152/200 = 0.76</td><td><code>libero_eval_short\448_pretrain_15000_*_eval.log</code></td></tr>
+<tr><td><code>448_wo_pretrain_15000</code></td><td>186/200 = 0.93</td><td>192/200 = 0.96</td><td>196/200 = 0.98</td><td>174/200 = 0.87</td><td><code>libero_eval_short\448_wo_pretrain_15000_*_eval.log</code></td></tr>
+</tbody></table></div>
+<p>若后续要真正“看到训练曲线”，需要补采每个目标 run 的 W&amp;B history 或 stdout，并按如下流程落档；否则报告只能保留当前这种“训练配置/候选日志 + checkpoint serve + eval 成功率”的证据边界。</p>
+<pre><code class="language-text"># 目标：为每个 LIBERO run 建立可画曲线的数据表
+for run in [224_h10_40000, 448_pretrain_15000, 448_wo_pretrain_15000]:
+    # 1. 先用 serve.log 中的 checkpoint exp_name 作为唯一键，避免错配相邻实验
+    exp_eval = parse_checkpoint_exp_name(run.serve_log)
+    ckpt_step = parse_checkpoint_step(run.serve_log)
+
+    # 2. 查找训练 stdout / W&amp;B summary / history / TensorBoard events
+    histories = search_logs(keys=[
+        "loss", "flow_matching_loss", "vlm_loss",
+        "action_learning_rate", "vlm_learning_rate", "grad_norm"
+    ])
+
+    # 3. 先分类，再决定是否画成目标 run 曲线
+    for hist in histories:
+        exp_train = read_config_exp_name(hist)
+        max_step = read_max_step(hist)
+        if exp_train == exp_eval and hist.has_step_series and max_step >= ckpt_step:
+            save_curve_table(run, hist, label="exact_full_curve")
+        elif exp_train == exp_eval:
+            save_curve_table(run, hist, label="exact_but_incomplete_or_failed")
+        elif keyword_overlap(exp_train, exp_eval):
+            save_curve_table(run, hist, label="candidate_only")
+        else:
+            reject(hist, reason="different project/data/exp")
+</code></pre>
+<h4>3.5.4 Luoshuang RoboCasa / Qwen-PaliGemma-Cosmos 评估</h4>
+<p>RoboCasa evidence 位于 <code>07_openpi_eval_and_deployment_clients\progress_20260613_remote\evidence\logs\luoshuang_openpi\</code>。训练日志显示 run 到 step 40000 并开始保存 DeepSpeed state；WandB summary 在 step 39900 记录 <code>loss=0.005656</code>、<code>action_expert_loss=0.004043</code>、<code>future_frame_loss=0.001613</code>、<code>checkpoint_step=30000</code>。kitchen24 评估每个任务 20 次 rollout，完整任务级结果如下：</p>
+<div class="table-wrap"><table>
+<thead><tr><th>任务</th><th>成功率</th><th>成功次数</th><th>平均长度</th></tr></thead>
+<tbody>
+<tr><td>PnPCounterToCab</td><td>0.45</td><td>9/20</td><td>391.8</td></tr>
+<tr><td>PnPCabToCounter</td><td>0.20</td><td>4/20</td><td>463.3</td></tr>
+<tr><td>PnPCounterToSink</td><td>0.75</td><td>15/20</td><td>547.3</td></tr>
+<tr><td>PnPSinkToCounter</td><td>0.70</td><td>14/20</td><td>355.4</td></tr>
+<tr><td>PnPCounterToMicrowave</td><td>0.40</td><td>8/20</td><td>541.0</td></tr>
+<tr><td>PnPMicrowaveToCounter</td><td>0.40</td><td>8/20</td><td>432.9</td></tr>
+<tr><td>PnPCounterToStove</td><td>0.55</td><td>11/20</td><td>397.4</td></tr>
+<tr><td>PnPStoveToCounter</td><td>0.65</td><td>13/20</td><td>355.5</td></tr>
+<tr><td>OpenSingleDoor</td><td>0.55</td><td>11/20</td><td>348.4</td></tr>
+<tr><td>CloseSingleDoor</td><td>0.70</td><td>14/20</td><td>322.2</td></tr>
+<tr><td>OpenDoubleDoor</td><td>0.45</td><td>9/20</td><td>895.4</td></tr>
+<tr><td>CloseDoubleDoor</td><td>0.95</td><td>19/20</td><td>385.8</td></tr>
+<tr><td>OpenDrawer</td><td>0.75</td><td>15/20</td><td>300.6</td></tr>
+<tr><td>CloseDrawer</td><td>0.90</td><td>18/20</td><td>221.4</td></tr>
+</tbody></table></div>
+<p>按 14 个任务、每任务 20 次计，整体为 $168/280=0.60$。模型明显更擅长结构性开闭类任务，尤其 <code>CloseDoubleDoor=0.95</code>、<code>CloseDrawer=0.90</code>；抓取放置（PnP）类任务仍是瓶颈，最低的 <code>PnPCabToCounter=0.20</code> 说明 cabinet/counter 之间的目标定位、抓取稳定性和长时程重规划仍未解决。与 LIBERO 高分相比，RoboCasa 暴露出更强的长视野、物体交互和环境几何泛化压力。</p>
+<h4>3.5.5 评估对后续复现路线的影响</h4>
+<p>此前报告建议先复现 GeneralVLN anchor flow，再复现 OpenPI/QwenVL/PiZero。最新 VLA 评估会改变优先级判断：如果目标是“证明训练出来的 VLA 模型确实有可用策略能力”，<code>224_h10_40000</code> 的 LIBERO 评估仍应成为 OpenPI 主线的第一复现锚点；2026-06-21 的四个 Houzhi 平行变体则更适合作为第二层对照，用来检查 checkpoint 系列、图像输入变体、规模变体和 serving 配置为什么没有复现旧高分。若目标是“找到下一步改进空间”，RoboCasa kitchen24 的任务级失败样本也有价值，因为它把瓶颈从 loss 曲线推进到了具体交互能力：PnP、OpenDoubleDoor、长 horizon replan。</p>
+</section>
+<section id="4-wm-线-dreamdojo-cosmos-vggt-omega-深拆">
+<h2>4. WM 线：DreamDojo / Cosmos / VGGT-Omega 深拆</h2>
+<h3>4.1 本地证据</h3>
+<p>核心证据：</p>
+<ul>
+<li><code>C:\Users\mousongzhe\pryer\project\13_dreamdojo_world_model\README.md</code> 第 5 行指出主线从 4 月 DreamDojo 扩展到 5 月 Cosmos Predict2.5 / Cosmos Policy RoboCasa finetune。</li>
+<li><code>C:\Users\mousongzhe\pryer\project\13_dreamdojo_world_model\04_remote_progress_20260521\README.md</code></li>
+<li>第 32 行记录训练启动时间。</li>
+<li>第 44-51 行给出 Cosmos Predict2.5 2B base checkpoint、RoboCasa dataset、batch size、action dim、<code>p_world_model=0.5</code>、<code>action_loss_multiplier=16</code>。</li>
+<li>第 62-63 行记录 loss 与 GPU 显存。</li>
+<li>第 142-145 行记录 DreamDojo/Cosmos/Cosmos Policy 本地 diff，大多集中在 dataset/dataloader/config/eval。</li>
+<li><code>C:\Users\mousongzhe\pryer\project\13_dreamdojo_world_model\04_remote_progress_20260521\evidence\summaries\current_run\config.yaml</code></li>
+<li>第 38-54 行使用 RoboCasaDataset、success/rollout data、T5 embeddings、<code>p_world_model=0.5</code>。</li>
+<li>第 175-177 行模型为 Cosmos Policy Video2World Rectified Flow，<code>action_loss_multiplier=16</code>。</li>
+<li>第 237 行是 MinimalV1LVGDiT；第 271 行是 HybridEDMSDE。</li>
+<li><code>C:\Users\mousongzhe\pryer\project\13_dreamdojo_world_model\archives\remote_alignment_20260529\evidence\code\liujingyuan_cosmos_predict2p5\lerobot_video2world.py</code></li>
+<li>第 16 行明确是 plain non-action-conditioned Video2World post-training on LeRobot。</li>
+<li>第 46-55 行定义 LeRobot video dataset 和 dataloader。</li>
+<li>第 104-106 行 max_iter 小规模 sanity/overfit 配置。</li>
+</ul>
+<p>这说明 DreamDojo/Cosmos 主线目前主要是公开方法的机器人数据适配与训练配置，不应误判为本地世界模型算法改造。</p>
+<h3>4.2 Cosmos WM 主体算法</h3>
+<p>Cosmos Predict2.5 / Cosmos Policy 运行的是 video2world / policy video2world rectified-flow 风格训练。抽象如下：</p>
+<p>给定条件视频帧 $c$、文本 embedding $e$、proprio/action 条件 $r$，目标未来视频 latent $x_1$。采样噪声 $x_0$ 与时间 $t$：</p>
+<div class="math-block">$$
+x_t = (1-t)x_0 + t x_1
+$$</div>
+<p>模型：</p>
+<div class="math-block">$$
+\hat v_\theta = f_\theta(x_t,t,c,e,r)
+$$</div>
+<p>视频世界模型 loss：</p>
+<div class="math-block">$$
+\mathcal{L}_{WM} =
+\mathbb{E}\left[\|\hat v_\theta - (x_1-x_0)\|^2\right]
+$$</div>
+<p>Cosmos Policy 还会引入 action/value/policy 相关监督。按当前配置可以概念化为：</p>
+<div class="math-block">$$
+\mathcal{L}
+=
+\mathcal{L}_{WM}
++ \lambda_a\mathcal{L}_{action}
++ \lambda_v\mathcal{L}_{value}
+$$</div>
+<p>其中当前本地 run 记录 $\lambda_a=16$，<code>p_world_model=0.5</code> 控制世界模型样本和 policy/action 样本混合概率。由于这些是公开 Cosmos Policy 配置中的参数化训练，不构成本地算法发明。</p>
+<p>伪代码：</p>
+<pre><code class="language-text">Algorithm Cosmos-RoboCasa-PostTrain
+Input: success demos, rollout episodes, text embeddings, video/proprio/action data
+Sample mode with probability p_world_model
+If world-model mode:
+    build video2world latent target from frames
+    sample rectified-flow time and noisy latent
+    predict video latent velocity
+    compute world-model loss
+Else policy/action mode:
+    sample action/proprio/value fields from RoboCasa rollout
+    compute action/value/policy losses using Cosmos Policy recipe
+L = L_world + action_loss_multiplier * L_action + ...
+Update Cosmos Predict2.5 / Cosmos Policy model</code></pre>
+<h3>4.3 辅助改造：VGGT-Omega action regression</h3>
+<p><code>vggt-omega</code> 辅助线值得单列：</p>
+<ul>
+<li><code>C:\Users\mousongzhe\pryer\project\13_dreamdojo_world_model\04_remote_progress_20260521\evidence\code\vggt-omega\scripts\train_vggt_action_regression.py</code></li>
+<li>第 74 行定义 <code>VGGTActionRegression</code>。</li>
+<li>第 111-143 行新增左右腕 trunk/head。</li>
+<li>第 154-157 行加载并冻结 VGGT-Omega aggregator。</li>
+<li>第 162-168 行从 CameraHead trunk/norm 初始化左右腕 trunk。</li>
+<li>第 378 行对 action chunk 做 masked MSE。</li>
+</ul>
+<p>算法形式：</p>
+<div class="math-block">$$
+h = \text{FrozenVGGT}(I_{1:V})
+$$</div>
+<p>左右腕特征：</p>
+<div class="math-block">$$
+g_L = T_L(h_L), \qquad g_R=T_R(h_R)
+$$</div>
+<p>结合状态 $s$ 预测动作 chunk：</p>
+<div class="math-block">$$
+\hat a_L = H_L([g_L,\psi(s)]), \qquad
+\hat a_R = H_R([g_R,\psi(s)])
+$$</div>
+<p>训练目标：</p>
+<div class="math-block">$$
+\mathcal{L}_{VGGT-act} =
+\frac{\sum_{b,t,d} m_{btd}(\hat a_{btd}-a_{btd})^2}
+{\sum_{b,t,d} m_{btd}}
+$$</div>
+<p>这属于模型/训练设计改造，但它是 Cosmos Policy / LIBERO pipeline 的辅助动作回归分支，不是 DreamDojo/Cosmos 世界模型本体。复现优先级低于 VLA 和 GeneralVLN，除非后续要评估“3D 几何特征是否提升 action prediction”。</p>
+<h3>4.4 2026-06-13 落档：世界模型与几何动作回归评估</h3>
+<p>最新 <code>git diff</code> 中，WM 相关新增证据主要来自 <code>13_dreamdojo_world_model\progress_20260613_remote</code> 和 <code>15_depth_anything_3\progress_20260613_remote</code>。它们共同说明：世界模型/几何视觉线已经从“代码和配置存在”推进到“能跑出 eval summary / offline action regression 指标”，但距离可用策略仍有明显缺口。</p>
+<h4>4.4.1 Cosmos Predict2.5 + VGGT adapter / droid sim</h4>
+<p><code>13_dreamdojo_world_model\progress_20260613_remote\README.md</code> 记录当前活跃重心转到 <code>liujingyuan/third_party/cosmos-predict2.5</code> 与 <code>liujingyuan/third_party/vggt</code>。新增代码包括 multiview dataset/config/model loader、<code>cosmos_predict25_adapter.py</code>、droid sim runtime/config、generator configs 和 selected summary。</p>
+<p>关键评估文件是 <code>evidence\summary\vggt\outputs\droid_sim_eval_da3_sm_new\summary.json</code>：</p>
+<div class="table-wrap"><table>
+<thead><tr><th>scene</th><th>embodiment</th><th>episodes</th><th>successes</th><th>success_rate</th><th>结论</th></tr></thead>
+<tbody>
+<tr><td>3</td><td>franka</td><td>5</td><td>0</td><td>0.0</td><td>pipeline 已跑到 summary，但策略效果未起来</td></tr>
+</tbody></table></div>
+<p>这条结果的价值不是性能，而是阶段定位：它证明 VGGT/Cosmos adapter 到 droid sim eval 的工程链路已经能执行完整 episode 并写出 summary；但 0/5 success 说明当前失败更可能来自 action execution、world-model-to-policy adapter、sim runtime 交互或数据尺度，而不是单纯“缺少一个生成配置”。下一轮如果继续投入，应优先分析 <code>episodes.json</code>、<code>result.json</code>、<code>step_debug.json</code> 和 <code>executed_actions.json</code>，而不是只看生成样本 metadata。</p>
+<h4>4.4.2 DA3 action regression / 3-cam giant</h4>
+<p><code>15_depth_anything_3</code> 虽然不是本报告最初的 WM 主目录，但它和 VGGT-Omega 一样属于“几何/深度视觉特征是否能改善 action prediction”的邻接动作回归线。本轮落档显示 DA3 已从 depth backbone 扩展到 train/serve/eval：<code>train_da3_action_regression.py</code>、<code>serve_da3_regression.py</code>、<code>offline_sanity_check_da3_regression_3cam.py</code>、2cam/3cam eval logs 和 model input stats 都已落地。</p>
+<p><code>README_EXP_RECORD.md</code> 给出 towel_clean holdout 的主对照：</p>
+<div class="table-wrap"><table>
+<thead><tr><th>模型</th><th>step</th><th>left_joints_mae ↓</th><th>right_joints_mae ↓</th><th>gripper_sum_mae ↓</th><th>样本数</th><th>状态</th></tr></thead>
+<tbody>
+<tr><td>pi05 baseline</td><td>30000</td><td>0.005274</td><td>0.010398</td><td>0.000694</td><td>4072</td><td>完整跑完</td></tr>
+<tr><td>DA3 regression 3-cam giant</td><td>30000</td><td>0.001369</td><td>0.041002</td><td>0.002726</td><td>77/4072</td><td>中断，partial</td></tr>
+</tbody></table></div>
+<p>这组数字说明 DA3 3-cam 的左臂早期 MAE 很低，但右臂误差约为 pi05 baseline 的 4 倍，gripper 也更差；而且 DA3 只跑到 77/4072，不能当作完整评估结论。后续 <code>eval_only_da3_regression_3cam_giant.log</code> 的 50-batch 评估也反复显示 right_mae 是主要误差来源。例如在 <code>AGILEX_BAISIC_DATA</code> 的 step 30000 评估中，batch 50/50 记录 <code>action_mae=0.030788</code>、<code>left_mae=0.004101</code>、<code>right_mae=0.057474</code>。因此 DA3/VGGT 类几何视觉 action head 的下一步应优先查右臂输入对齐、camera/action mapping、左右腕坐标系切片和 norm stats，而不是急于扩大模型。</p>
+</section>
+<section id="5-vln-线-janusvln-streamvln-uni-navid-generalvln-深拆">
+<h2>5. VLN 线：JanusVLN / StreamVLN / Uni-NaVid / GeneralVLN 深拆</h2>
+<h3>5.1 本地证据</h3>
+<p>上游/近上游目录：</p>
+<ul>
+<li><code>C:\Users\mousongzhe\pryer\project\20_vln_vla_navigation_models\JanusVLN</code></li>
+<li><code>C:\Users\mousongzhe\pryer\project\20_vln_vla_navigation_models\StreamVLN</code></li>
+<li><code>C:\Users\mousongzhe\pryer\project\20_vln_vla_navigation_models\uni-navid_lijianfeng</code></li>
+<li><code>C:\Users\mousongzhe\pryer\project\20_vln_vla_navigation_models\OpenTrackVLA</code></li>
+</ul>
+<p>这些目录可作为公开 baseline、部署入口或权重/数据格式参考。</p>
+<p>本地改造主线：</p>
+<ul>
+<li><code>C:\Users\mousongzhe\pryer\project\20_vln_vla_navigation_models\generalvln\JANUSVLN_INTEGRATION_SUMMARY.md</code></li>
+<li>第 9-18 行说明 JanusVLN/Qwen2.5-VL/VGGT/LoRA 的框架适配。</li>
+<li>第 67 行对比原 DINOv2+SigLIP 与 JanusVLN 的 QwenVL2.5+VGGT。</li>
+<li><code>C:\Users\mousongzhe\pryer\project\20_vln_vla_navigation_models\generalvln\model\architectures\janus_vln_model.py</code></li>
+<li>第 18 行定义 <code>JanusVLNModel</code>。</li>
+<li>第 60-80 行加载 JanusVLN Qwen2.5-VL full model 并拷贝 vision/backbone 权重。</li>
+<li>第 227-242 行注入 trajectory token 并维护 Qwen2.5-VL 3D position ids。</li>
+<li>第 262-266 行用 planner head 从 action token hidden state 预测轨迹。</li>
+<li><code>C:\Users\mousongzhe\pryer\project\20_vln_vla_navigation_models\generalvln\model\architectures\vln_qa_model_mixed.py</code></li>
+<li>第 146-181 行按 <code>image_qa</code> / <code>video_qa</code> / <code>traj</code> 切视觉 token 策略。</li>
+<li>第 247 行注入 action token；第 264-292 行分出 QA logits 和 trajectory head。</li>
+<li><code>C:\Users\mousongzhe\pryer\project\20_vln_vla_navigation_models\generalvln\engine\loss_mixed.py</code></li>
+<li>第 12 行 LM CE；第 58-65 行 trajectory MSE；第 67-98 行 direction/velocity 辅助损失。</li>
+<li><code>C:\Users\mousongzhe\pryer\project\20_vln_vla_navigation_models\generalvln\model\architectures\vln_qa_model_mixed_flowmatching.py</code></li>
+<li>第 10 行定义 flowmatching 版本；第 67-74 行预测 vector field 并重建轨迹。</li>
+<li><code>C:\Users\mousongzhe\pryer\project\20_vln_vla_navigation_models\generalvln\engine\engine_flowmatching.py</code></li>
+<li>第 41-42 行构造 $x_t=(1-t)\epsilon+t y$ 与 target velocity。</li>
+<li><code>C:\Users\mousongzhe\pryer\project\20_vln_vla_navigation_models\generalvln\engine\loss_flowmatching.py</code></li>
+<li>第 57-74 行分别实现 vector-field loss 与 reconstruction loss。</li>
+<li><code>C:\Users\mousongzhe\pryer\project\20_vln_vla_navigation_models\generalvln\model\architectures\vln_qa_model_mixed_anchor_flowmatching.py</code></li>
+<li>第 46-55 行输出 per-anchor vector field、anchor score、top anchor trajectory。</li>
+<li><code>C:\Users\mousongzhe\pryer\project\20_vln_vla_navigation_models\generalvln\engine\engine_anchor_flowmatching.py</code></li>
+<li>第 70-71 行构造 anchor-to-ground-truth flow。</li>
+<li><code>C:\Users\mousongzhe\pryer\project\20_vln_vla_navigation_models\generalvln\engine\loss_anchor_flowmatching.py</code></li>
+<li>第 89-106 行 nearest-anchor CE、GT-nearest flow loss、pred-score weighted flow loss。</li>
+</ul>
+<h3>5.2 GeneralVLN mixed QA + trajectory</h3>
+<p>基础 mixed 模型把多任务 batch 分成三种任务：</p>
+<ul>
+<li><code>image_qa</code>：只取当前帧 fine tokens。</li>
+<li><code>video_qa</code>：取历史 coarse tokens。</li>
+<li><code>traj</code>：历史帧 coarse tokens + 当前帧 fine tokens + action token。</li>
+</ul>
+<p>序列结构：</p>
+<div class="math-block">$$
+S = [V_{\text{coarse/fine}}, T_{\text{text}}, q_{\text{traj}}]
+$$</div>
+<p>LLM hidden state：</p>
+<div class="math-block">$$
+H = \text{LLM}(S)
+$$</div>
+<p>QA 分支：</p>
+<div class="math-block">$$
+\mathcal{L}_{QA} =
+-\sum_i \log p_\theta(y_i \mid y_{&lt;i}, V, q)
+$$</div>
+<p>轨迹分支：</p>
+<div class="math-block">$$
+\hat Y = g_\theta(H_{q_{\text{traj}}})
+$$</div>
+<p>基础轨迹损失：</p>
+<div class="math-block">$$
+\mathcal{L}_{traj} =
+\|\hat Y - Y\|_2^2
+$$</div>
+<p>可选方向/速度：</p>
+<div class="math-block">$$
+\mathcal{L}_{dir}=1-\cos(\Delta \hat Y,\Delta Y)
+$$</div>
+<div class="math-block">$$
+\mathcal{L}_{vel}=\|\Delta \hat Y-\Delta Y\|_2^2
+$$</div>
+<p>总损失：</p>
+<div class="math-block">$$
+\mathcal{L}_{mixed} =
+\lambda_{QA}\mathcal{L}_{QA}
+\lambda_{traj}\mathcal{L}_{traj}
+\lambda_{dir}\mathcal{L}_{dir}
+\lambda_{vel}\mathcal{L}_{vel}
+$$</div>
+<p>伪代码：</p>
+<pre><code class="language-text">Algorithm GeneralVLN-Mixed
+Input: batch with task_type in {image_qa, video_qa, traj_*}
+For each sample:
+    if image_qa: encode current fine visual tokens
+    if video_qa: encode history coarse visual tokens
+    if traj: encode history coarse + current fine visual tokens
+Project visual tokens and inject temporal/view ids
+Build text tokens:
+    QA -&gt; question + answer labels
+    Traj -&gt; instruction + navigation prompt, labels masked
+Append trajectory action token
+Run LLM
+Compute QA CE on QA samples
+Compute trajectory head on action-token hidden states for traj samples
+Return weighted loss graph</code></pre>
+<h3>5.3 Flow matching trajectory head</h3>
+<p>GeneralVLN 的 flow-matching 轨迹头把轨迹从直接回归改成连续生成：</p>
+<div class="math-block">$$
+x_t = (1-t)\epsilon + tY,\qquad v^\star = Y-\epsilon
+$$</div>
+<p>模型：</p>
+<div class="math-block">$$
+\hat v_\theta = h_\theta(c,x_t,t)
+$$</div>
+<p>其中 $c$ 是 planner/action-token hidden state。训练：</p>
+<div class="math-block">$$
+\mathcal{L}_{FM}^{VLN}
+=
+\|\hat v_\theta - v^\star\|_2^2
+\alpha\|x_t+(1-t)\hat v_\theta-Y\|_2^2
+$$</div>
+<p>采样：</p>
+<div class="math-block">$$
+x_{k+1}=x_k+\Delta t\,h_\theta(c,x_k,t_k)
+$$</div>
+<p>这是一项明确训练设计改造：用生成式轨迹分布替代单点 MSE 回归，理论上更适合 VLN 中同一指令存在多条可行路径的问题。</p>
+<h3>5.4 Anchor flow matching</h3>
+<p>Anchor flow matching 更进一步：先准备 $M$ 个轨迹 anchor $A_m$，模型对每个 anchor 预测到真值轨迹的 flow，并同时打分。</p>
+<p>训练 batch：</p>
+<div class="math-block">$$
+x_{t,m}=(1-t)A_m+tY
+$$</div>
+<div class="math-block">$$
+v^\star_m = Y-A_m
+$$</div>
+<p>模型输出：</p>
+<div class="math-block">$$
+(\hat v_m, s_m) = f_\theta(c, x_{t,m}, t)
+$$</div>
+<p>最近 anchor 标签：</p>
+<div class="math-block">$$
+m^\star = \arg\min_m \|A_m-Y\|^2
+$$</div>
+<p>score loss：</p>
+<div class="math-block">$$
+\mathcal{L}_{score} = CE(s, m^\star)
+$$</div>
+<p>flow loss：</p>
+<div class="math-block">$$
+\mathcal{L}_{flow}^{gt}
+=
+\|\hat v_{m^\star}-v^\star_{m^\star}\|^2
+$$</div>
+<div class="math-block">$$
+\mathcal{L}_{flow}^{pred}
+=
+\sum_m \text{softmax}(s)_m\|\hat v_m-v^\star_m\|^2
+$$</div>
+<p>总目标：</p>
+<div class="math-block">$$
+\mathcal{L}_{AFM}
+=
+\lambda_f
+\left(
+w_g\mathcal{L}_{flow}^{gt}
++w_p\mathcal{L}_{flow}^{pred}
+\right)
++
+\lambda_s\mathcal{L}_{score}
+$$</div>
+<p>推理：</p>
+<pre><code class="language-text">Algorithm Anchor-Flow-Infer
+Input: condition c, clean anchors {A_m}
+x_m = A_m
+For k = 0..K-1:
+    t = k / K
+    v_m, score_m = f(c, x_m, t)
+    x_m = x_m + (1/K) * v_m
+m_best = argmax score_m
+return x_m_best</code></pre>
+<p>为什么这样改：</p>
+<ul>
+<li>纯 MSE 轨迹回归会平均多模态路径，容易生成“中间路线”。</li>
+<li>Diffusion/flow 直接从噪声生成轨迹更灵活，但小数据下不稳定。</li>
+<li>Anchor 提供先验轨迹簇，score head 负责模式选择，flow head 负责局部修正，兼顾多模态和训练稳定性。</li>
+</ul>
+<p>风险：</p>
+<ul>
+<li>anchor 质量决定上限；如果 anchor 覆盖不到目标路径，flow 只能做大幅修正，失去 anchor 优势。</li>
+<li>score CE 与 pred-score weighted flow 可能竞争：早期 score 不准时，weighted flow 会训练到错误 anchor。</li>
+<li>当前 inference top-1 选择容易忽略次优路径；可考虑 top-k 重采样或代价函数 rerank。</li>
+</ul>
+<h3>5.5 Anchor diffusion</h3>
+<p>Anchor diffusion 与 AFM 类似，但以 noisy anchor 到 refined trajectory 的方式训练：</p>
+<div class="math-block">$$
+\tilde A_t = \sqrt{\bar\alpha_t}A+\sqrt{1-\bar\alpha_t}\epsilon
+$$</div>
+<p>本地实现当前更多像“anchor + delta head + score head”：</p>
+<div class="math-block">$$
+\hat Y_m = A_m + \Delta_\theta(c,A_m,t)
+$$</div>
+<p>损失：</p>
+<div class="math-block">$$
+\mathcal{L}_{AD}
+=
+\sum_m \text{softmax}(s)_m\|\hat Y_m-Y\|^2
++\lambda_s CE(s,m^\star)
+$$</div>
+<p>本地代码里 forward/infer 有注释掉 noisy input、实际传 clean anchors 的痕迹，因此 anchor diffusion 线应判定为实验性更强、复现不确定性高于 anchor flow matching。</p>
+<h3>5.6 2026-06-13 落档：VLN 评估证据边界</h3>
+<p>本轮 <code>pryer/project</code> 的最新 <code>git diff</code> 和 <code>remote_alignment_20260613_213457</code> 明确记录：远端只读对齐按要求跳过了 <code>20_vln_vla_navigation_models</code>。因此 6 月 13 日落档不能为 GeneralVLN、JanusVLN、StreamVLN、Uni-NaVid 或 OpenTrackVLA 提供新的训练模型评估数字。</p>
+<p>这点很重要：本报告前面对 GeneralVLN 的 mixed QA+trajectory、flow matching、anchor flow/diffusion 的分析仍然成立，但它属于代码和方法层证据；若要补“训练出来的模型评估情况”，当前可引用的最新实证主要来自 OpenPI/LIBERO、OpenPI/RoboCasa、Cosmos/VGGT droid sim 和 DA3 action regression。VLN 线需要等下一轮对 <code>20_vln_vla_navigation_models</code> 的训练日志、checkpoint metadata、offline eval 或 server rollout 结果做专门落档后再更新。</p>
+</section>
+<section id="6-可复现性资源分析">
+<h2>6. 可复现性资源分析</h2>
+<p>只分析有本地方法/训练改造的线。</p>
+<h3>6.1 OpenPI / QwenVL / PiZero / FAST / FM</h3>
+<p>复现目标：</p>
+<ul>
+<li>最小复现：跑通 QwenVL/PiZero + FM action loss 的单数据集训练，验证 loss 和 eval L1。</li>
+<li>完整复现：加入 FAST token、state token、VLM 混合数据、slowfast fastobs、DeepSpeed 分组优化。</li>
+</ul>
+<p>资源估算：</p>
+<div class="table-wrap"><table>
+<thead><tr><th>层级</th><th>GPU</th><th>显存</th><th>时间</th><th>数据</th><th>风险</th></tr></thead>
+<tbody>
+<tr><td>smoke test</td><td>1x 24-48 GB</td><td>20-40 GB</td><td>数小时</td><td>小 batch / 单任务 LeRobot</td><td>tokenizer/processor 路径最容易失败</td></tr>
+<tr><td>单任务可用训练</td><td>1-4x 48-80 GB</td><td>40-80 GB</td><td>1-3 天</td><td>机器人 demo 1k-10k episodes 级</td><td>FAST token 和 FM loss 尺度需调</td></tr>
+<tr><td>多任务完整训练</td><td>4-8x 80 GB</td><td>60-80 GB/GPU</td><td>多天到数周</td><td>混合机器人数据 + VLM 数据</td><td>数据均衡、DeepSpeed checkpoint、VLM/action loss 权重</td></tr>
+</tbody></table></div>
+<p>复现步骤：</p>
+<ol>
+<li>固定上游 OpenPI / QwenVL / transformers / flash-attn / DeepSpeed 版本。</li>
+<li>先禁用 FAST、VLM batch、slowfast，只跑 FM action。</li>
+<li>加 FAST token，确认 labels 中 <code>&lt;robot_action_i&gt;</code> 未被错误 mask。</li>
+<li>加 state token supervision，检查 state token id 与模板。</li>
+<li>加 VLM batch，调 $\lambda_{\text{vlm}}$。</li>
+<li>最后启用 slowfast/fastobs 与多视角视觉。</li>
+</ol>
+<p>关键指标：</p>
+<ul>
+<li>train/eval action L1 或 MSE。</li>
+<li>FM loss 曲线是否稳定下降。</li>
+<li>FAST decoded action 与 GT action 的分段 L1。</li>
+<li>在线/离线 rollout success rate。</li>
+<li>2026-06-13 后应优先对齐 LIBERO success rate，尤其 <code>224_h10_40000</code> 的 goal/object/spatial/libero10 = 0.99/0.995/0.98/0.93。</li>
+<li>RoboCasa kitchen24 应按任务类型拆分统计，重点追 PnP 与 OpenDoubleDoor 失败样本，而不是只看平均 0.60。</li>
+</ul>
+<p>不建议优先复现 IQL。若复现，应先修正或确认 <code>final_loss = policy_loss + policy_loss</code> 的意图，并明确 value loss 是否应进入总损失。</p>
+<h3>6.2 GeneralVLN / JanusVLN / Flow / Anchor Flow</h3>
+<p>复现目标：</p>
+<ul>
+<li>最小复现：GeneralVLN mixed QA+traj 单 GPU训练。</li>
+<li>推荐目标：anchor flow matching 轨迹生成，因为它最能体现本地算法改造且比 anchor diffusion 更清楚。</li>
+</ul>
+<p>资源估算：</p>
+<div class="table-wrap"><table>
+<thead><tr><th>层级</th><th>GPU</th><th>显存</th><th>时间</th><th>数据</th><th>风险</th></tr></thead>
+<tbody>
+<tr><td>mixed baseline</td><td>1x 24-48 GB</td><td>16-40 GB</td><td>数小时到 1 天</td><td>小规模 VLN QA/trajectory</td><td>数据字段和 visual precompute</td></tr>
+<tr><td>Qwen2.5-VL / Janus adapter</td><td>1-4x 48-80 GB</td><td>40-80 GB</td><td>1-3 天</td><td>JanusVLN/R2R/自有导航数据</td><td>position_ids、image token 对齐</td></tr>
+<tr><td>anchor flow matching</td><td>1-4x 48-80 GB</td><td>30-80 GB</td><td>1-5 天</td><td>轨迹 GT + anchor npz</td><td>anchor 质量、score/flow loss 平衡</td></tr>
+</tbody></table></div>
+<p>复现步骤：</p>
+<ol>
+<li>先跑 <code>vln_qa_model_mixed</code>，验证 QA CE 与 trajectory MSE 可训练。</li>
+<li>加 <code>vln_qa_model_mixed_flowmatching</code>，确认 <code>flow_x_t/flow_t/flow_target_v</code> batch 字段生成。</li>
+<li>生成或复用 anchor npz，检查 scale：<code>pos_scale=10</code>、<code>angle_scale=pi</code>。</li>
+<li>跑 <code>vln_qa_model_mixed_anchor_flowmatching</code>，观察 <code>loss_afm_score</code>、<code>loss_afm_flow_gt</code>、<code>loss_afm_flow_pred</code>。</li>
+<li>在 eval 中对比 MSE baseline、flow、anchor flow 的 DTW/ADE/FDE/SPL/SR。</li>
+</ol>
+<p>关键指标：</p>
+<ul>
+<li>Trajectory ADE/FDE。</li>
+<li>Success Rate / SPL。</li>
+<li>Anchor top-1 accuracy：最近 GT anchor 是否被 score head 选中。</li>
+<li>flow reconstruction loss。</li>
+</ul>
+<h3>6.3 WM 辅助 VGGT-Omega action regression</h3>
+<p>复现目标：</p>
+<ul>
+<li>验证冻结 VGGT-Omega aggregator + 左右腕 action head 能否从多视角 wrist/base 图像预测 action chunk。</li>
+</ul>
+<p>资源估算：</p>
+<div class="table-wrap"><table>
+<thead><tr><th>层级</th><th>GPU</th><th>显存</th><th>时间</th><th>数据</th><th>风险</th></tr></thead>
+<tbody>
+<tr><td>smoke test</td><td>1x 24 GB</td><td>12-24 GB</td><td>数小时</td><td>小规模 LIBERO/机器人 action chunk</td><td>VGGT checkpoint、OpenPI 数据 collator</td></tr>
+<tr><td>可用训练</td><td>1-4x 48 GB</td><td>24-48 GB</td><td>1-3 天</td><td>多任务 wrist/base 图像 + action</td><td>冻结 backbone 是否足够，action slice 对齐</td></tr>
+</tbody></table></div>
+<p>它不是 WM 主模型，所以优先级低于 VLA 和 GeneralVLN。若要复现，应作为“几何视觉动作回归 ablation”而不是世界模型复现。</p>
+</section>
+<section id="7-推荐复现路线">
+<h2>7. 推荐复现路线</h2>
+<p>第一优先级：GeneralVLN anchor flow matching。</p>
+<p>原因：本地改造边界最清晰，数学目标自洽，资源需求低于 QwenVL/PiZero 完整训练，能较快产出“改造是否有效”的可比结果。</p>
+<p>第二优先级：OpenPI/QwenVL/PiZero Flow Matching + FAST CE。</p>
+<p>原因：最接近 VLA 主线价值，但工程依赖多、GPU 压力大。建议先做 FM-only，再逐步打开 FAST/VLM/slowfast。</p>
+<p>基于 2026-06-13 评估落档补充：如果目标不是“验证本地新方法”，而是“复现已经训练出来的策略效果”，OpenPI 的优先级应前移，先复现 <code>224_h10_40000</code> 的 LIBERO 四套评估，再做 448/pretrain/wo-pretrain 的消融对比。RoboCasa kitchen24 则适合作为第二阶段失败分析基准，用来定位 PnP、OpenDoubleDoor 和长 horizon replan 问题。</p>
+<p>第三优先级：Cosmos RoboCasa world model official reproduction。</p>
+<p>原因：这条线当前主要是公开方法 + 数据适配。可以复现实验稳定性和资源需求，但不应作为“本地算法创新”主结论。</p>
+<p>第四优先级：IQL 和 VGGT-Omega action regression。</p>
+<p>IQL 有实现疑点，VGGT-Omega 是辅助分支。两者更适合做后续探索或 ablation。</p>
+</section>
+<section id="8-主要风险清单">
+<h2>8. 主要风险清单</h2>
+<ol>
+<li>本地目录是整理工作区，很多代码是快照或归档，不一定能直接运行。</li>
+<li>公开项目的许可证、权重许可、数据许可需要在复现前逐项核对。</li>
+<li>OpenPI/QwenVL 主线依赖 Qwen3-VL、OpenPI、FAST tokenizer、DeepSpeed、flash-attn、Hydra 配置路径，环境风险高。</li>
+<li>GeneralVLN 的 JanusVLN adapter 需要 Qwen2.5-VL 的 3D RoPE position_ids 严格对齐，batch padding 细节容易出错。</li>
+<li>Anchor flow/diffusion 的结论高度依赖 anchor npz 的生成方式和尺度。</li>
+<li>WM/Cosmos 的训练资源重，单 checkpoint optimizer shard 很大；当前本地只有轻量证据，没有权重。</li>
+<li>IQL 当前 final loss 疑似没有使用 value loss，需先审计再复现。</li>
+</ol>
+</section>
+<section id="9-结论">
+<h2>9. 结论</h2>
+<p>可以明确判定为本地方法/训练改造的项目是：</p>
+<ol>
+<li>OpenPI/QwenVL/PiZero VLA 主线：QwenVL + PiZero joint mixture、FAST token/state supervision、FM 动作生成、VLM/action 混合训练、IQL 实验线。</li>
+<li>GeneralVLN/VLN 主线：mixed QA+trajectory、JanusVLN/Qwen2.5-VL adapter、flow matching trajectory、anchor flow matching、anchor diffusion。</li>
+<li>WM 目录中的 VGGT-Omega action regression 辅助线：冻结 3D/几何视觉 backbone 并训练左右腕 action chunk heads。</li>
+</ol>
+<p>不应判定为本地算法改造的项目是：</p>
+<ol>
+<li>OpenVLA-OFT：当前是官方 LoRA/OFT fine-tune、LIBERO/ALOHA eval/deploy baseline。</li>
+<li>DreamDojo/Cosmos 主世界模型：当前主要是公开方法的 RoboCasa/LeRobot 数据接入、配置和运行记录。</li>
+<li>JanusVLN/StreamVLN/Uni-NaVid/OpenTrackVLA 单独目录：多为公开 baseline 或近上游代码，本地创新主要体现在 GeneralVLN 的集成和训练目标扩展中。</li>
+</ol>
+<p>最可行、最值得先做的复现是 GeneralVLN anchor flow matching；最有 VLA 价值但工程成本最高的是 OpenPI/QwenVL/PiZero + FAST/FM 主线。</p>
+<p>结合 2026-06-13 最新落档，需要补充一条评估层结论：OpenPI VLA 已有可引用的训练模型效果，<code>224_h10_40000</code> 在 LIBERO goal/object/spatial/libero10 上达到 0.99/0.995/0.98/0.93，是当前最强的实证锚点；RoboCasa kitchen24 总体约 0.60，显示策略在关门/关抽屉较稳、PnP 与 OpenDoubleDoor 仍弱；Cosmos/VGGT droid sim 当前 0/5 success，DA3 3-cam action regression 的右臂误差仍显著高于 pi05 baseline；VLN 线本轮被跳过，没有新增模型评估证据。</p>
+</section>
+<section id="10-参考文献-references">
+<h2>10. 参考文献（References）</h2>
+<ul>
+<li>[1] Physical Intelligence, "OpenPI", 2025-2026. <a href="https://github.com/Physical-Intelligence/openpi" target="_blank" rel="noopener">链接</a></li>
+<li>[2] OpenVLA-OFT Project, "OpenVLA-OFT", 2025. <a href="https://openvla-oft.github.io/" target="_blank" rel="noopener">项目页</a> / <a href="https://arxiv.org/abs/2502.19645" target="_blank" rel="noopener">论文</a></li>
+<li>[3] NVIDIA, "DreamDojo", 2026. <a href="https://github.com/NVIDIA/DreamDojo" target="_blank" rel="noopener">链接</a></li>
+<li>[4] NVIDIA Cosmos, "Cosmos Predict2.5", 2026. <a href="https://github.com/nvidia-cosmos/cosmos-predict2.5" target="_blank" rel="noopener">链接</a></li>
+<li>[5] NVIDIA / NVLabs, "Cosmos Policy", 2026. <a href="https://github.com/NVlabs/cosmos-policy" target="_blank" rel="noopener">链接</a></li>
+<li>[6] MIV-XJTU, "JanusVLN", 2025. <a href="https://github.com/MIV-XJTU/JanusVLN" target="_blank" rel="noopener">代码</a> / <a href="https://arxiv.org/abs/2509.22548" target="_blank" rel="noopener">论文</a></li>
+<li>[7] OpenRobotLab, "StreamVLN", 2025. <a href="https://github.com/OpenRobotLab/StreamVLN" target="_blank" rel="noopener">代码</a> / <a href="https://arxiv.org/abs/2507.05240" target="_blank" rel="noopener">论文</a></li>
+<li>[8] Uni-NaVid Authors, "Uni-NaVid", 2024. <a href="https://github.com/jzhzhang/Uni-NaVid" target="_blank" rel="noopener">代码</a> / <a href="https://arxiv.org/abs/2412.06224" target="_blank" rel="noopener">论文</a></li>
+<li>[9] OMLab, "OpenTrackVLA", 2025. <a href="https://github.com/om-ai-lab/OpenTrackVLA" target="_blank" rel="noopener">链接</a></li>
+<li>[10] Physical Intelligence, "π0: A Vision-Language-Action Flow Model for General Robot Control", 2024. <a href="https://arxiv.org/abs/2410.24164" target="_blank" rel="noopener">论文</a></li>
+<li>[11] Physical Intelligence, "FAST: Efficient Action Tokenization for Vision-Language-Action Models", 2025. <a href="https://arxiv.org/abs/2501.09747" target="_blank" rel="noopener">论文</a></li>
+<li>[12] Physical Intelligence, "OpenPI model.py: observation/action data format and image keys", 2025-2026. <a href="https://github.com/Physical-Intelligence/openpi/blob/main/src/openpi/models/model.py" target="_blank" rel="noopener">代码</a></li>
+<li>[13] Physical Intelligence, "OpenPI pi0_config.py: π0 / π0.5 / π0-FAST model config", 2025-2026. <a href="https://github.com/Physical-Intelligence/openpi/blob/main/src/openpi/models/pi0_config.py" target="_blank" rel="noopener">代码</a></li>
+<li>[14] Physical Intelligence, "OpenPI pi0.py: flow matching loss and sample_actions", 2025-2026. <a href="https://github.com/Physical-Intelligence/openpi/blob/main/src/openpi/models/pi0.py" target="_blank" rel="noopener">代码</a></li>
+<li>[15] Physical Intelligence, "OpenPI pi0_fast.py: FAST autoregressive action generation", 2025-2026. <a href="https://github.com/Physical-Intelligence/openpi/blob/main/src/openpi/models/pi0_fast.py" target="_blank" rel="noopener">代码</a></li>
+<li>[16] Physical Intelligence, "OpenPI tokenizer.py: PaligemmaTokenizer and FASTTokenizer", 2025-2026. <a href="https://github.com/Physical-Intelligence/openpi/blob/main/src/openpi/models/tokenizer.py" target="_blank" rel="noopener">代码</a></li>
+</ul>
+</section>
+</article>
+</body>
+</html>

@@ -35,16 +35,47 @@
         .info { background: #e7f3ff; border-left: 4px solid #0066cc; padding: 0.8rem 1rem; margin: 1rem 0; border-radius: 4px; }
         .success { background: #d4edda; border-left: 4px solid #28a745; padding: 0.8rem 1rem; margin: 1rem 0; border-radius: 4px; }
         .evidence { background: #f8f0ff; border-left: 4px solid #6f42c1; padding: 0.8rem 1rem; margin: 1rem 0; border-radius: 4px; font-size: 0.9rem; }
+        .toc { background: #f8fbff; border: 1px solid #d9e8ff; border-left: 4px solid #0066cc; padding: 1rem 1.2rem; margin: 1.5rem 0 2rem; border-radius: 6px; }
+        .toc h2 { border: none; margin: 0 0 0.8rem; padding: 0; font-size: 1.2rem; color: #123; }
+        .toc ol { columns: 2; column-gap: 2rem; margin-bottom: 0; }
+        .toc li { break-inside: avoid; margin-bottom: 0.35rem; }
+        .math-note { background: #f7f7f7; border-left: 4px solid #555; padding: 0.8rem 1rem; margin: 1rem 0; border-radius: 4px; }
+        .compact-table td, .compact-table th { padding: 0.45rem 0.6rem; font-size: 0.9rem; }
         a { color: #0066cc; text-decoration: none; }
         a:hover { text-decoration: underline; }
-        @media (max-width: 600px) { body { padding: 1rem 0.5rem; } h1 { font-size: 1.5rem; } table { font-size: 0.85rem; } }
+        @media (max-width: 600px) { body { padding: 1rem 0.5rem; } h1 { font-size: 1.5rem; } table { font-size: 0.85rem; } .toc ol { columns: 1; } }
     </style>
 </head>
 <body>
 <article>
 
 <h1>世界模型线项目报告</h1>
-<p class="meta">项目编号：13_dreamdojo_world_model | 报告日期：2026-05-22 | 数据截止：2026-05-21 远端巡检</p>
+<p class="meta">项目编号：13_dreamdojo_world_model | 报告日期：2026-05-22 | 更新日期：2026-06-07 | 本地证据截止：2026-05-29 | 公有仓库核查：2026-06-07</p>
+
+<nav class="toc" aria-label="目录">
+<h2>目录</h2>
+<ol>
+<li><a href="#question">问题</a></li>
+<li><a href="#background">背景与动机</a></li>
+<li><a href="#overview">项目总览</a></li>
+<li><a href="#math-foundations">扩散、DiT 与世界模型数学基础</a></li>
+<li><a href="#architecture">核心架构设计</a></li>
+<li><a href="#generation-pipeline">DreamDojo / Cosmos 生成流程</a></li>
+<li><a href="#training-algorithm">训练算法</a></li>
+<li><a href="#dreamdojo">DreamDojo 两阶段设计</a></li>
+<li><a href="#distillation">蒸馏与实时推理</a></li>
+<li><a href="#cosmos-policy-finetune">Cosmos Policy RoboCasa Finetune</a></li>
+<li><a href="#public-private-boundary">公有/改造边界核查</a></li>
+<li><a href="#project-boundary-ledger">逐项目边界账本</a></li>
+<li><a href="#cosmos-modification-line">本地 Cosmos 改造线分析</a></li>
+<li><a href="#vggt-action">VGG-T-Omega Action Regression</a></li>
+<li><a href="#comparison">方法对比</a></li>
+<li><a href="#progress">训练进度与评估现状</a></li>
+<li><a href="#evaluation">评估体系</a></li>
+<li><a href="#risks">风险与建议</a></li>
+<li><a href="#references">参考文献</a></li>
+</ol>
+</nav>
 
 <section id="question">
 <h2>问题（Question）</h2>
@@ -55,7 +86,7 @@
 <h2>背景与动机（Background & Motivation）</h2>
 <p>机器人世界模型（Robot World Model）的核心命题是：能否将大规模视频预训练的生成能力转化为机器人策略？传统方法将"感知→规划→控制"分离为独立模块；而世界模型路线试图用一个统一的生成模型同时完成<strong>未来状态预测</strong>（world model）、<strong>动作生成</strong>（policy）和<strong>价值估计</strong>（value function）。</p>
 
-<p>本项目线的核心设计哲学是：<strong>将机器人策略学习重新表述为条件视频生成问题</strong>。具体而言，将动作（action）、本体感知（proprioception）、价值函数回报（value function return）统一编码为视频潜在空间中的"帧"，与视觉观测帧共享同一个扩散模型的去噪过程。这使得一个预训练好的视频生成模型��以通过后训练直接输出机器人动作。</p>
+<p>本项目线的核心设计哲学是：<strong>将机器人策略学习重新表述为条件视频生成问题</strong>。具体而言，将动作（action）、本体感知（proprioception）、价值函数回报（value function return）统一编码为视频潜在空间中的"帧"，与视觉观测帧共享同一个扩散模型的去噪过程。这使得一个预训练好的视频生成模型可以通过后训练直接输出机器人动作。</p>
 </section>
 
 <section id="overview">
@@ -94,6 +125,195 @@
 <tr><td>chiyixiao</td><td>DreamDojo 原始仓库维护、评估脚本适配</td></tr>
 </tbody>
 </table>
+</section>
+
+<section id="math-foundations">
+<h2>扩散、DiT 与世界模型数学基础</h2>
+
+<h3>符号与世界模型定义</h3>
+<p>在机器人场景中，真实环境可以看作一个部分可观测马尔可夫决策过程（POMDP）：隐藏状态 \(s_t \in \mathcal{S}\)，观测 \(o_t \in \mathcal{O}\)，动作 \(a_t \in \mathcal{A}\)，奖励 \(r_t \in \mathbb{R}\)，语言或任务条件 \(c\)。世界模型学习的是条件转移分布：</p>
+
+\[
+p_\theta(o_{t+1:t+H}, r_{t:t+H} \mid o_{\le t}, a_{t:t+H-1}, c)
+\]
+
+<p>视频世界模型通常不直接在像素空间建模，而是先用 VAE / tokenizer 将视频帧压缩为潜在变量：</p>
+
+\[
+z_t = E_\phi(o_t), \quad \hat{o}_t = G_\phi(z_t), \quad z_{1:T} \in \mathbb{R}^{C \times T \times H' \times W'}
+\]
+
+<p>于是 DreamDojo / Cosmos Predict2.5 的核心对象可以写成：</p>
+
+\[
+p_\theta(z_{\text{future}} \mid z_{\text{cond}}, u, c)
+\]
+
+<p>其中 \(z_{\text{cond}}\) 是当前观测或历史帧的潜在表示，\(u\) 可以是真实机器人动作、Latent Action Model 产生的潜在动作、或 Cosmos Policy 中注入到 latent frame 的 action/proprio/value 张量。若把世界模型用于规划，则可以在模型内部做想象式优化：</p>
+
+\[
+a^*_{t:t+H-1}
+= \arg\max_{a_{t:t+H-1}}
+\mathbb{E}_{p_\theta}\left[\sum_{k=0}^{H-1}\gamma^k r_{t+k}\right]
+\]
+
+<div class="math-note">
+<strong>关键区分</strong>：传统 dynamics model 预测 \(s_{t+1}=f_\theta(s_t,a_t)\)；视频世界模型预测的是未来观测分布 \(p_\theta(z_{\text{future}}\mid z_{\text{cond}},a,c)\)。后者不是单点回归，而是一个多模态生成分布，因而适合用扩散 / flow 这类生成模型实现。
+</div>
+
+<h3>扩散模型具体是什么</h3>
+<p>扩散模型（Diffusion Model）是一类“先加噪、再学会逆向去噪”的生成模型。给定干净样本 \(x_0 \sim p_{\text{data}}\)，DDPM 定义一个固定前向加噪链：</p>
+
+\[
+q(x_t \mid x_{t-1}) = \mathcal{N}(\sqrt{1-\beta_t}x_{t-1}, \beta_t I)
+\]
+
+<p>将多个时间步合并后，有闭式采样：</p>
+
+\[
+q(x_t \mid x_0)
+= \mathcal{N}(\sqrt{\bar{\alpha}_t}x_0, (1-\bar{\alpha}_t)I),
+\quad
+x_t = \sqrt{\bar{\alpha}_t}x_0 + \sqrt{1-\bar{\alpha}_t}\epsilon,
+\quad
+\epsilon \sim \mathcal{N}(0,I)
+\]
+
+<p>其中 \(\beta_t\) 是每一步加入的噪声方差，\(\alpha_t=1-\beta_t\)，\(\bar{\alpha}_t=\prod_{i=1}^{t}\alpha_i\)。训练时常让网络 \(\epsilon_\theta(x_t,t,c)\) 预测噪声：</p>
+
+\[
+\mathcal{L}_{\text{DDPM}}
+= \mathbb{E}_{x_0,\epsilon,t}
+\left[
+\left\|\epsilon - \epsilon_\theta(x_t,t,c)\right\|_2^2
+\right]
+\]
+
+<p>有了噪声预测后，可以恢复干净样本估计：</p>
+
+\[
+\hat{x}_0(x_t,t,c)
+= \frac{x_t-\sqrt{1-\bar{\alpha}_t}\epsilon_\theta(x_t,t,c)}
+{\sqrt{\bar{\alpha}_t}}
+\]
+
+<p>推理时从高斯噪声 \(x_T \sim \mathcal{N}(0,I)\) 出发，反复采样 \(p_\theta(x_{t-1}\mid x_t,c)\)，逐步得到 \(x_0\)。所以扩散模型的本质不是“随机抖动图片”，而是学习数据分布在不同噪声尺度上的 score / denoiser。</p>
+
+<h3>EDM 与 Rectified Flow 的连续时间视角</h3>
+<p>EDM（Elucidated Diffusion Model）把离散时间 \(t\) 改写为连续噪声尺度 \(\sigma\)，直接构造：</p>
+
+\[
+x_\sigma = x_0 + \sigma\epsilon,\quad \epsilon \sim \mathcal{N}(0,I)
+\]
+
+<p>模型学习 denoiser \(D_\theta(x_\sigma,\sigma,c)\approx x_0\)。它也等价于估计平滑后数据分布 \(p_\sigma\) 的 score：</p>
+
+\[
+\nabla_x \log p_\sigma(x)
+\approx \frac{D_\theta(x,\sigma,c)-x}{\sigma^2}
+\]
+
+<p>Rectified Flow 则把生成看成在噪声点和数据点之间学习一条速度场。令 \(x_1=\epsilon\sim\mathcal{N}(0,I)\)，\(x_0\sim p_{\text{data}}\)，线性插值为：</p>
+
+\[
+x_t = (1-t)x_0 + t x_1,\quad t\in[0,1]
+\]
+
+<p>若时间方向定义为“从数据走向噪声”，最优速度是：</p>
+
+\[
+v^*(x_t,t) = \frac{d x_t}{dt} = x_1 - x_0
+\]
+
+<p>训练目标为：</p>
+
+\[
+\mathcal{L}_{\text{RF}}
+= \mathbb{E}_{x_0,x_1,t}
+\left[
+\left\|v_\theta(x_t,t,c) - (x_1-x_0)\right\|_2^2
+\right]
+\]
+
+<p>推理时若从噪声生成数据，则沿反方向积分：</p>
+
+\[
+\frac{d x_t}{dt}=v_\theta(x_t,t,c),\quad t:1\rightarrow 0
+\]
+
+<p>不同代码库会把速度目标写成 \(x_1-x_0\) 或 \(x_0-x_1\)，区别只是积分方向的符号约定。对 DreamDojo / Cosmos 这类视频世界模型来说，核心是 DiT 在每个噪声/时间尺度上预测“如何把当前 noisy latent 拉回物理合理的视频 latent”。</p>
+
+<h3>DiT 具体是什么：用 Transformer 做扩散去噪器</h3>
+<p>DiT（Diffusion Transformer）不是一种新的扩散目标，而是把扩散模型中的去噪网络 \(F_\theta\) 从 U-Net 换成 Transformer。输入 latent video \(x \in \mathbb{R}^{B \times C \times T \times H \times W}\) 先被 patchify：</p>
+
+\[
+N = \frac{T}{p_t}\cdot\frac{H}{p_h}\cdot\frac{W}{p_w},\quad
+e_i = W_p \operatorname{vec}(x_{\text{patch }i}) + p_i
+\]
+
+<p>其中 \(p_t,p_h,p_w\) 是时间/高度/宽度 patch size，\(N\) 是 token 数，\(W_p\) 是线性投影，\(p_i\) 是 3D 位置编码。一个 DiT block 的核心是多头自注意力、交叉注意力、MLP 与噪声条件调制：</p>
+
+\[
+\operatorname{Attn}(Q,K,V)
+= \operatorname{softmax}\left(\frac{QK^\top}{\sqrt{d}}\right)V
+\]
+
+\[
+\operatorname{AdaLN}(h;\sigma)
+= \gamma(\sigma)\odot \frac{h-\mu(h)}{\sqrt{\operatorname{Var}(h)+\epsilon}}
++ \beta(\sigma)
+\]
+
+\[
+h \leftarrow h + g_{\text{attn}}(\sigma)\operatorname{MHA}(\operatorname{AdaLN}(h;\sigma))
+\]
+
+\[
+h \leftarrow h + g_{\text{cross}}(\sigma)\operatorname{CrossAttn}(h, E_{\text{text}}(c))
+\]
+
+\[
+h \leftarrow h + g_{\text{mlp}}(\sigma)\operatorname{MLP}(\operatorname{AdaLN}(h;\sigma))
+\]
+
+<p>最终，Transformer token 被 unpatchify 回 latent video 形状，输出可以解释为噪声 \(\epsilon_\theta\)、速度 \(v_\theta\)、或 EDM preconditioning 中的残差 \(F_\theta\)。Cosmos / DreamDojo 的 DiT 还包含以下模块：</p>
+
+<table class="compact-table">
+<thead><tr><th>模块</th><th>数学对象</th><th>功能</th></tr></thead>
+<tbody>
+<tr><td>VAE tokenizer</td><td>\(E_\phi,G_\phi\)</td><td>像素视频 \(\leftrightarrow\) 低维 latent video</td></tr>
+<tr><td>T5 text encoder</td><td>\(e_c=E_{\text{text}}(c)\)</td><td>把任务文本变成 cross-attention 的 key/value 条件</td></tr>
+<tr><td>Action / proprio embedder</td><td>\(u=f_\psi(a,q)\)</td><td>把动作、本体感知映射到 DiT 可读的条件向量或 latent frame</td></tr>
+<tr><td>Condition mask</td><td>\(M\in\{0,1\}^{B\times T}\)</td><td>区分哪些帧是已知条件、哪些帧要生成或计算 loss</td></tr>
+<tr><td>DiT denoiser</td><td>\(F_\theta(x,\sigma,c,u,M)\)</td><td>在 latent 空间预测去噪方向或干净 latent</td></tr>
+<tr><td>Sampler</td><td>ODE/SDE solver</td><td>从噪声积分到视频 latent</td></tr>
+<tr><td>Decoder</td><td>\(G_\phi(z)\)</td><td>把生成 latent 解码为视频帧，或从 action latent 读出动作</td></tr>
+</tbody>
+</table>
+
+<h3>统一生成伪代码</h3>
+<pre><code class="language-python">def sample_video_world_model(obs_frames, action_or_latent, text, model, vae, schedule):
+    """
+    obs_frames: 条件观测 o_{1:k}
+    action_or_latent: 真实动作 a、LAM 动作 u，或 Cosmos Policy 的 latent frame 条件
+    text: 语言任务条件 c
+    schedule: 从高噪声到低噪声的 sigma/t 序列
+    """
+    z_cond = vae.encode(obs_frames)              # z_cond = E_phi(o)
+    y_text = text_encoder(text)                  # e_c = E_text(c)
+    condition, target_mask = build_condition(z_cond, action_or_latent, y_text)
+
+    x = normal_like_target_latents(target_mask)  # x_T 或 x_{sigma_max}
+    x = insert_condition_frames(x, condition, target_mask)
+
+    for sigma_high, sigma_low in pairwise(schedule):
+        denoised = model.denoise(x, sigma_high, condition)
+        x = sampler_step(x, denoised, sigma_high, sigma_low)
+        x = insert_condition_frames(x, condition, target_mask)
+
+    z_future = x[target_mask == 1]
+    return vae.decode(z_future)
+</code></pre>
 </section>
 
 <section id="architecture">
@@ -160,7 +380,7 @@ def replace_latent_with_action_chunk(x0, action_chunk, action_indices):
 <thead><tr><th>参数</th><th>2B 模型</th><th>设计意图</th></tr></thead>
 <tbody>
 <tr><td>model_channels</td><td>2048</td><td>高维特征表示</td></tr>
-<tr><td>num_blocks</td><td>28</td><td>���度 transformer</td></tr>
+<tr><td>num_blocks</td><td>28</td><td>深度 transformer</td></tr>
 <tr><td>num_heads</td><td>16</td><td>多头注意力</td></tr>
 <tr><td>patch_spatial / patch_temporal</td><td>2 / 1</td><td>空间 2× 下采样，时间不压缩</td></tr>
 <tr><td>pos_emb_cls</td><td>RoPE 3D（可学习）</td><td>3D 旋转位置编码</td></tr>
@@ -183,6 +403,151 @@ def replace_latent_with_action_chunk(x0, action_chunk, action_indices):
 </ul>
 </section>
 
+<section id="generation-pipeline">
+<h2>DreamDojo / Cosmos 的典型生成流程</h2>
+
+<h3>DreamDojo：从人类视频到动作条件世界模型</h3>
+<p>DreamDojo 的标准思路是先从无动作标注的人类视频中学习潜在动作，再把这些潜在动作作为世界模型的条件。抽象地看，Latent Action Model（LAM）学习一个从相邻观测到动作因子的编码器：</p>
+
+\[
+u_t = f_\psi(o_t,o_{t+1}), \quad
+u_t \in \mathbb{R}^{d_u}
+\]
+
+<p>其中 \(u_t\) 不一定对应某台机器人的关节角或末端位姿，而是“使 \(o_t\rightarrow o_{t+1}\) 成立的潜在干预变量”。随后视频世界模型学习：</p>
+
+\[
+p_\theta(z_{t+1:t+H}\mid z_{\le t}, u_{t:t+H-1}, c)
+\]
+
+<p>若使用 Rectified Flow，训练样本为干净 future latent \(x_0=z_{t+1:t+H}\)、噪声 \(x_1\sim\mathcal{N}(0,I)\)、插值 \(x_\tau=(1-\tau)x_0+\tau x_1\)，目标速度为 \(x_1-x_0\)。条件包括历史视频 latent、LAM 动作、文本条件以及 frame mask。</p>
+
+<pre><code class="language-python">def dreamdojo_pretrain_step(video_clip, text):
+    # 1. 从人类视频中抽取潜在动作
+    obs = sample_frames(video_clip)
+    latent_action = LAM.encode_pairs(obs[:-1], obs[1:])     # u_t = f_psi(o_t, o_{t+1})
+
+    # 2. 视频帧进入 VAE latent 空间
+    z = vae.encode(obs)                                     # z = E_phi(o)
+    z_cond, z_future = split_condition_and_future(z)
+
+    # 3. Rectified Flow 加噪
+    eps = torch.randn_like(z_future)
+    tau = torch.rand(batch_size)
+    x_tau = (1 - tau) * z_future + tau * eps
+    target_v = eps - z_future
+
+    # 4. DiT 预测速度场，条件为历史帧 + 潜在动作 + 文本
+    pred_v = dit(x_tau, tau, z_cond=z_cond, action=latent_action, text=text)
+    loss = mse(pred_v, target_v, mask=future_frame_mask)
+    return loss
+</code></pre>
+
+<h3>DreamDojo 后训练与推理</h3>
+<p>后训练时，真实机器人动作 \(a_t\) 被投影到统一动作空间 \(u_t=g_\eta(a_t,\text{robot\_id})\)。如果统一动作空间维度为 384，则不同机器人只占用其中一段坐标；数学上可以写成：</p>
+
+\[
+u_t = P_{\text{robot}} a_t,\quad
+P_{\text{robot}}\in\mathbb{R}^{384\times d_a}
+\]
+
+<p>其中 \(P_{\text{robot}}\) 是机器人动作维度到统一 384 维空间的稀疏投影/填充算子。推理时，模型从噪声 future latent 开始，在动作条件下生成未来视频：</p>
+
+<pre><code class="language-python">def dreamdojo_inference(current_frames, robot_actions, text, num_steps=35):
+    z_cond = vae.encode(current_frames)
+    u = robot_action_projector(robot_actions)       # a_t -> 384-d unified action
+    x = torch.randn(target_latent_shape)
+
+    for step in reversed(range(num_steps)):
+        tau = step / num_steps
+        v = dit(x, tau, z_cond=z_cond, action=u, text=text)
+        x = flow_solver_step(x, v, tau)             # 沿噪声 -> 数据方向积分
+
+    future_frames = vae.decode(x)
+    return future_frames
+</code></pre>
+
+<h3>Cosmos Predict2.5：条件视频生成器</h3>
+<p>Cosmos Predict2.5 的 Video2World 模型可以理解为一个条件 latent-video 生成器。输入是当前视频/图像条件、文本 prompt、可选动作条件；输出是未来视频 latent。其内部顺序为：</p>
+
+<ol>
+<li><strong>Tokenizer</strong>：像素视频 \(o\) 经 VAE 得到 latent \(z\)</li>
+<li><strong>Condition builder</strong>：根据 mask 把条件帧固定，把待预测帧初始化为噪声</li>
+<li><strong>Text/action conditioning</strong>：T5 文本 embedding 和动作 embedding 进入 DiT</li>
+<li><strong>Denoising / flow solve</strong>：DiT 在多噪声尺度上反复预测 denoised latent 或 velocity</li>
+<li><strong>Decode</strong>：VAE decoder 将 latent 还原为未来视频帧</li>
+</ol>
+
+\[
+\hat{z}_{\text{future}}
+= \operatorname{Solve}\left(
+F_\theta(x,\sigma,E_{\text{text}}(c),E_{\text{act}}(a),M),
+\sigma_{\max}\rightarrow\sigma_{\min}
+\right)
+\]
+
+<h3>Cosmos Policy：把动作、世界模型和值函数统一成 latent-frame 生成</h3>
+<p>Cosmos Policy 更进一步：它不只生成未来视频，还把动作、本体感知和值函数都塞进同构 latent frame。若一个样本的 latent 序列为 \(x_0\)，其中第 \(i_a\) 帧是 action frame，第 \(i_v\) 帧是 value frame，第 \(i_f\) 组帧是 future visual/proprio frame，则三种任务共用同一个 DiT：</p>
+
+\[
+D_\theta(x_\sigma,\sigma,c,M) \rightarrow \hat{x}_0
+\]
+
+<p>差别只在 mask \(M\)：policy 任务只让 action frame 计算 loss；world-model 任务只让 future frame 计算 loss；value 任务只让 value frame 计算 loss。</p>
+
+<pre><code class="language-python">def cosmos_policy_train_step(batch):
+    # batch 内可能混合 demo 与 rollout
+    x0 = vae.encode(batch.images)
+    x0 = inject_proprio_frames(x0, batch.proprio)
+    x0 = inject_action_frame(x0, batch.action_chunk)       # action-as-latent-frame
+    x0 = inject_value_frame(x0, batch.mc_return)
+
+    task_mask = build_policy_world_value_mask(
+        rollout_data_mask=batch.is_rollout,
+        world_model_sample_mask=batch.use_world_model,
+        action_idx=batch.action_idx,
+        future_idx=batch.future_indices,
+        value_idx=batch.value_idx,
+    )
+
+    sigma = sample_hybrid_sigma(batch.size)
+    eps = torch.randn_like(x0)
+    xt = x0 + sigma * eps
+
+    x0_pred = model.denoise(
+        xt, sigma,
+        condition_frames=batch.current_observation_frames,
+        text_embedding=batch.t5_embedding,
+        condition_mask=batch.condition_mask,
+    )
+
+    weighted_mask = task_mask * action_loss_multiplier_if_action_frame(batch)
+    return edm_weight(sigma) * mse(x0_pred, x0, mask=weighted_mask)
+</code></pre>
+
+<pre><code class="language-python">def cosmos_policy_inference(current_obs, instruction, mode):
+    x = build_latent_sequence_with_blank_targets(current_obs)
+    x = replace_condition_frames_with_clean_latents(x, current_obs)
+    text = t5(instruction)
+
+    for sigma_high, sigma_low in pairwise(sampling_schedule):
+        x0_pred = model.denoise(x, sigma_high, text_embedding=text)
+        x = edm_or_flow_sampler_step(x, x0_pred, sigma_high, sigma_low)
+        x = replace_condition_frames_with_clean_latents(x, current_obs)
+
+    if mode == "policy":
+        return read_action_chunk_from_latent_frame(x[action_idx])
+    if mode == "world_model":
+        return vae.decode(x[future_image_indices])
+    if mode == "value":
+        return reduce_value_latent_to_scalar(x[value_idx])
+</code></pre>
+
+<div class="info">
+<strong>直观总结</strong>：DreamDojo 的主线是“先从人类视频发现潜在动作，再训练动作条件视频世界模型”；Cosmos Predict2.5 是“条件视频生成基础模型”；Cosmos Policy 则把 policy / world model / value function 三个监督信号放进同一个 latent-video 去噪问题里。
+</div>
+</section>
+
 <section id="training-algorithm">
 <h2>训练算法：Rectified Flow + Hybrid Sigma + Multi-Objective Loss</h2>
 
@@ -200,7 +565,7 @@ D_\theta(x_t; \sigma) = c_{\text{skip}}(\sigma) \cdot x_t + c_{\text{out}}(\sigm
 \]
 
 <div class="evidence">
-<strong>代码证据</strong>：<code>cosmos_policy/models/policy_video2world_model.py:410-455</code> — <code>denoise()</code> 方法实现了完整的 EDM preconditioning 和去���逻辑。
+<strong>代码证据</strong>：<code>cosmos_policy/models/policy_video2world_model.py:410-455</code> — <code>denoise()</code> 方法实现了完整的 EDM preconditioning 和去噪逻辑。
 </div>
 
 <pre><code class="language-python"># policy_video2world_model.py:410-455 (denoise 核心逻辑)
@@ -517,7 +882,555 @@ torchrun -m scripts.train \
 </ul>
 
 <h3>训练重试轨迹与工程经验</h3>
-<p>该训练在 2026-05-18 到 05-20 期间经历了多轮配置调试，���终解决方案是 <code>num_workers=1, pin_memory=False</code>。这反映了大模型训练中 CUDA 内存管理与 DataLoader 多进程之间的常见冲突——当模型已占用大部分 GPU 显存时，pin_memory 的额外 CUDA 分配会触发 invalid argument 错误。</p>
+<p>该训练在 2026-05-18 到 05-20 期间经历了多轮配置调试，最终解决方案是 <code>num_workers=1, pin_memory=False</code>。这反映了大模型训练中 CUDA 内存管理与 DataLoader 多进程之间的常见冲突——当模型已占用大部分 GPU 显存时，pin_memory 的额外 CUDA 分配会触发 invalid argument 错误。</p>
+</section>
+
+<section id="public-private-boundary">
+<h2>公有/改造边界核查：World Model 项目谱系</h2>
+
+<div class="info">
+<strong>核查口径</strong>：用户提到的 <code>/pryer/project/wm</code> 在当前本地目录树中没有同名目录；本报告实际可核查的世界模型证据位于 <code>C:\Users\mousongzhe\pryer\project\13_dreamdojo_world_model</code>。其中 2026-05-21 证据包来自只读 SSH 巡检和用户确认后的 <code>scp</code> 轻量证据补拉；显式跳过了 checkpoint、optimizer/model shard、embedding pickle、大数据集、<code>.venv</code> 与 <code>.git</code>。因此这里讨论的是“公开上游 + 本地轻量证据能确认的改造边界”，不是对远端完整私有仓库的无保留复刻。
+</div>
+
+<h3>边界的数学定义</h3>
+<p>对任意一个世界模型实验 \(e\)，可以把它拆成公开上游、局部改造、私有数据、运行配置和评估闭环五个因子：</p>
+
+\[
+e=\operatorname{Run}\left(
+P_{\text{upstream}},
+\Delta_{\text{code}},
+D_{\text{local}},
+C_{\text{train}},
+H_{\text{eval}},
+\theta_0
+\right)
+\]
+
+<p>其中 \(P_{\text{upstream}}\) 是 GitHub/HuggingFace/论文中可公开验证的代码、模型卡与算法描述；\(\Delta_{\text{code}}\) 是远端或本地相对上游的源码差异；\(D_{\text{local}}\) 是本地生成、重采样、过滤或重新打包的数据；\(C_{\text{train}}\) 是训练命令、Hydra 配置、checkpoint 路径、日志和运行环境；\(H_{\text{eval}}\) 是 LIBERO、RoboCasa、DA3/VGGT 等评估脚本与结果；\(\theta_0\) 是公开或受许可约束的初始化权重。</p>
+
+<p>本报告把“私有/改造边界”定义为：</p>
+
+\[
+\mathcal{B}_{\text{private}} =
+\Delta_{\text{code}}
+\cup D_{\text{local}}
+\cup C_{\text{train}}
+\cup H_{\text{eval}}
+\cup
+\{\text{未公开的远端路径、日志索引、训练产物指针}\}
+\]
+
+<p>而不把以下内容算成本地私有创新：公开论文中的方法名、公开 GitHub 仓库已有代码、公开 README 中列出的训练 recipe、公开模型卡中的 checkpoint 名称、RoboCasa/LeRobot/VGGT 等公共生态组件。</p>
+
+<pre><code class="language-python">def audit_world_model_boundary(projects, local_evidence_root):
+    boundary_report = []
+    for project in projects:
+        upstream = query_public_repo(project.repo_url)
+        evidence = read_local_records(local_evidence_root, project.name)
+
+        public_surface = {
+            "repo": upstream.url,
+            "license": upstream.license,
+            "documented_capability": upstream.readme_claims,
+            "model_or_dataset_terms": upstream.model_card_terms,
+        }
+
+        private_surface = {
+            "code_diff": evidence.git_status_and_diff_stat,
+            "local_dataset": evidence.dataset_readme_and_stats,
+            "run_config": evidence.config_yaml_and_launch_info,
+            "eval_harness": evidence.eval_scripts_and_metrics,
+            "remote_paths": evidence.remote_paths_without_payloads,
+        }
+
+        confidence = classify_evidence(
+            confirmed_public=public_surface,
+            confirmed_local=private_surface,
+            skipped=evidence.explicit_skips,
+        )
+        boundary_report.append((project.name, public_surface, private_surface, confidence))
+    return boundary_report
+</code></pre>
+
+<h3>公有仓库矩阵</h3>
+<table class="compact-table">
+<thead><tr><th>项目</th><th>公有状态与许可</th><th>公开能力边界</th><th>在本地世界模型线中的角色</th><th>不应误判为私有的部分</th></tr></thead>
+<tbody>
+<tr>
+<td><code>NVIDIA/DreamDojo</code></td>
+<td>GitHub 公有；代码许可证为 Apache-2.0。</td>
+<td>公开仓库描述的是从大规模人类第一视角视频训练通用机器人世界模型，并包含 LAM、预训练、后训练、蒸馏、推理与评估入口。</td>
+<td>4 月的完整入口证据；本地目录按 DreamDojo 任务链拆成预训练/后训练、蒸馏/推理、评估三组。</td>
+<td>DreamDojo 方法名、LAM 概念、两阶段训练范式、公开仓库已有脚本和文档。</td>
+</tr>
+<tr>
+<td><code>nvidia-cosmos/cosmos-predict2.5</code></td>
+<td>GitHub 公有；源代码 Apache-2.0；模型权重需按对应 NVIDIA/HuggingFace 模型条款使用。</td>
+<td>公开视频世界模型基础设施，覆盖 Text2World、Image2World、Video2World 以及机器人/action-conditioned 相关 recipe。公开 README 已提示后续重心转向 Cosmos 3。</td>
+<td>5 月活跃训练的底座；RoboCasa finetune 从 Predict2.5 2B video2world checkpoint 初始化。</td>
+<td>DiT/Rectified Flow 主干、Predict2.5 基础训练框架、公开 post-training/inference 文档。</td>
+</tr>
+<tr>
+<td><code>NVlabs/cosmos-policy</code></td>
+<td>GitHub 公有；Apache-2.0。</td>
+<td>公开目标是把视频模型后训练为 visuomotor policy，同时预测动作、未来状态与未来状态价值；README 中公开了 ALOHA、RoboCasa、LIBERO 等训练/评估方向。</td>
+<td>本地 RoboCasa 三任务统一训练与 LIBERO 评估改造的主要参照。</td>
+<td>“动作/世界模型/价值函数统一到扩散视频 latent”的总体范式与公开模型说明。</td>
+</tr>
+<tr>
+<td><code>NVIDIA/Cosmos</code></td>
+<td>GitHub 公有；Cosmos 3 平台 README 使用 OpenMDW-1.1 口径。</td>
+<td>公开的 Cosmos 3 / OpenMDW 平台、Reasoner/Generator 和 omnimodal world model 方向。</td>
+<td>不是当前本地训练证据的直接底座；用于判断 NVIDIA 世界模型上游的后续演进方向。</td>
+<td>Cosmos 3 的公开平台定位、公开 README、公开许可声明。</td>
+</tr>
+<tr>
+<td><code>facebookresearch/vggt-omega</code></td>
+<td>GitHub 公有；许可证为 FAIR Noncommercial Research License，checkpoint 访问也可能受限。</td>
+<td>公开 3D/geometry foundation model 能力，用于相机/点云/深度/姿态等视觉几何任务。</td>
+<td>本地作为 DA3/VGGT 辅助 pipeline 和 action regression baseline，不是 Cosmos Policy 主干。</td>
+<td>VGGT-Omega backbone、公开 geometry 任务定义与公开非商用许可范围。</td>
+</tr>
+<tr>
+<td><code>robocasa/robocasa</code></td>
+<td>GitHub 公有；代码 MIT；RoboCasa 数据集/派生数据通常按 CC BY 4.0 处理。</td>
+<td>公开 kitchen manipulation simulation benchmark、任务环境与原始数据来源。</td>
+<td>本地 <code>RoboCasa-Cosmos-Policy</code> 是基于 RoboCasa 的再生成/再过滤/再打包数据。</td>
+<td>RoboCasa benchmark、本体任务、原始仿真环境与论文。</td>
+</tr>
+<tr>
+<td><code>huggingface/lerobot</code></td>
+<td>GitHub 公有；Apache-2.0。</td>
+<td>公开机器人数据集格式、HF dataset 生态、数据加载与训练工具链。</td>
+<td>5 月 29 日证据显示 Cosmos Predict2.5 正在补 LeRobot 到 Video2World 的数据转换和配置。</td>
+<td>LeRobot 数据格式、HF repo_id 机制、公开数据加载 API。</td>
+</tr>
+</tbody>
+</table>
+
+<h3>本地私有/改造边界矩阵</h3>
+<table class="compact-table">
+<thead><tr><th>本地线索</th><th>公开基座</th><th>已确认的本地改造</th><th>私有边界解释</th><th>证据强度</th></tr></thead>
+<tbody>
+<tr>
+<td><code>/data/users/chiyixiao/code/DreamDojo</code></td>
+<td><code>NVIDIA/DreamDojo</code> commit <code>02f119b</code></td>
+<td>6 个本地修改文件：<code>video2world.py</code>、<code>action_conditioned.py</code>、<code>groot_dreams/data/dataset.py</code>、<code>video.py</code>、<code>dataloader.py</code>、<code>groot_configs.py</code>；diff stat 为 1491 insertions / 137 deletions。</td>
+<td>主要私有边界在数据集、dataloader、GR00T/LeRobot/机器人数据 schema、动作条件推理胶水，而不是改写 DreamDojo 主干生成模型。</td>
+<td>远端 git status/diff stat 已归档，强确认。</td>
+</tr>
+<tr>
+<td><code>/data/users/liyichen/cosmos-predict2.5</code></td>
+<td><code>nvidia-cosmos/cosmos-predict2.5</code> commit <code>441b897</code></td>
+<td>远端 git diff 只确认 <code>cosmos_predict2/_src/reason1/tokenizer/processor.py</code> 7 行改动；训练证据另包含 <code>cosmos_policy</code> 数据集、模型和 HybridEDMSDE 模块。</td>
+<td>Predict2.5 主干本身的私有 diff 很小；更大的私有工程边界是把 Cosmos Policy 训练代码接入 Predict2.5 运行栈、配置 RoboCasa 数据和初始化 checkpoint。</td>
+<td>processor diff 强确认；policy 模块属于本地 evidence 代码确认，但未全部证明为相对上游的 uncommitted diff。</td>
+</tr>
+<tr>
+<td><code>/data/users/liujingyuan/third_party/cosmos-policy</code></td>
+<td><code>NVlabs/cosmos-policy</code> commit <code>18a2acc</code></td>
+<td>2 个本地修改文件：<code>libero_utils.py</code> 与 <code>run_libero_eval.py</code>，约 340 行 diff。</td>
+<td>私有边界集中在 LIBERO 评估：reset/episode 控制、动作调试保存、latent sequence index、open-loop action chunk、value/model-based planning hook。</td>
+<td>远端 git status/diff stat 已归档，强确认。</td>
+</tr>
+<tr>
+<td><code>RoboCasa-Cosmos-Policy</code></td>
+<td>RoboCasa benchmark + Cosmos Policy 数据格式</td>
+<td>24 个厨房任务，约 50 demos/task；图像 224×224；7D action；9D proprio；分为 <code>success_only</code> 和 <code>all_episodes</code>；过滤 no-op、成功截断、JPEG 压缩、确定性重放。</td>
+<td>这是本地训练最重要的数据私有边界：公开任务被重新生成、重新筛选、重新组织为 policy/world/value 三类监督数据。报告只保留 README、statistics 和索引，未搬运 HDF5/image/video payload。</td>
+<td>本地 dataset README 与 statistics 已归档，强确认。</td>
+</tr>
+<tr>
+<td>Cosmos Policy RoboCasa 训练 run</td>
+<td>Predict2.5 2B Video2World + Cosmos Policy recipe</td>
+<td>experiment 为 <code>cosmos_predict2p5_2b_480p_robocasa_50_demos_per_task_no_s3</code>；batch size 25；chunk size 32；<code>p_world_model=0.5</code>；<code>action_loss_multiplier=16</code>；lr \(2\times 10^{-4}\)；<code>save_iter=1000</code>；<code>max_iter=1000000</code>；最终使用 <code>num_workers=1</code>、<code>pin_memory=False</code>。</td>
+<td>训练配置、日志、checkpoint 指针、远端输出路径都属于私有运行边界；底层算法思想和公开 checkpoint 名称不等于私有。</td>
+<td>config/launch/log summary 已归档，强确认。</td>
+</tr>
+<tr>
+<td>Policy/World/Value latent 注入</td>
+<td>Cosmos Policy 公开范式 + 本地 evidence 代码</td>
+<td><code>RoboCasaDataset</code> 返回 <code>world_model_sample_mask</code>、<code>value_function_sample_mask</code>、action/proprio/value latent index；<code>policy_video2world_model.py</code> 用 <code>replace_latent_with_action_chunk</code>、<code>replace_latent_with_proprio</code> 和 condition mask 控制不同任务。</td>
+<td>私有边界不是“提出统一 latent frame”这个公开思想，而是本地 RoboCasa schema 到 latent 序列索引、mask、loss 权重、value return 的具体落地。</td>
+<td>代码 evidence 已归档，强确认；是否完全上游已有需逐文件 diff 才能进一步细分。</td>
+</tr>
+<tr>
+<td><code>HybridEDMSDE</code> 噪声采样</td>
+<td>EDM / Rectified Flow 公开训练框架</td>
+<td>配置启用 <code>hybrid_sigma_distribution=True</code>：约 70% log-normal 与 30% uniform \([1,85]\) 混合；模型配置里存在 <code>high_sigma_ratio=0.05</code>，但当前 <code>use_high_sigma_strategy: false</code>。</td>
+<td>私有边界是本地训练稳定性/未来生成覆盖的噪声采样策略。需要注意：高噪声字段存在不代表当前 run 已启用 high-sigma strategy。</td>
+<td>代码与 config 双重确认。</td>
+</tr>
+<tr>
+<td>LeRobot Video2World 数据构造</td>
+<td>LeRobot + Cosmos Predict2.5 VideoDataset</td>
+<td>5 月 29 日新增 <code>prepare_lerobot_video2world_dataset.py</code>、<code>lerobot_video2world.py</code>、<code>lerobot_video2world.json</code>；脚本将 HF LeRobot episode 切成 <code>videos/*.mp4</code>、<code>metas/*.txt</code>、<code>manifest.jsonl</code>，支持 <code>--repo-id</code>、<code>--camera-key</code>、<code>--clip-len</code>、<code>--stride</code>、<code>--metas-only</code>。</td>
+<td>私有边界是把 LeRobot 数据接入 Cosmos Video2World 的具体转换规范和 sanity/overfit 配置；LeRobot 本身和 Video2World 基础训练不是私有。</td>
+<td>5 月 29 日 evidence README 与脚本确认。</td>
+</tr>
+<tr>
+<td>VGGT-Omega / DA3 几何辅助线</td>
+<td><code>facebookresearch/vggt-omega</code> + DA3 pipeline</td>
+<td>新增/使用 <code>scripts/train_vggt_action_regression.py</code>：冻结 VGGT-Omega aggregator，复用 CameraHead trunk/norm，接左右腕 action heads；DA3 500 samples 指标已归档。</td>
+<td>私有边界是 3D 几何先验到动作 chunk regression 的本地 baseline 和中间评估，不是 Cosmos Policy 主训练线的替代。</td>
+<td>脚本和 DA3 summary 已归档；VGGT 仓库本身无本地 git diff。</td>
+</tr>
+</tbody>
+</table>
+
+<h3>按时间线看边界迁移</h3>
+<table class="compact-table">
+<thead><tr><th>时间</th><th>中心项目</th><th>边界变化</th><th>报告结论</th></tr></thead>
+<tbody>
+<tr><td>2026-04-16 左右</td><td>DreamDojo</td><td>本地归档以 DreamDojo 公开仓库任务链为中心，配合远端 DreamDojo 的 dataset/dataloader/inference 本地 diff。</td><td>这阶段的私有边界偏“把公开 DreamDojo 接到本地机器人数据与推理脚本”。</td></tr>
+<tr><td>2026-05-21</td><td>Cosmos Predict2.5 / Cosmos Policy / RoboCasa</td><td>活跃训练转向 Predict2.5 2B checkpoint + Cosmos Policy 三任务统一训练；RoboCasa-Cosmos-Policy 数据与训练 run 成为主要私有资产。</td><td>这阶段的私有边界偏“数据再生成 + latent injection/mask/loss 训练胶水 + run 配置”。</td></tr>
+<tr><td>2026-05-29</td><td>Cosmos Predict2.5 / LeRobot</td><td>新增 LeRobot 到 Video2World 的数据准备和配置，显示数据侧正在从 RoboCasa 扩到更通用的 robot dataset 格式。</td><td>这阶段的私有边界偏“跨数据格式接入与 prompt/video clip 规范”。</td></tr>
+<tr><td>2026-06-07 公有核查</td><td>Cosmos 3 / Predict2.5 / Cosmos Policy 生态</td><td>公开上游仍可验证；Predict2.5 公开 README 已提示后续支持重点转向 Cosmos 3，但本地 evidence 仍停留在 Predict2.5/Cosmos Policy 训练线。</td><td>不能把 Cosmos 3 的公开新能力倒推成本地已采用；本地结论以 5 月 evidence 为准。</td></tr>
+</tbody>
+</table>
+
+<h3>私有边界的数学化落地</h3>
+<p>本地 Cosmos Policy/RoboCasa 训练可以写成一个三任务采样问题。令样本类型 \(m\in\{\pi,W,V\}\)，分别对应 policy action、world model future state、value return。根据 evidence 中的采样概率，近似有：</p>
+
+\[
+P(m=\pi)\approx 0.5,\quad
+P(m=W)\approx 0.25,\quad
+P(m=V)\approx 0.25
+\]
+
+<p>对一个 latent 序列 \(x_0\in\mathbb{R}^{C\times T\times H'\times W'}\)，本地数据层会生成一组索引：</p>
+
+\[
+\mathcal{I}=
+\{i_{\text{action}}, i_{\text{cur-proprio}}, i_{\text{future-proprio}}, i_{\text{value}}, \mathcal{I}_{\text{future-image}}\}
+\]
+
+<p>然后通过 mask \(M_m\) 只在目标帧上计算 denoising loss：</p>
+
+\[
+\mathcal{L}(\theta)=
+\mathbb{E}_{m,\sigma,\epsilon}
+\left[
+w(\sigma)
+\left\|
+M_m(\mathcal{I})\odot
+\left(D_\theta(x_0+\sigma\epsilon,\sigma,c)-x_0\right)
+\right\|_2^2
+\right]
+\]
+
+<p>其中 action frame 的权重按本地配置乘以 16：</p>
+
+\[
+M_{\pi}(i_{\text{action}})\leftarrow 16\,M_{\pi}(i_{\text{action}})
+\]
+
+<p>这条公式正好对应本地私有边界：公开 Cosmos Policy 说明“动作/未来/价值可统一为视频 latent 预测”，但本地具体把 RoboCasa 的 7D action、9D proprio、Monte Carlo return、JPEG rollout、success-only demo 组织成什么索引、mask 和损失倍率，才是项目实际改造。</p>
+
+<h3>哪些不是私有，哪些才是私有</h3>
+<table class="compact-table">
+<thead><tr><th>类别</th><th>不是私有</th><th>本地私有/改造边界</th></tr></thead>
+<tbody>
+<tr><td>算法概念</td><td>DDPM/EDM/Rectified Flow/DiT、LAM、Video2World、action-conditioned generation。</td><td>把这些概念组合到 RoboCasa policy/world/value 三任务训练的具体数据组织、mask 位置、噪声采样与调参。</td></tr>
+<tr><td>代码</td><td>NVIDIA/DreamDojo、nvidia-cosmos/cosmos-predict2.5、NVlabs/cosmos-policy、LeRobot、RoboCasa、VGGT-Omega 公有仓库。</td><td>远端未提交 diff、内部脚本、训练 launcher、配置覆盖、评估 harness、局部 tokenizer/processor 兼容修正。</td></tr>
+<tr><td>数据</td><td>RoboCasa benchmark、LeRobot 公开数据格式、公开模型卡中的数据描述。</td><td><code>RoboCasa-Cosmos-Policy</code> 的 224×224 再生成数据、no-op 过滤、成功截断、success/all split、reason embeddings、dataset statistics。</td></tr>
+<tr><td>模型权重</td><td>公开模型卡中声明可获得的 base checkpoint 或 policy checkpoint。</td><td>远端训练中的 checkpoint shards、optimizer shards、latest_checkpoint 指针、未公开 finetune 产物和选择策略。</td></tr>
+<tr><td>评估</td><td>LIBERO/RoboCasa/DA3/VGGT 的公开 benchmark 概念。</td><td>本地 LIBERO 评估改造、single-episode smoke test 结果、DA3 500-sample summary、action debug 轨迹。</td></tr>
+</tbody>
+</table>
+
+<h3>当前仍未核实或不应过度外推的部分</h3>
+<ol>
+<li><strong>远端最新状态</strong>：本地 evidence 截止 2026-05-29；除公有仓库在线核查外，本报告没有重新登录远端机器确认 5 月 29 日之后的训练进度。</li>
+<li><strong>最终 policy 成功率</strong>：已有 LIBERO smoke test 是 3 次、每次 1 episode / 0 success；这只能说明评估链路能启动，不能代表统计意义上的模型能力。</li>
+<li><strong>完整代码 diff</strong>：部分 evidence 是复制的关键源码和配置，不等于完整远端仓库。因此对“是否上游已有”只能在已归档 diff stat 范围内强确认。</li>
+<li><strong>模型权重与数据 payload</strong>：checkpoint、embedding、大数据集被显式跳过，本报告不会把未复制的权重或数据内容写成已经本地掌握。</li>
+<li><strong>Cosmos 3 迁移</strong>：Cosmos 3 是公开上游的最新方向之一，但本地训练证据仍是 Predict2.5/Cosmos Policy；不能把 Cosmos 3 能力视作本地项目已经采用。</li>
+</ol>
+
+<div class="success">
+<strong>边界结论</strong>：这条世界模型线的公开部分是 DreamDojo、Cosmos Predict2.5、Cosmos Policy、RoboCasa、LeRobot、VGGT-Omega 等上游生态；真正的本地私有/改造边界主要落在四处：第一，RoboCasa-Cosmos-Policy 派生数据与统计/embedding；第二，policy/world/value 统一训练的 latent index、mask、loss multiplier、HybridEDMSDE 与运行配置；第三，DreamDojo/Cosmos Policy/LIBERO 的未提交本地 diff；第四，训练日志、checkpoint 指针、评估 smoke test 与 DA3/VGGT 辅助结果。
+</div>
+</section>
+
+<section id="project-boundary-ledger">
+<h2>逐项目边界账本：数据、模型、训练、推理与评估</h2>
+
+<div class="info">
+<strong>阅读方式</strong>：下面每个项目都按六个维度拆开：数据、数据处理、模型设计、训练设计、推理/部署、评估管线。每一行都区分“公有官方流程”和“本地改造/私有边界”。如果某项只是公开官方 recipe 被本地照着跑，本报告会写成“官方公开，私有的是本地运行产物”；如果证据只能证明本地有代码文件、但不能证明相对上游是否新增，则写成“本地 evidence 确认，完整 diff 未核实”。
+</div>
+
+<p>可以把每个项目 \(j\) 的边界写成一个六元组：</p>
+
+\[
+\mathcal{P}_j =
+\left(
+D_j,\; G_j,\; M_j,\; T_j,\; I_j,\; E_j
+\right)
+\]
+
+<p>其中 \(D_j\) 是数据来源，\(G_j\) 是数据处理或格式转换，\(M_j\) 是模型结构，\(T_j\) 是训练策略，\(I_j\) 是推理/部署方式，\(E_j\) 是评估管线。每一项再拆成：</p>
+
+\[
+X_j = X_j^{\text{official-public}} \cup X_j^{\text{local-private}} \cup X_j^{\text{unknown}}
+\]
+
+<p>这里的 \(X_j^{\text{official-public}}\) 指官方公开仓库、论文、README、docs 或模型/数据卡中可复现的流程；\(X_j^{\text{local-private}}\) 指本地路径、远端未提交 diff、内部数据副本、训练日志、checkpoint 指针、私有评估结果；\(X_j^{\text{unknown}}\) 指当前证据不足，不把它写成确定事实。</p>
+
+<h3>1. DreamDojo</h3>
+<table class="compact-table">
+<thead><tr><th>维度</th><th>公有官方流程</th><th>本地改造/私有边界</th><th>判断</th></tr></thead>
+<tbody>
+<tr><td>数据</td><td>官方公开方法使用大规模人类第一视角视频训练通用机器人世界模型；公开仓库给出 LAM、world model、distillation、inference/evaluation 的代码入口。</td><td>本地没有搬运完整远端数据 payload；只确认存在与 <code>groot_dreams</code>、LeRobot/GR00T 风格数据 schema 相关的本地 dataset/dataloader 改造。</td><td>底座公有，具体接入的数据集合与远端数据 payload 属私有/未搬运。</td></tr>
+<tr><td>数据处理</td><td>LAM 从无动作视频中学习 latent action，再用于动作条件世界模型训练；这是 DreamDojo 官方公开范式。</td><td><code>groot_dreams/data/dataset.py</code>、<code>groot_dreams/dataloader.py</code>、<code>groot_configs.py</code> 是本地 diff 主体，diff stat 显示 1491 insertions / 137 deletions。</td><td>数据处理改造是 DreamDojo 线最明确的私有边界。</td></tr>
+<tr><td>模型设计</td><td>官方模型设计包括 Latent Action Model、视频世界模型、后训练和教师到学生蒸馏。</td><td>本地 diff 只看到 <code>cosmos_predict2/_src/predict2/inference/video2world.py</code> 与 <code>cosmos_predict2/action_conditioned.py</code> 小改，未看到重写主干 DiT 或 LAM 的证据。</td><td>主模型设计公有；本地偏条件注入/推理 glue。</td></tr>
+<tr><td>训练设计</td><td>官方公开训练链是 LAM 训练、世界模型预训练、机器人后训练、蒸馏。</td><td>4 月归档保留 DreamDojo 任务链；5 月活跃训练已经转向 Cosmos Predict2.5/Cosmos Policy，DreamDojo 本地训练不是最新主线。</td><td>官方训练流程公有；本地最新训练重心不在 DreamDojo。</td></tr>
+<tr><td>推理/部署</td><td>官方公开包含蒸馏与实时推理方向，目标是把多步生成压缩到可交互速度。</td><td>本地改动触达 <code>video2world.py</code> 和 <code>action_conditioned.py</code>，说明私有边界在动作条件推理适配；完整真机部署状态未在本地证据中强确认。</td><td>官方部署思路公有，本地推理适配私有。</td></tr>
+<tr><td>评估</td><td>官方有离线生成评估、推理评估入口。</td><td>本地 5 月评估证据主要来自 Cosmos Policy/LIBERO/DA3，不是 DreamDojo 成功率结果。</td><td>DreamDojo 官方评估流程公有；本地有效评估结果不在 DreamDojo 本体。</td></tr>
+</tbody>
+</table>
+
+<h3>2. Cosmos Predict2.5</h3>
+<table class="compact-table">
+<thead><tr><th>维度</th><th>公有官方流程</th><th>本地改造/私有边界</th><th>判断</th></tr></thead>
+<tbody>
+<tr><td>数据</td><td>官方 Predict2.5 支持 Text2World、Image2World、Video2World，并提供自定义视频数据后训练文档；robot/action-conditioned 相关文档公开描述动作、状态、gripper 等条件数据格式。</td><td>5 月 21 日本地训练使用 <code>RoboCasa-Cosmos-Policy</code>；5 月 29 日新增 LeRobot 到 Video2World 的本地数据构造证据。</td><td>底层数据接口和 VideoDataset 流程公有；本地数据副本、路径、embedding 和 LeRobot 转换属于改造/私有。</td></tr>
+<tr><td>数据处理</td><td>官方后训练流程公开要求视频、文本 prompt/meta、条件信息和配置文件对齐。</td><td><code>prepare_lerobot_video2world_dataset.py</code> 把 HF LeRobot episode 切为 <code>videos/*.mp4</code>、<code>metas/*.txt</code>、<code>manifest.jsonl</code>，支持 clip/window/prompt/camera 参数；这是本地 5 月 29 日证据。</td><td>官方格式公有；LeRobot 转 Cosmos Video2World 的具体脚本与硬编码配置是本地改造。</td></tr>
+<tr><td>模型设计</td><td>Predict2.5 的 DiT/Video2World 主干、扩散/Rectified Flow/EDM 式去噪、条件视频生成能力是官方公开底座。</td><td>远端 git diff 只确认 <code>reason1/tokenizer/processor.py</code> 7 行本地改动；未确认主干模型结构被重写。</td><td>主模型公有；本地 Predict2.5 本体改动很小。</td></tr>
+<tr><td>训练设计</td><td>官方提供 post-training 配置、Cosmos Cookbook 和 Video2World 训练 recipe。</td><td>本地 run 从 Predict2.5 2B <code>iter_000023000</code> 初始化，使用 batch 25、chunk 32、lr \(2\times10^{-4}\)、FSDP、<code>num_workers=1</code>、<code>pin_memory=False</code>，输出到远端私有路径。</td><td>训练框架公有；具体超参组合、运行路径、日志和 checkpoint 是私有运行边界。</td></tr>
+<tr><td>推理/部署</td><td>官方文档公开 Video2World 和 robot action-conditioned inference 流程。</td><td>本地 5 月 29 日有 <code>cosmos_predict2/inference.py</code>、<code>inference_robot_action_cond.md</code> 证据；具体 prompt、93 帧、256×256、guidance=7 的 LeRobot 推理配置属于本地落地。</td><td>官方推理流程公有；本地 prompt/配置/数据目录是改造。</td></tr>
+<tr><td>评估</td><td>官方可通过生成视频质量、条件一致性和下游机器人评估进行验证。</td><td>本地没有 Predict2.5 单独 video quality 指标；主要以 Cosmos Policy finetune loss、LIBERO smoke、DA3/VGGT 辅助结果为证据。</td><td>Predict2.5 官方评估思路公有；本地评估还未形成独立完整指标。</td></tr>
+</tbody>
+</table>
+
+<h3>3. Cosmos Policy</h3>
+<table class="compact-table">
+<thead><tr><th>维度</th><th>公有官方流程</th><th>本地改造/私有边界</th><th>判断</th></tr></thead>
+<tbody>
+<tr><td>数据</td><td>官方 Cosmos Policy 公开支持 ALOHA、RoboCasa、LIBERO 等机器人数据；RoboCasa-Cosmos-Policy 的任务、success/all split、动作维度、本体维度和数据改造说明属于官方公开 recipe/数据卡范畴。</td><td>本地私有的是远端 <code>/data/users/liyichen/RoboCasa-Cosmos-Policy</code> 副本、<code>reason1_embeddings*.pkl</code>、dataset statistics、训练时实际使用的 split 和路径；大数据 payload 被显式跳过。</td><td>“RoboCasa 数据怎么改”大体是官方公开；“本地这份数据与 embedding 怎么生成、放哪里、训练用哪份”是私有。</td></tr>
+<tr><td>数据处理</td><td>官方思想是把 action、future state、value return 统一组织成视频 latent 预测问题，mask 指定要预测的帧。</td><td>本地 evidence 确认 <code>RoboCasaDataset</code> 产出 <code>action_latent_idx</code>、<code>future_proprio_latent_idx</code>、<code>value_latent_idx</code>、<code>world_model_sample_mask</code>、<code>value_function_sample_mask</code>，并计算 Monte Carlo returns。</td><td>统一表述公有；本地索引、mask、return 与 stats 绑定方式是项目实装边界。</td></tr>
+<tr><td>模型设计</td><td>官方 Cosmos Policy 的核心公开设计是用同一个扩散视频模型同时生成动作、预测未来状态和值函数；README 公开强调动作、未来状态、未来状态价值。</td><td>本地 <code>policy_video2world_model.py</code> 使用 <code>replace_latent_with_action_chunk</code>、<code>replace_latent_with_proprio</code>、value frame 注入和 condition mask 操作。是否全部为官方已有实现，需要逐文件对上游 diff 才能完全拆开。</td><td>概念公有；本地 evidence 证明这些模块在本地训练中被使用，完整原创性边界需继续 diff。</td></tr>
+<tr><td>训练设计</td><td>官方 post-training 是在视频模型基础上做机器人 policy/world/value finetune；RoboCasa/LIBERO 训练资源、数据组织和 cookbook 属公开流程。</td><td>本地 run 具体为 <code>cosmos_predict2p5_2b_480p_robocasa_50_demos_per_task_no_s3</code>，<code>p_world_model=0.5</code>、<code>action_loss_multiplier=16</code>、HybridEDMSDE 启用、high-sigma strategy 未启用、DataLoader 改为 <code>num_workers=1</code>/<code>pin_memory=False</code>。</td><td>官方训练范式公有；本地稳定训练方案、超参与运行状态私有。</td></tr>
+<tr><td>推理/部署</td><td>官方 Cosmos Policy 推理可以从当前观测生成 action chunk，并可结合预测未来状态/价值做 planning 或 best-of-N 选择。</td><td>本地当前证据主要是训练与 LIBERO smoke；尚未确认大规模 RoboCasa policy rollout 或真机部署成功率。</td><td>官方推理/规划流程公有；本地部署效果未充分核实。</td></tr>
+<tr><td>评估</td><td>官方评估应覆盖 RoboCasa/LIBERO 等任务成功率、动作质量、未来预测质量和价值估计。</td><td><code>cosmos-policy</code> 本地 diff 明确在 <code>libero_utils.py</code> 与 <code>run_libero_eval.py</code>，约 340 行，包含 LIBERO 评估适配；现有 smoke test 为 3 次、每次 1 episode / 0 success。</td><td>官方 benchmark 公有；本地 LIBERO harness 改造私有，当前结果只说明链路联通。</td></tr>
+</tbody>
+</table>
+
+<h3>4. RoboCasa-Cosmos-Policy 数据项目</h3>
+<table class="compact-table">
+<thead><tr><th>维度</th><th>公有官方流程</th><th>本地改造/私有边界</th><th>判断</th></tr></thead>
+<tbody>
+<tr><td>数据</td><td>RoboCasa benchmark 公有；Cosmos Policy 使用的改造数据说明包括 24 个厨房任务、约 50 demos/task、224×224 图像、7D action、9D proprio、<code>success_only</code>/<code>all_episodes</code>。</td><td>本地保留 README、statistics 和路径索引；HDF5、JPEG、video payload 未拉取。远端具体数据版本、重新生成种子和 embedding 文件属于本地运行边界。</td><td>数据说明和派生方向公开；本地实例化数据 payload 私有/未搬运。</td></tr>
+<tr><td>数据处理</td><td>高分辨率重放、no-op 过滤、success trimming、JPEG 压缩、确定性 regeneration 是公开数据卡描述。</td><td>本地训练实际依赖 <code>success_only/reason1_embeddings.pkl</code>、patched embeddings、<code>dataset_statistics.json</code> 与 <code>dataset_statistics_post_norm.json</code>。</td><td>处理规则公有；本地生成产物和统计值私有。</td></tr>
+<tr><td>模型设计</td><td>数据集本身不定义模型；服务于 Cosmos Policy 的 latent-frame policy/world/value 训练。</td><td>本地数据 schema 与 <code>RoboCasaDataset</code>、latent index 和 mask 强耦合。</td><td>数据-模型接口的具体绑定是本地工程边界。</td></tr>
+<tr><td>训练设计</td><td>官方 recipe 用 successful demos 训练 policy，用 all episodes 训练 world model/value function。</td><td>本地采样概率、batch、chunk、loss multiplier 和 no-S3 运行方式由当前 run config 决定。</td><td>训练用途公有；训练实例私有。</td></tr>
+<tr><td>推理/部署</td><td>数据集没有单独部署流程。</td><td>本地推理依赖训练出的 checkpoint 与 eval harness，当前没有证明最终 policy success rate。</td><td>无独立公有/私有部署线。</td></tr>
+<tr><td>评估</td><td>RoboCasa 本身提供任务成功率语义。</td><td>本地没有归档多 episode RoboCasa policy success-rate；只归档训练 loss 与辅助 pipeline。</td><td>评估目标公有；本地结果不足。</td></tr>
+</tbody>
+</table>
+
+<h3>5. LeRobot Video2World 接入</h3>
+<table class="compact-table">
+<thead><tr><th>维度</th><th>公有官方流程</th><th>本地改造/私有边界</th><th>判断</th></tr></thead>
+<tbody>
+<tr><td>数据</td><td>LeRobot 公有生态提供机器人数据集格式、HF dataset repo、episode/frame metadata 和训练工具链。</td><td>5 月 29 日 evidence 使用 HF <code>repo_id</code> 读取 LeRobot 数据；本地没有实现 local dataset loading，脚本里明确未实现。</td><td>LeRobot 数据生态公有；选用哪个 repo、如何切片是本地改造。</td></tr>
+<tr><td>数据处理</td><td>公开的 LeRobot 格式不等于 Cosmos Video2World 格式；Cosmos 官方 VideoDataset 需要视频和文本/meta。</td><td>本地脚本按 <code>episode_index</code> 分组，滑窗切 clip，写 <code>videos/*.mp4</code>、<code>metas/*.txt</code>、<code>manifest.jsonl</code>，参数包括 <code>--camera-key</code>、<code>--clip-len</code>、<code>--stride</code>、<code>--height</code>、<code>--width</code>、<code>--fps</code>。</td><td>这是清晰的本地数据处理改造。</td></tr>
+<tr><td>模型设计</td><td>不新增模型，复用 Cosmos Predict2.5 Video2World。</td><td>当前 evidence 是非 action-conditioned 的 Video2World sanity/overfit 配置，尚不是完整 policy 模型。</td><td>模型公有，接入配置私有。</td></tr>
+<tr><td>训练设计</td><td>官方 Video2World post-training 流程公有。</td><td><code>lerobot_video2world.py</code> 硬编码 <code>dataset_dir=datasets/lerobot_libero_video2_world_wrist_93</code>、<code>num_frames=93</code>、<code>video_size=(256,256)</code>、<code>batch_size=1</code>、<code>save_iter=500</code>、<code>max_iter=1000</code>，明显是 sanity/overfit。</td><td>训练框架公有；当前 LeRobot 接入是本地小规模验证配置。</td></tr>
+<tr><td>推理/部署</td><td>Cosmos 官方 inference 支持 Video2World continuation。</td><td><code>lerobot_video2world.json</code> 使用 wrist camera pick-and-place prompt、93 frames、256×256、guidance 7。</td><td>官方推理公有；prompt 与 case 配置私有。</td></tr>
+<tr><td>评估</td><td>LeRobot/Video2World 可通过生成质量或下游任务评估。</td><td>本地没有归档 LeRobot Video2World 定量评估结果；只确认数据准备与配置。</td><td>处于数据接入/配置阶段。</td></tr>
+</tbody>
+</table>
+
+<h3>6. VGGT-Omega / DA3 / 几何动作辅助线</h3>
+<table class="compact-table">
+<thead><tr><th>维度</th><th>公有官方流程</th><th>本地改造/私有边界</th><th>判断</th></tr></thead>
+<tbody>
+<tr><td>数据</td><td>VGGT-Omega 是公开 3D 视觉几何模型；DA3/几何评估思想属于公开视觉几何生态。</td><td>本地 pipeline 使用 LIBERO/Cosmos Policy 相关输出做几何动作评估，具体输出目录和 metrics 属私有证据。</td><td>底座公有，机器人动作绑定私有。</td></tr>
+<tr><td>数据处理</td><td>官方 VGGT 处理多视角/时序图像以恢复几何表征。</td><td>本地把 robot wrist/scene 视觉输入接到 action regression 和 pose metrics，DA3 summary 记录 500 samples。</td><td>几何表征公有；转成动作监督私有。</td></tr>
+<tr><td>模型设计</td><td>VGGT-Omega aggregator、CameraHead 等公开或受限许可组件用于 3D 视觉任务。</td><td><code>train_vggt_action_regression.py</code> 方向是冻结 aggregator，复用 CameraHead trunk/norm，接左右腕 action heads 做 action chunk regression。</td><td>backbone 公有/受非商用许可；action head 设计是本地 baseline。</td></tr>
+<tr><td>训练设计</td><td>官方 VGGT 不是 Cosmos Policy 的训练主线。</td><td>本地训练是辅助 baseline，不替代 Cosmos Policy 的 diffusion policy/world/value 训练。</td><td>独立辅助线。</td></tr>
+<tr><td>推理/部署</td><td>官方推理输出 geometry/pose/depth 类结果。</td><td>本地目标是把几何特征用于动作 chunk regression 或评估辅助，尚未证明部署闭环。</td><td>公有几何推理，本地动作应用未完成。</td></tr>
+<tr><td>评估</td><td>官方可用几何指标评估。</td><td>本地 DA3 500 samples：mean translation L2 0.2567，median rotation 8.23°，rotation &lt;15° 为 73.6%，direction cosine &gt;0.5 为 11.2%。</td><td>几何分支有离线指标，但不能代表 policy success rate。</td></tr>
+</tbody>
+</table>
+
+<h3>7. Cosmos 3 / NVIDIA Cosmos 平台</h3>
+<table class="compact-table">
+<thead><tr><th>维度</th><th>公有官方流程</th><th>本地改造/私有边界</th><th>判断</th></tr></thead>
+<tbody>
+<tr><td>数据</td><td>NVIDIA Cosmos / Cosmos 3 平台公开描述世界模型、Reasoner、Generator 与 OpenMDW 方向。</td><td>本地 5 月 evidence 没有显示训练已迁移到 Cosmos 3。</td><td>仅作上游方向参考。</td></tr>
+<tr><td>数据处理</td><td>官方平台流程公开但与当前 Predict2.5 evidence 不是同一条实跑链。</td><td>无本地 Cosmos 3 数据处理改造证据。</td><td>无私有边界可确认。</td></tr>
+<tr><td>模型设计</td><td>Cosmos 3 的 omnimodal/Reasoner/Generator 公开描述属于公有上游。</td><td>不能倒推为本地项目已采用。</td><td>只引用，不归功本地。</td></tr>
+<tr><td>训练设计</td><td>官方未来支持重点转向 Cosmos 3 的事实属于公开信息。</td><td>本地训练证据仍是 Cosmos Predict2.5/Cosmos Policy。</td><td>当前报告不把它列入本地改造。</td></tr>
+<tr><td>推理/部署</td><td>官方平台推理/部署是公开平台能力。</td><td>无本地部署证据。</td><td>不纳入本地成果。</td></tr>
+<tr><td>评估</td><td>官方平台有自身评估方向。</td><td>无本地评估证据。</td><td>不纳入本地结果。</td></tr>
+</tbody>
+</table>
+
+<h3>总表：一眼看清哪些是官方公开，哪些是本地改造</h3>
+<table class="compact-table">
+<thead><tr><th>项目</th><th>主要公有底座</th><th>主要官方公开流程</th><th>主要本地改造/私有边界</th><th>当前证据结论</th></tr></thead>
+<tbody>
+<tr><td>DreamDojo</td><td>Apache-2.0 官方仓库、论文、LAM/WM/蒸馏流程</td><td>LAM 训练、世界模型预训练/后训练、蒸馏、推理评估</td><td>dataset/dataloader/config/action-conditioned inference 本地 diff</td><td>入口快照明确，但当前活跃训练已转 Cosmos Policy</td></tr>
+<tr><td>Cosmos Predict2.5</td><td>Apache-2.0 源码、Video2World/post-training/inference docs</td><td>Text/Image/Video2World、robot action-conditioned inference、post-training recipe</td><td>processor 7 行改动、LeRobot 转换脚本、具体 run config 和 checkpoint 指针</td><td>主干公有，本地是接入和运行改造</td></tr>
+<tr><td>Cosmos Policy</td><td>Apache-2.0 官方仓库、policy/world/value 统一范式</td><td>RoboCasa/LIBERO/ALOHA 训练评估 recipe、action/world/value 生成</td><td>RoboCasa 实跑配置、latent index/mask 使用、LIBERO eval diff、日志和 smoke 结果</td><td>本地最活跃主线</td></tr>
+<tr><td>RoboCasa-Cosmos-Policy</td><td>RoboCasa benchmark、Cosmos Policy 数据卡/recipe</td><td>224×224、no-op filtering、success trimming、success/all split</td><td>本地数据副本、statistics、reason embeddings、HDF5/JPEG payload 指针</td><td>规则多为公开，实例化资产私有</td></tr>
+<tr><td>LeRobot Video2World</td><td>LeRobot 数据格式、Cosmos VideoDataset</td><td>HF dataset repo + Video2World post-training</td><td>episode 切片到 mp4/meta/manifest 的本地脚本和 93-frame sanity config</td><td>数据侧扩展，尚无定量结果</td></tr>
+<tr><td>VGGT-Omega/DA3</td><td>VGGT-Omega 公开/非商用许可几何模型</td><td>3D geometry/pose/depth 推理评估</td><td>action regression head、LIBERO/Cosmos Policy 几何辅助 pipeline、DA3 metrics</td><td>辅助线，不代表主 policy 成功率</td></tr>
+<tr><td>Cosmos 3</td><td>NVIDIA Cosmos/OpenMDW 平台</td><td>Reasoner/Generator/omnimodal world model 方向</td><td>无本地改造证据</td><td>只作未来上游方向，不算本地成果</td></tr>
+</tbody>
+</table>
+</section>
+
+<section id="cosmos-modification-line">
+<h2>深入分析：本地 Cosmos 改造线做了什么</h2>
+
+<div class="warning">
+<strong>证据边界</strong>：本节使用的本地证据位于 <code>C:\Users\mousongzhe\pryer\project\13_dreamdojo_world_model</code>，尤其是 <code>04_remote_progress_20260521</code> 与 <code>archives\remote_alignment_20260529</code>。证据包包含关键源码、配置摘要、训练日志片段、dataset README/statistics、评估 summary 与 git diff stat；但没有搬运 checkpoint、embedding、大数据集和完整 <code>.git</code>。因此下面的“改造线”只写已归档证据能支持的工程事实，并把完整远端仓库状态之外的内容标为未核实。
+</div>
+
+<h3>改造目标：把 Video2World 改成 Policy / World / Value 统一模型</h3>
+<p>原始 Cosmos Predict2.5 的主能力是条件视频生成：</p>
+
+\[
+p_\theta(z_{\text{future}}\mid z_{\text{cond}},c,a)
+\]
+
+<p>本地 Cosmos Policy 改造线把它改造成三任务共享的生成式策略模型：</p>
+
+\[
+\theta^* =
+\arg\min_\theta
+\mathbb{E}_{m,\sigma,\epsilon,x_0}
+\left[
+\lambda_m w(\sigma)
+\left\|M_m \odot \left(D_\theta(x_0+\sigma\epsilon,\sigma,c)-x_0\right)\right\|_2^2
+\right]
+\]
+
+<p>其中 \(m\in\{\text{policy},\text{world},\text{value}\}\) 表示当前样本的训练任务，\(M_m\) 是任务 mask，\(\lambda_m\) 是任务权重，\(w(\sigma)\) 是 EDM 噪声权重。三类 mask 的定义可以写成：</p>
+
+\[
+M_{\text{policy}}(t)=\mathbf{1}[t=i_a]
+\]
+
+\[
+M_{\text{world}}(t)=
+\mathbf{1}[t\in \mathcal{I}_{\text{future image}} \cup
+\mathcal{I}_{\text{future proprio}}]
+\]
+
+\[
+M_{\text{value}}(t)=\mathbf{1}[t=i_v]
+\]
+
+<p>这意味着训练时没有新增一个独立 action head 或 value head；动作和值函数被改写为“需要被扩散模型去噪恢复的 latent frame”。</p>
+
+<h3>数据层改造</h3>
+<table>
+<thead><tr><th>改造点</th><th>具体内容</th><th>数学/训练含义</th></tr></thead>
+<tbody>
+<tr><td>RoboCasa 数据拆分</td><td><code>success_only/</code> 与 <code>all_episodes/</code></td><td>成功演示监督 policy；成功/失败 rollout 监督 world model 和 value</td></tr>
+<tr><td>观测标准化</td><td>224×224 RGB、no-op 过滤、成功截断、JPEG 压缩、确定性重放</td><td>减少无效状态转移，固定 \(o_t\) 分布与 tokenizer 输入尺度</td></tr>
+<tr><td>潜在序列拼装</td><td>blank/current proprio/current image/action/future/value 固定位置</td><td>把异构变量统一为 \(x_0\in\mathbb{R}^{C\times T\times H'\times W'}\)</td></tr>
+<tr><td>索引字段</td><td><code>action_latent_idx</code>、<code>future_*_idx</code>、<code>value_idx</code></td><td>让 loss mask 精确选择任务目标帧</td></tr>
+<tr><td>任务采样</td><td>demo/rollout 约 50/50；rollout 中 world/value 约 50/50</td><td>\(P(m=\text{policy})\approx0.5\)，\(P(m=\text{world})\approx0.25\)，\(P(m=\text{value})\approx0.25\)</td></tr>
+<tr><td>T5 embedding 准备</td><td>离线生成文本嵌入</td><td>减少训练时文本编码开销，使 DiT 直接接收 \(E_{\text{text}}(c)\)</td></tr>
+</tbody>
+</table>
+
+<h3>模型层改造</h3>
+<p><strong>1. Action latent injection</strong>：RoboCasa 动作为 \(a\in\mathbb{R}^{32\times 7}\)，展平后只有 224 个数；而一个 latent frame 约为 \(16\times 28\times 28=12544\) 个数。本地实现通过重复填充算子 \(R\) 将动作放大到 latent frame：</p>
+
+\[
+R(a) =
+\operatorname{reshape}\left(
+\operatorname{tile}(\operatorname{vec}(a)),
+C'H'W'
+\right)
+\]
+
+<p>再替换指定 action frame：</p>
+
+\[
+x_0[:, :, i_a, :, :] \leftarrow R(a)
+\]
+
+<p>这就是“action-as-latent-frame”的工程实现。由于动作信息密度远低于图像 latent，本地配置使用 <code>action_loss_multiplier=16</code>，相当于把 action frame 的 mask 权重放大：</p>
+
+\[
+M_{\text{policy}}(i_a) \leftarrow 16\cdot M_{\text{policy}}(i_a)
+\]
+
+<p><strong>2. Frame Replace conditioning</strong>：当前观测帧不是只通过 cross-attention 输入，而是直接替换进 noisy latent。若 \(C\) 是条件 mask，则 DiT 实际看到的输入为：</p>
+
+\[
+\tilde{x}_\sigma = C\odot x_{\text{cond}} + (1-C)\odot (x_0+\sigma\epsilon)
+\]
+
+<p>这保证条件帧在所有去噪步保持物理一致，避免模型把当前机器人位置或场景布局“改写掉”。</p>
+
+<p><strong>3. Hybrid sigma sampling</strong>：本地实现的 <code>HybridEDMSDE</code> 把 log-normal 噪声采样与 uniform 高噪声采样混合。config 中存在 <code>high_sigma_ratio=0.05</code> 字段，但当前 run 的 <code>use_high_sigma_strategy</code> 为 <code>false</code>；因此可以确认启用的是 hybrid sigma distribution，不能把 5% high-sigma strategy 写成当前已启用。它的效果是让模型同时覆盖细节修复区间和从条件帧想象未来的高噪声区间。</p>
+
+<p><strong>4. 小范围 processor/tokenizer 适配</strong>：远端仓库状态显示 <code>liyichen/cosmos-predict2.5</code> 在 tokenizer/processor 侧有 7 行本地改动。结合报告内证据，更大的训练逻辑改造主要落在 <code>cosmos_policy</code> 数据集、mask、latent injection 与 loss 计算，而非重写 Predict2.5 主干 DiT。</p>
+
+<h3>训练方式：从基础 checkpoint 到 RoboCasa finetune</h3>
+<p>训练从 Cosmos Predict2.5 2B 视频生成 checkpoint <code>iter_000023000</code> 初始化，在 RoboCasa-Cosmos-Policy 数据上进行后训练。关键配置是：FusedAdamW、学习率 \(2\times10^{-4}\)、warmup 1000 steps 后线性衰减、bfloat16、FSDP、batch size 25、chunk size 32、梯度裁剪 0.1。</p>
+
+<pre><code class="language-python">def local_cosmos_finetune_loop(loader, model, optimizer):
+    for batch in loader:
+        # A. 数据层：拼装统一 latent 序列
+        x0, indices = build_robocasa_latent_sequence(batch)
+
+        # B. 任务层：根据 demo/rollout 随机选择 policy/world/value mask
+        mode = sample_mode(batch.is_rollout, p_world_model=0.5)
+        mask = build_loss_mask(mode, indices)
+
+        # C. 噪声层：HybridEDMSDE；当前 run 未启用 high_sigma_strategy
+        sigma = hybrid_edm_sde.sample_t(batch_size=len(batch))
+        if config.use_high_sigma_strategy:
+            sigma = maybe_replace_with_high_sigma(sigma, ratio=config.high_sigma_ratio)
+        xt = x0 + sigma * torch.randn_like(x0)
+
+        # D. 条件层：Frame Replace 当前观测
+        xt = frame_replace(xt, batch.condition_latents, batch.condition_mask)
+
+        # E. 模型层：DiT + EDM preconditioning
+        x0_pred = model.denoise(xt, sigma, batch.t5_embedding, batch.condition_mask)
+
+        # F. 损失层：只在目标帧上计算，动作帧乘以 16
+        mask = apply_action_multiplier(mask, indices.action_idx, multiplier=16)
+        loss = (edm_weight(sigma) * ((x0_pred - x0) ** 2) * mask).mean()
+
+        optimizer.zero_grad()
+        loss.backward()
+        clip_grad_norm_(model.parameters(), 0.1)
+        optimizer.step()
+</code></pre>
+
+<p>训练过程中遇到的关键工程问题是 DataLoader 多进程与 CUDA/pinned memory 的冲突。最终配置改为 <code>num_workers=1, pin_memory=False</code>，这属于“牺牲部分吞吐，换取稳定落盘”的选择。</p>
+
+<h3>评估结果与可解释结论</h3>
+<table>
+<thead><tr><th>评估/监控项</th><th>当前结果</th><th>能说明什么</th><th>不能说明什么</th></tr></thead>
+<tbody>
+<tr><td>RoboCasa finetune loss</td><td>step 4520，loss 0.03–0.07，约 8.3 s/iter</td><td>训练已跑通且未立即发散</td><td>不能证明策略成功率或生成质量</td></tr>
+<tr><td>Checkpoint</td><td><code>iter_001000</code> 到 <code>iter_004000</code> 已保存</td><td>产物已可用于下游离线评估</td><td>不能证明最佳 checkpoint 已出现</td></tr>
+<tr><td>LIBERO spatial smoke test</td><td>3 次均为 1 episode / 0 success</td><td>评估链路至少能启动</td><td>样本数太小，不具备统计意义</td></tr>
+<tr><td>DA3 pose 500 samples</td><td>平移 L2 0.2567，旋转中位误差 8.23°，旋转 &lt;15° 为 73.6%</td><td>姿态/几何分支有可量化离线指标</td><td>不能直接代表 Cosmos Policy 成功率</td></tr>
+</tbody>
+</table>
+
+<p>因此，本地 Cosmos 改造线目前最准确的结论是：<strong>已完成从视频生成基础模型到 RoboCasa 三任务统一训练的工程接入，并获得可持续训练的 checkpoint；但尚未完成具有统计意义的 policy success-rate 评估。</strong></p>
+
+<h3>改造线的关键风险</h3>
+<ol>
+<li><strong>动作信号稀释</strong>：224 维动作重复填充到 12544 维 latent frame，可能导致 denoising loss 与真实 action error 不完全一致。</li>
+<li><strong>多任务梯度竞争</strong>：policy/world/value 共享 DiT，mask 能隔离 loss 位置，但不能完全避免参数层面的表示冲突。</li>
+<li><strong>训练 loss 与控制质量脱节</strong>：低 denoising loss 不必然对应高 success rate，需要 RoboCasa/LIBERO 多 episode 评估闭环。</li>
+<li><strong>高噪声采样权衡</strong>：高 \(\sigma\) 有助于全局未来生成，但可能降低动作帧低噪声精修能力，需要 action error ablation。</li>
+</ol>
 </section>
 
 <section id="vggt-action">
@@ -525,6 +1438,10 @@ torchrun -m scripts.train \
 
 <h3>设计思想</h3>
 <p>Cosmos Policy 的一个潜在弱点是：它在 2D 潜在空间中预测动作，缺乏显式的 3D 几何理解。VGG-T-Omega Action Regression 分支试图通过引入预训练的 3D 视觉几何先验来弥补这一不足。</p>
+
+<div class="warning">
+<strong>边界澄清</strong>：这里所谓“在 VGGT-Omega backbone 上加 action regression heads”，不是改写 VGGT-Omega 的 aggregator 主干，也不是 Cosmos Policy 的主模型架构改造；更准确地说，是把公开/预训练的 VGGT-Omega 视觉几何模型冻结为特征提取器，然后在它输出的 camera token 上新增机器人动作回归头，用来做一个 3D 几何先验驱动的动作预测 baseline。
+</div>
 
 <h3>架构设计</h3>
 <pre><code class="language-python"># scripts/train_vggt_action_regression.py 文档字符串
@@ -547,19 +1464,129 @@ View layout with num_history=2, num_context_views=1:
 """
 </code></pre>
 
-<p>核心设计选择：</p>
-<ul>
-<li><strong>冻结 backbone</strong>：VGGT-Omega 的 aggregator（交替 frame/inter-frame attention）完全冻结，保留其 3D 几何理解能力</li>
-<li><strong>复用 pose estimation 权重</strong>：CameraHead trunk 从 pose estimation 任务初始化，将"估计相机位姿"的能力迁移到"估计末端执行器动作"</li>
-<li><strong>双腕独立 head</strong>：左右腕分别有独立的 action head，各预测 8 维动作 chunk</li>
-<li><strong>历史帧输入</strong>：使用 <code>num_history=2</code> 帧提供时间上下文，使模型能感知运动方向</li>
-</ul>
+<h3>具体改造了什么</h3>
+<table class="compact-table">
+<thead><tr><th>模块</th><th>来源</th><th>是否训练</th><th>作用</th><th>是否本地改造</th></tr></thead>
+<tbody>
+<tr><td><code>aggregator</code></td><td>VGGT-Omega <code>VGGTOmega(...).aggregator</code></td><td>冻结，<code>requires_grad=False</code></td><td>从多视角/多时刻图像中提取 camera token；保留原模型的几何时空注意力能力。</td><td>不是新增架构，只是复用公开/预训练 backbone。</td></tr>
+<tr><td><code>trunk_left</code> / <code>trunk_right</code></td><td>从 VGGT-Omega <code>CameraHead.trunk</code> 初始化的 4 层 self-attention</td><td>训练</td><td>分别处理左腕、右腕的 camera token 序列，把“相机位姿估计”的中间能力迁移到动作估计。</td><td>本地复制为左右腕两套 trunk，是动作回归适配的一部分。</td></tr>
+<tr><td><code>token_norm_*</code> / <code>trunk_norm_*</code></td><td>从 <code>CameraHead</code> norm 权重初始化</td><td>训练</td><td>稳定 camera token 和 trunk 输出的尺度。</td><td>本地复用/分叉成左右腕 norm。</td></tr>
+<tr><td><code>state_enc</code></td><td>新增 MLP</td><td>训练</td><td>把机器人当前状态 \(s_t\in\mathbb{R}^{d_s}\) 编码到与视觉特征同维的空间。</td><td>本地新增。</td></tr>
+<tr><td><code>head_left</code> / <code>head_right</code></td><td>新增 MLP heads</td><td>训练</td><td>分别预测左腕与右腕动作 chunk，例如 <code>action[0:8]</code> 和 <code>action[8:16]</code>。</td><td>本地新增，是这条线真正的“action regression head”。</td></tr>
+</tbody>
+</table>
+
+<p>若输入图像为 \(I\in\mathbb{R}^{B\times V\times 3\times H\times W}\)，其中 \(V=(2+C)T\)，\(T\) 是历史帧数，\(C\) 是上下文视角数，则脚本中的默认例子是：</p>
+
+\[
+I = [I^L_{t_0}, I^L_{t_1}, I^R_{t_0}, I^R_{t_1}, I^B_{t_0}, I^B_{t_1}]
+\]
+
+<p>左腕、右腕和 base 视角一起送进 frozen aggregator；base 视角不直接输出动作，但参与 backbone 的 inter-frame/inter-view attention，帮助 camera token 获得场景几何上下文。最后只取最后一层 token 的第 0 个 camera token：</p>
+
+\[
+F=\operatorname{Aggregator}_{\text{frozen}}(I),\quad
+c_v=F_{\text{last}}[:,v,0,:]
+\]
+
+<p>再将左右腕 token 分开：</p>
+
+\[
+C_L=[c_0,\ldots,c_{T-1}],\quad
+C_R=[c_T,\ldots,c_{2T-1}]
+\]
+
+<p>经过左右腕 trunk 和状态编码后预测动作：</p>
+
+\[
+h_L=\operatorname{Trunk}_L(\operatorname{LN}(C_L)),\quad
+h_R=\operatorname{Trunk}_R(\operatorname{LN}(C_R)),\quad
+e_s=\operatorname{MLP}_{state}(s_t)
+\]
+
+\[
+\hat{a}^{L}_{t:t+H-1}=\operatorname{Head}_L([h_L,e_s]),\quad
+\hat{a}^{R}_{t:t+H-1}=\operatorname{Head}_R([h_R,e_s])
+\]
+
+<p>最后把左右腕预测填回完整动作张量：</p>
+
+\[
+\hat{a}_{:,:,0:8}\leftarrow \hat{a}^{L},\quad
+\hat{a}_{:,:,8:16}\leftarrow \hat{a}^{R},\quad
+\hat{a}\in\mathbb{R}^{B\times H\times d_a}
+\]
+
+<h3>训练方式</h3>
+<p>这条线不是扩散去噪训练，而是直接监督回归。脚本复用 OpenPI 的数据配置和 DA3 的 <code>DA3ActionDataCollator</code>，从 batch 中取 <code>image</code>、<code>state</code>、<code>actions</code>，将动作裁剪/补齐到 <code>action_horizon</code>，再用 masked MSE 训练新增头和左右 trunk：</p>
+
+\[
+\mathcal{L}_{action}
+=
+\frac{
+\sum_{b,t,k} m_{btk}\left(\hat{a}_{btk}-a_{btk}\right)^2
+}{
+\sum_{b,t,k}m_{btk}
+}
+\]
+
+<p>其中 \(m_{btk}=\mathbf{1}[|a_{btk}|<10]\)，并且训练前会把动作裁剪到 \([-5,5]\)，避免异常动作值主导损失。checkpoint 保存时也只保存非 aggregator 的 trainable state，即新增动作分支、左右 trunk/norm、state encoder 和 optimizer/EMA，而不重复保存 frozen backbone。</p>
+
+<pre><code class="language-python">def vggt_action_regression_step(batch, model, optimizer):
+    image = batch["image"]      # (B, (2+C)*T, 3, H, W)
+    state = batch["state"]      # (B, state_dim)
+    actions = batch["actions"]  # (B, horizon, action_dim)
+
+    # Frozen VGGT-Omega aggregator extracts camera tokens under no_grad.
+    pred = model(image, state)
+
+    valid = (actions.abs() < 10.0).float()
+    target = actions.clamp(-5.0, 5.0)
+    loss = ((pred - target) ** 2 * valid).sum() / valid.sum().clamp(min=1.0)
+
+    optimizer.zero_grad()
+    loss.backward()
+    clip_grad_norm_(trainable_parameters(model), max_norm=1.0)
+    optimizer.step()
+</code></pre>
+
+<p>直观上，这条线等价于问一个问题：如果 VGGT-Omega 已经从多视角历史图像里学到了相机几何、物体位姿和运动线索，那么仅训练很小的动作 head，能否把这种几何线索转成机器人左右腕未来 \(H\) 步动作？</p>
+
+<h3>输入/输出形式</h3>
+<table class="compact-table">
+<thead><tr><th>对象</th><th>形式</th><th>说明</th></tr></thead>
+<tbody>
+<tr><td>图像输入</td><td><code>(B, (2+C)*T, 3, H, W)</code></td><td>默认示例用左腕、右腕、base 三个视角，各取 <code>num_history=2</code> 帧。</td></tr>
+<tr><td>状态输入</td><td><code>(B, state_dim)</code></td><td>机器人当前低维状态，由 <code>state_enc</code> 映射到视觉特征维度。</td></tr>
+<tr><td>动作输出</td><td><code>(B, horizon, action_dim)</code></td><td>默认 <code>action_dim=72</code>、<code>horizon=50</code>；左腕 slice 默认为 <code>[0,8)</code>，右腕 slice 默认为 <code>[8,16)</code>。</td></tr>
+<tr><td>训练目标</td><td>masked MSE</td><td>仅在有效动作维度上回归，异常值被 mask/crop 控制。</td></tr>
+</tbody>
+</table>
+
+<h3>和 DA3、Cosmos Policy 的关系</h3>
+<p>脚本说明它“mirrors DA3 action regression”，并复用 <code>train_da3_diffusion_action</code> 中的 collator、EMA、DDP setup 与 cosine learning-rate schedule。这里的 DA3 更像数据/训练胶水和几何评估参照；VGGT-Omega 则提供 frozen visual geometry backbone。</p>
+
+<p>这条线与 Cosmos Policy 的关系是<strong>辅助 baseline</strong>：Cosmos Policy 用视频扩散模型统一做 policy/world/value，VGGT/DA3 线则绕开扩散生成，直接从几何 token 回归动作。它可以回答“3D 几何先验是否有助于动作预测”，但不能替代 Cosmos Policy 的世界模型能力，也不能单独证明策略成功率。</p>
+
+<table class="compact-table">
+<thead><tr><th>能力</th><th>Cosmos Policy</th><th>VGGT/DA3 Action Regression</th></tr></thead>
+<tbody>
+<tr><td>核心目标</td><td>生成动作、未来视觉状态和值函数</td><td>直接回归未来 action chunk</td></tr>
+<tr><td>主要表示</td><td>Video latent frame + diffusion denoising</td><td>VGGT camera token + MLP action head</td></tr>
+<tr><td>几何显式性</td><td>隐式，来自视频模型表征</td><td>更显式，来自 VGGT-Omega 3D geometry backbone</td></tr>
+<tr><td>是否能想象未来视频</td><td>可以</td><td>不可以，只输出动作</td></tr>
+<tr><td>本地改造性质</td><td>主要是官方模式训练/评估适配</td><td>新增动作回归分支，是辅助模型侧适配</td></tr>
+</tbody>
+</table>
+
+<h3>当前证据与评估状态</h3>
+<p>远端 git 状态显示 <code>/data/users/houzhi/Code/vggt-omega</code> 跟踪 <code>facebookresearch/vggt-omega</code> main，未显示未提交 diff；因此本报告能确认的是本地 evidence 中存在并使用了 <code>scripts/train_vggt_action_regression.py</code> 这条动作回归实验线，不能仅凭 git status 断言它是未提交私有 patch。</p>
+
+<p>DA3 pose pipeline 已有 500 samples 的几何中间评估：mean translation L2 为 0.2567，median rotation error 为 8.23°，rotation error &lt;15° 为 73.6%，translation direction cosine &gt;0.5 仅 11.2%。这些指标说明几何/姿态分支有离线可量化结果，但它们不是机器人 policy success rate。</p>
 
 <div class="evidence">
-<strong>代码证据</strong>：<code>04_remote_progress_20260521/evidence/code/vggt-omega/scripts/train_vggt_action_regression.py:1-80</code> — 完整的架构文档字符串和导入结构。
+<strong>代码证据</strong>：<code>04_remote_progress_20260521/evidence/code/vggt-omega/scripts/train_vggt_action_regression.py</code> — 包含 frozen aggregator、CameraHead trunk/norm 初始化、左右腕 action head、OpenPI/DA3 data collator、masked MSE 训练和非 aggregator checkpoint 保存逻辑。
 </div>
-
-<p><strong>与 Cosmos Policy 的关系</strong>：这条线是 Cosmos Policy 的补充而非替代。Cosmos Policy 在 2D 潜在空间中做端到端的 policy/world model/value 联合训练；VGG-T-Omega 则提供一个基于 3D 几何的 action regression baseline，用于评估 3D 先验对策略质量的贡献。</p>
 </section>
 
 <section id="comparison">
@@ -587,7 +1614,7 @@ View layout with num_history=2, num_context_views=1:
 <p>Cosmos Policy 选择在同一个 batch 内混合 policy/world model/value function 三种目标。优势是共享表征、减少训练成本；风险是不同目标之间可能存在梯度冲突。当前通过 mask 机制确保每个样本只对一种目标计算 loss，避免了显式的多任务梯度冲突。</p>
 
 <h4>3. Hybrid Sigma Distribution 的必要性</h4>
-<p>标准 log-normal 采样在 \(\sigma \in [0.01, 10]\) 区间集中，但视频条件生成需要模型在极高噪声（\(\sigma > 80\)，对应"从条件帧想象全新未来"）和极低噪声（\(\sigma < 0.01\)，对应"精修细节"）都有良好表现。混合分布 + 额外的 high sigma 策略确保了这一点。</p>
+<p>标准 log-normal 采样在中等噪声区间更集中，但视频条件生成需要模型同时覆盖低噪声细节修复和高噪声未来想象。当前 evidence 可确认启用了 <code>hybrid_sigma_distribution=True</code> 的混合噪声采样；虽然配置里存在 <code>high_sigma_ratio=0.05</code> 字段，但当前 run 的 <code>use_high_sigma_strategy=false</code>，因此不能把额外 high-sigma strategy 写成已启用。</p>
 
 <h4>4. Frame Replace vs. Cross-Attention Conditioning</h4>
 <p>Frame Replace 直接将条件帧"放入"噪声输入中，比 cross-attention 更强地约束了生成结果与条件帧的一致性。这对机器人场景至关重要——生成的未来帧必须与当前观测在物理上连续。</p>
@@ -696,6 +1723,23 @@ python examples/action_conditioned.py \
 <li>[5] Nasiriany et al., "RoboCasa: Large-Scale Simulation of Everyday Tasks for Generalist Robots", 2024. <a href="https://arxiv.org/abs/2406.02523">arXiv:2406.02523</a></li>
 <li>[6] 项目代码证据来源：<code>pryer/project/13_dreamdojo_world_model/04_remote_progress_20260521/evidence/code/</code></li>
 <li>[7] 训练配置证据：<code>pryer/project/13_dreamdojo_world_model/04_remote_progress_20260521/evidence/summaries/current_run/config.yaml</code></li>
+<li>[8] Ho et al., "Denoising Diffusion Probabilistic Models", NeurIPS 2020. <a href="https://arxiv.org/abs/2006.11239">arXiv:2006.11239</a></li>
+<li>[9] Peebles &amp; Xie, "Scalable Diffusion Models with Transformers", ICCV 2023. <a href="https://arxiv.org/abs/2212.09748">arXiv:2212.09748</a></li>
+<li>[10] Liu et al., "Flow Straight and Fast: Learning to Generate and Transfer Data with Rectified Flow", 2022. <a href="https://arxiv.org/abs/2209.03003">arXiv:2209.03003</a></li>
+<li>[11] Black et al., "Cosmos Policy: Diffusion-based World Models for Generalist Robot Policies", 2026. <a href="https://arxiv.org/abs/2601.16163">arXiv:2601.16163</a></li>
+<li>[12] NVIDIA Cosmos Predict2.5 Documentation. <a href="https://docs.nvidia.com/cosmos/latest/predict2/post-training_video2world/index.html">Cosmos Predict2 post-training docs</a></li>
+<li>[13] NVIDIA Cosmos Cookbook: Cosmos Policy post-training. <a href="https://nvidia-cosmos.github.io/cosmos-cookbook/recipes/post_training/predict2/cosmos_policy/post_training.html">Cosmos Cookbook</a></li>
+<li>[14] Cosmos Predict2.5 开源仓库. <a href="https://github.com/nvidia-cosmos/cosmos-predict2.5">GitHub: nvidia-cosmos/cosmos-predict2.5</a></li>
+<li>[15] Cosmos Policy 开源仓库. <a href="https://github.com/NVlabs/cosmos-policy">GitHub: NVlabs/cosmos-policy</a></li>
+<li>[16] NVIDIA Cosmos / Cosmos 3 开源平台. <a href="https://github.com/NVIDIA/Cosmos">GitHub: NVIDIA/Cosmos</a></li>
+<li>[17] VGGT-Omega 开源仓库与 FAIR Noncommercial Research License. <a href="https://github.com/facebookresearch/vggt-omega">GitHub: facebookresearch/vggt-omega</a></li>
+<li>[18] RoboCasa 开源仓库. <a href="https://github.com/robocasa/robocasa">GitHub: robocasa/robocasa</a></li>
+<li>[19] LeRobot 开源仓库. <a href="https://github.com/huggingface/lerobot">GitHub: huggingface/lerobot</a></li>
+<li>[20] 本地 2026-05-21 远端巡检证据：<code>C:\Users\mousongzhe\pryer\project\13_dreamdojo_world_model\04_remote_progress_20260521\README.md</code>、<code>evidence\captures\remote_git_status_and_diff_stat.txt</code>、<code>evidence\captures\copied_sources_and_skips.txt</code></li>
+<li>[21] 本地 2026-05-29 LeRobot/Cosmos 对齐证据：<code>C:\Users\mousongzhe\pryer\project\13_dreamdojo_world_model\archives\remote_alignment_20260529\README.md</code></li>
+<li>[22] NVIDIA Cosmos Predict2.5 Post-Training Guides. <a href="https://docs.nvidia.com/cosmos/latest/predict2.5/post-training/index.html">Cosmos Predict2.5 post-training docs</a></li>
+<li>[23] NVIDIA Cosmos Predict2.5 Model Reference, including Robot Action-Conditioned Inference. <a href="https://docs.nvidia.com/cosmos/latest/predict2.5/reference.html">Cosmos Predict2.5 model reference</a></li>
+<li>[24] LeRobot Dataset v3.0 documentation. <a href="https://github.com/huggingface/lerobot/blob/main/docs/source/lerobot-dataset-v3.mdx">GitHub: LeRobotDataset v3 docs</a></li>
 </ol>
 </section>
 

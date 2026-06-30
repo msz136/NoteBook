@@ -1,0 +1,944 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cosmos Policy WAM 后训练复现报告</title>
+    <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <style>
+        :root {
+            --text: #18212f;
+            --muted: #5d6b7c;
+            --line: #d9e1ea;
+            --soft: #f5f7fa;
+            --soft-2: #edf3f8;
+            --accent: #2364aa;
+            --accent-2: #0f766e;
+            --warn: #a15c04;
+            --code: #f1f3f6;
+        }
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            font-size: 16px;
+            line-height: 1.8;
+            color: var(--text);
+            background: #ffffff;
+        }
+        article {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 40px 20px 72px;
+        }
+        h1, h2, h3, h4 {
+            line-height: 1.35;
+            color: #111827;
+        }
+        h1 {
+            font-size: 2rem;
+            margin: 0 0 18px;
+            padding-bottom: 14px;
+            border-bottom: 2px solid var(--line);
+        }
+        h2 {
+            font-size: 1.45rem;
+            margin: 44px 0 14px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid var(--line);
+        }
+        h3 { font-size: 1.18rem; margin: 28px 0 10px; }
+        h4 { font-size: 1.02rem; margin: 22px 0 8px; }
+        p { margin: 10px 0; }
+        a { color: var(--accent); text-decoration: none; }
+        a:hover { text-decoration: underline; }
+        code {
+            font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+            background: var(--code);
+            border-radius: 4px;
+            padding: 0.12rem 0.32rem;
+            font-size: 0.92em;
+        }
+        pre {
+            overflow-x: auto;
+            background: var(--code);
+            border: 1px solid var(--line);
+            border-radius: 8px;
+            padding: 14px 16px;
+            line-height: 1.55;
+        }
+        pre code {
+            background: transparent;
+            padding: 0;
+            border-radius: 0;
+            font-size: 0.9rem;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 14px 0 22px;
+            overflow-wrap: anywhere;
+        }
+        th, td {
+            border: 1px solid var(--line);
+            padding: 9px 10px;
+            vertical-align: top;
+        }
+        th {
+            background: var(--soft-2);
+            text-align: left;
+        }
+        tbody tr:nth-child(even) { background: #fafbfc; }
+        ul, ol { padding-left: 1.35rem; }
+        li { margin: 4px 0; }
+        .lead {
+            color: var(--muted);
+            font-size: 1.03rem;
+        }
+        .note {
+            background: var(--soft);
+            border-left: 4px solid var(--accent);
+            padding: 12px 14px;
+            border-radius: 6px;
+            margin: 14px 0;
+        }
+        .warn {
+            background: #fff8ed;
+            border-left: 4px solid var(--warn);
+            padding: 12px 14px;
+            border-radius: 6px;
+            margin: 14px 0;
+        }
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin: 16px 0;
+        }
+        .box {
+            border: 1px solid var(--line);
+            background: #fff;
+            border-radius: 8px;
+            padding: 11px 12px;
+        }
+        .box strong { display: block; margin-bottom: 4px; }
+        .flow {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 8px;
+            margin: 16px 0 20px;
+        }
+        .flow-row {
+            display: grid;
+            grid-template-columns: 1fr 34px 1fr;
+            align-items: center;
+            gap: 8px;
+        }
+        .flow-card {
+            border: 1px solid var(--line);
+            background: var(--soft);
+            border-radius: 8px;
+            padding: 10px 12px;
+        }
+        .arrow {
+            text-align: center;
+            color: var(--accent-2);
+            font-weight: 700;
+        }
+        .small { color: var(--muted); font-size: 0.92rem; }
+        .tag {
+            display: inline-block;
+            border: 1px solid var(--line);
+            border-radius: 999px;
+            padding: 0.05rem 0.5rem;
+            background: #fff;
+            color: var(--muted);
+            font-size: 0.86rem;
+            margin-right: 4px;
+        }
+        @media (max-width: 720px) {
+            article { padding: 28px 14px 56px; }
+            .grid { grid-template-columns: 1fr; }
+            .flow-row { grid-template-columns: 1fr; }
+            .arrow { transform: rotate(90deg); }
+            table { font-size: 0.92rem; }
+        }
+    </style>
+</head>
+<body>
+<article>
+    <h1>Cosmos Policy WAM 后训练复现报告</h1>
+    <p class="lead">目标：围绕本地 <code>C:\Users\mousongzhe\pryer\project\13_dreamdojo_world_model</code> 的 Cosmos Policy / Cosmos Predict2.5 证据，设计一条可复现的世界动作模型（World Action Model, WAM）后训练路线，并解释从输入数据到动作、未来状态、价值预测输出的每个环节。</p>
+
+    <section id="question">
+        <h2>问题（Question）</h2>
+        <p>我们希望复现 Cosmos Policy 这条 WAM 后训练线。具体问题包括：它基于什么 pretrained base，为什么属于 WAM 而不是普通 VLA 或纯世界模型，RoboCasa 数据如何被改造成 action / future / value 三类 latent slot，训练时模型如何通过 mask 区分 policy、world model、value function，最后应该如何组织复现、评估和 ablation。</p>
+    </section>
+
+    <section id="agent-prompt">
+        <h2>给另一个 Agent 的复现 Prompt</h2>
+        <p>下面这段可以直接交给另一个 coding/research agent。它包含本地路径、公开链接、边界要求和交付物要求。</p>
+        <pre><code class="language-text">你是一个具身智能/机器人世界模型复现 agent。请基于本地 Windows 工作区和公开资料，帮助我复现 Cosmos Policy 风格的 WAM 后训练线，并产出可运行、可审计的最小复现计划与实验脚本。
+
+核心目标：
+1. 复现 Cosmos Policy / Cosmos Predict2.5 在 RoboCasa 上的 WAM post-training 思路。
+2. 明确区分公开上游设计、本地自有改造、本地证据推断，不能把公源代码误判为自研。
+3. 优先做小规模 smoke test / overfit test / 数据契约验证，再做完整训练。
+
+本地证据根目录：
+- C:\Users\mousongzhe\pryer\project\13_dreamdojo_world_model
+- 当前 Cosmos Policy 训练证据：
+  C:\Users\mousongzhe\pryer\project\13_dreamdojo_world_model\04_remote_progress_20260521
+- 当前 run 配置：
+  C:\Users\mousongzhe\pryer\project\13_dreamdojo_world_model\04_remote_progress_20260521\evidence\summaries\current_run\config.yaml
+- RoboCasa dataset 代码：
+  C:\Users\mousongzhe\pryer\project\13_dreamdojo_world_model\04_remote_progress_20260521\evidence\code\cosmos-policy\cosmos_policy\datasets\robocasa_dataset.py
+- Cosmos Policy 模型侧 evidence：
+  C:\Users\mousongzhe\pryer\project\13_dreamdojo_world_model\04_remote_progress_20260521\evidence\code\cosmos-policy\cosmos_policy\models\policy_video2world_model.py
+  C:\Users\mousongzhe\pryer\project\13_dreamdojo_world_model\04_remote_progress_20260521\evidence\code\cosmos-policy\cosmos_policy\models\policy_text2world_model.py
+- action-conditioned Video2World 推理参考：
+  C:\Users\mousongzhe\pryer\project\13_dreamdojo_world_model\01_pretraining_and_posttraining\cosmos_predict2\action_conditioned.py
+
+公开资料：
+- Cosmos Policy project page: https://research.nvidia.com/labs/cosmos-lab/cosmos-policy/
+- Cosmos Policy GitHub: https://github.com/NVlabs/cosmos-policy
+- Cosmos Predict2.5 GitHub: https://github.com/nvidia-cosmos/cosmos-predict2.5
+- Cosmos Cookbook robot policy post-training recipe:
+  https://github.com/nvidia-cosmos/cosmos-cookbook/tree/main/recipes/robot_policy/post_training
+- WAM survey: https://arxiv.org/abs/2605.12090
+- DreamDojo: https://arxiv.org/abs/2602.06949
+- RoboCasa: https://arxiv.org/abs/2406.02523
+- LIBERO: https://arxiv.org/abs/2306.03310
+- LeRobot: https://github.com/huggingface/lerobot
+
+请按以下步骤工作：
+1. 读取本地 README/config/code，建立证据表：
+   - 哪些是公开上游：Cosmos Predict2.5、Cosmos Policy、RoboCasa、LeRobot、LIBERO。
+   - 哪些是本地改造或本地运行证据：RoboCasa-Cosmos-Policy 数据、config override、训练日志、sample mask、latent slot index、value return。
+2. 复原数据契约：
+   - 输入：当前多视角图像、当前 proprio、语言指令 T5 embedding、action chunk、future image/proprio、return。
+   - 输出 sample_dict 字段：video、actions、t5_text_embeddings、proprio、future_proprio、world_model_sample_mask、value_function_sample_mask、action_latent_idx、value_latent_idx、future_*_latent_idx、value_function_return。
+3. 写一个 dataset smoke test：
+   - 加载一个最小 RoboCasa/CosmosPolicy 格式样本或 mock 样本。
+   - 打印每个字段 shape、dtype、取值范围、mask 是否互斥。
+   - 验证 action chunk 长度为 32，action dim 为 7，value 为 scalar return。
+4. 写一个 model-contract smoke test：
+   - 不必下载 2B 权重也要 mock 出 x0_B_C_T_H_W、sigma_B_T、condition mask、action/value/future indices。
+   - 复现 policy/world/value 三类 loss mask 的构造逻辑。
+   - 验证 demo 样本只训 action，world_model 样本只训 future，value 样本只训 value。
+5. 若权重/数据可用，再组织最小训练：
+   - base checkpoint: Cosmos Predict2.5 2B video2world iter_000023000/model。
+   - dataset: success_only + all_episodes。
+   - batch_size=25, chunk_size=32, p_world_model=0.5, gamma=0.99, action_loss_multiplier=16。
+   - 先跑 10 step、100 step、1k step，记录 loss breakdown、GPU memory、checkpoint。
+6. 评估：
+   - 数据契约：mask/slot/value/action 是否正确。
+   - 训练：总 loss、demo_sample_action_mse_loss、world_model_sample_future_*_mse_loss、value_function_sample_value_mse_loss。
+   - policy：RoboCasa/LIBERO closed-loop success rate。
+   - ablation：action only、action+future、action+future+value、p_world_model=0/0.5/1.0、action_loss_multiplier=1/16。
+
+交付物：
+- 一份 reproduction_plan.md，包含环境、数据、权重、命令、风险。
+- 一个 scripts/smoke_dataset_cosmos_policy.py。
+- 一个 scripts/smoke_loss_mask_cosmos_policy.py。
+- 如果条件允许，一个最小 torchrun/uv run 训练命令和日志解析脚本。
+- 所有结论必须引用本地路径/行号或公开链接。</code></pre>
+    </section>
+
+    <section id="background">
+        <h2>背景与动机（Background &amp; Motivation）</h2>
+        <p>Cosmos Policy 是 NVIDIA 基于 Cosmos 世界基础模型发展出的机器人策略路线。它的关键思想不是把一个 VLM 后面简单接 action head，而是把机器人动作、本体感知、未来视觉状态和值函数都转成与视频 latent 兼容的“帧”，让同一个 Video2World 扩散/rectified-flow 模型承担三类预测任务。</p>
+        <p>这正好落在 WAM 的核心定义上：模型不仅需要输出动作 \(a_{t:t+H}\)，还需要理解动作导致的未来状态 \(s_{t+H}\)，并对未来好坏给出价值估计 \(V_t\)。抽象地说：</p>
+        <p>\[
+        \text{WAM:}\quad p_\theta(a_{t:t+H},\, s_{t+1:t+H},\, V_t \mid o_{\le t},\, l)
+        \]</p>
+        <p>其中 \(o_{\le t}\) 表示历史观测（observation history），\(l\) 表示语言指令（language instruction），\(a_{t:t+H}\) 是未来 \(H\) 步动作块（action chunk），\(s_{t+1:t+H}\) 是未来世界状态或未来图像/本体感知，\(V_t\) 是从当前状态出发的价值或折扣回报。</p>
+
+        <div class="grid">
+            <div class="box">
+                <strong>VLA</strong>
+                <span class="small">直接预测动作：\(p(a\mid o,l)\)。优点是部署简单；缺点是不显式想象动作后果。</span>
+            </div>
+            <div class="box">
+                <strong>WM</strong>
+                <span class="small">预测世界演化：\(p(s'\mid s,a,l)\)。优点是能 rollout；缺点是不一定直接给可执行策略。</span>
+            </div>
+            <div class="box">
+                <strong>WAM</strong>
+                <span class="small">联合动作、未来和值：\(p(a,s',V\mid o,l)\)。适合长程任务、失败恢复和 model-based selection。</span>
+            </div>
+        </div>
+
+        <p>本地证据显示，<code>13_dreamdojo_world_model</code> 已经从 4 月 DreamDojo 快照转向 5 月 Cosmos Predict2.5 / Cosmos Policy RoboCasa finetune。该判断见本地 [README](C:/Users/mousongzhe/pryer/project/13_dreamdojo_world_model/README.md) 第 1-22 行，以及远端进度报告第 30-75 行。</p>
+    </section>
+
+    <section id="local-evidence">
+        <h2>本地证据与公源边界</h2>
+        <table>
+            <thead>
+                <tr><th>对象</th><th>性质</th><th>证据</th><th>复现意义</th></tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Cosmos Predict2.5 2B Video2World</td>
+                    <td>公开上游 base model；本地使用其 checkpoint 做后训练</td>
+                    <td><code>config.yaml:18</code> 指向 <code>iter_000023000/model</code>；<a href="https://github.com/nvidia-cosmos/cosmos-predict2.5">Cosmos Predict2.5 GitHub</a></td>
+                    <td>不要从零 pretrain；复现目标是 post-training / fine-tuning。</td>
+                </tr>
+                <tr>
+                    <td>Cosmos Policy</td>
+                    <td>公开上游方法；本地有代码证据和训练配置</td>
+                    <td><a href="https://research.nvidia.com/labs/cosmos-lab/cosmos-policy/">官方项目页</a>、<a href="https://github.com/NVlabs/cosmos-policy">GitHub</a>；本地 <code>cosmos_policy/models</code></td>
+                    <td>核心实现范式：action/proprio/value/future 都作为 latent frame 进入 Video2World。</td>
+                </tr>
+                <tr>
+                    <td>RoboCasa-Cosmos-Policy 数据</td>
+                    <td>本地派生数据/运行资产</td>
+                    <td>远端进度报告第 91-107 行：<code>success_only</code>、<code>all_episodes</code>、T5 embeddings、dataset stats</td>
+                    <td>复现最容易卡住的地方：数据格式、action chunk、return、归一化和 mask。</td>
+                </tr>
+                <tr>
+                    <td>当前训练 run</td>
+                    <td>本地运行证据，不是公开论文实验</td>
+                    <td>远端进度报告第 39-75 行：batch 25、chunk 32、action dim 7、<code>p_world_model=0.5</code>、<code>action_loss_multiplier=16</code></td>
+                    <td>复现实验应优先对齐这些超参和日志指标。</td>
+                </tr>
+                <tr>
+                    <td>DreamDojo</td>
+                    <td>公开方法和本地归档；不是当前最活跃训练主体</td>
+                    <td>本地 README 第 7-14 行列出 LAM、pretrain、posttrain、distill、eval；<a href="https://arxiv.org/abs/2602.06949">DreamDojo paper</a></td>
+                    <td>理解人类视频 world model pretrain 很有价值，但当前复现应以 Cosmos Policy 后训练为主。</td>
+                </tr>
+            </tbody>
+        </table>
+    </section>
+
+    <section id="architecture">
+        <h2>输入到输出的整体架构</h2>
+        <p>Cosmos Policy WAM 后训练可以拆成九个环节。每一环的输出都是下一环的输入，关键是把异构机器人数据变成“Video2World 可训练的 latent-frame 序列”。</p>
+
+        <div class="flow">
+            <div class="flow-row">
+                <div class="flow-card"><strong>1. 原始轨迹输入</strong>多视角 RGB、proprio、7D action、语言指令、reward/success。</div>
+                <div class="arrow">-&gt;</div>
+                <div class="flow-card"><strong>2. 数据分流</strong><code>success_only</code> 训 policy action；<code>all_episodes</code> 训 world/value。</div>
+            </div>
+            <div class="flow-row">
+                <div class="flow-card"><strong>3. Sample Type</strong>demo / success rollout / failure rollout。</div>
+                <div class="arrow">-&gt;</div>
+                <div class="flow-card"><strong>4. Slot 序列</strong>current image/proprio、action blank、future image/proprio、value blank。</div>
+            </div>
+            <div class="flow-row">
+                <div class="flow-card"><strong>5. Latent Injection</strong>把 action chunk、proprio、value return 写入对应 latent frame。</div>
+                <div class="arrow">-&gt;</div>
+                <div class="flow-card"><strong>6. Condition Mask</strong>决定哪些帧作为条件，哪些帧需要去噪预测。</div>
+            </div>
+            <div class="flow-row">
+                <div class="flow-card"><strong>7. Video2World Denoiser</strong>Cosmos Predict2.5 / DiT / EDM 或 rectified-flow 去噪。</div>
+                <div class="arrow">-&gt;</div>
+                <div class="flow-card"><strong>8. Loss Mask</strong>demo 只训 action；world 样本训 future；value 样本训 value。</div>
+            </div>
+            <div class="flow-row">
+                <div class="flow-card"><strong>9. 输出</strong>action 预测、future image/proprio 预测、scalar value/return 预测。</div>
+                <div class="arrow">-&gt;</div>
+                <div class="flow-card"><strong>10. 评估</strong>loss breakdown、RoboCasa/LIBERO success、value calibration、ablation。</div>
+            </div>
+        </div>
+
+        <h3>关键变量</h3>
+        <table>
+            <thead><tr><th>符号</th><th>代码字段</th><th>形态</th><th>含义</th></tr></thead>
+            <tbody>
+                <tr><td>\(o_t\)</td><td><code>video</code> 中 current image slots</td><td>多视角 RGB latent</td><td>当前观测。</td></tr>
+                <tr><td>\(p_t\)</td><td><code>proprio</code></td><td>9D</td><td>夹爪、末端位置、四元数等本体感知。</td></tr>
+                <tr><td>\(a_{t:t+H}\)</td><td><code>actions</code></td><td>\(32\times 7\)</td><td>RoboCasa 7D 动作块，6-DoF EEF + gripper。</td></tr>
+                <tr><td>\(s_{t+H}\)</td><td><code>future_*_latent_idx</code></td><td>future image/proprio latent</td><td>动作后未来世界状态。</td></tr>
+                <tr><td>\(G_t\)</td><td><code>value_function_return</code></td><td>scalar</td><td>折扣回报，用于 value function 监督。</td></tr>
+                <tr><td>\(i_a,i_v,i_f\)</td><td><code>action_latent_idx</code>、<code>value_latent_idx</code>、<code>future_*_latent_idx</code></td><td>整数索引</td><td>不同预测目标在 latent video 序列中的帧位置。</td></tr>
+            </tbody>
+        </table>
+    </section>
+
+    <section id="math">
+        <h2>数学表达：从 WAM 目标到训练损失</h2>
+
+        <h3>1. 轨迹与回报</h3>
+        <p>令一条机器人轨迹为：</p>
+        <p>\[
+        \tau = (o_0, p_0, a_0, r_0, o_1, p_1, a_1, r_1, \dots, o_T, p_T)
+        \]</p>
+        <p>其中 \(o_t\) 是视觉观测，\(p_t\) 是 proprioception，\(a_t\) 是动作，\(r_t\) 是奖励或成功标注转换出的 reward。Cosmos Policy 的 value 监督通常来自 Monte Carlo return：</p>
+        <p>\[
+        G_t = \sum_{k=0}^{T-t} \gamma^k r_{t+k},\qquad \gamma=0.99
+        \]</p>
+        <p>这里 \(G_t\) 是一个标量（scalar）。本地代码会把它 expand 成和 latent frame 同形状的张量，以便复用视频去噪损失；语义上仍是一个 value/return 数。</p>
+
+        <h3>2. WAM 的联合条件分布</h3>
+        <p>理想 WAM 可以写成：</p>
+        <p>\[
+        p_\theta(a_{t:t+H}, o_{t+H}, p_{t+H}, G_t \mid o_t, p_t, l)
+        \]</p>
+        <p>Cosmos Policy 的工程实现不是四个完全独立 head，而是把这些对象放进 latent-video 序列 \(x\) 的不同 slot：</p>
+        <p>\[
+        x = [x^{obs}_1,\dots,x^{obs}_m,\ x^{action}_{i_a},\ x^{future}_{i_f},\ x^{value}_{i_v}]
+        \]</p>
+        <p>其中 \(x^{action}_{i_a}\) 由 action chunk 注入，\(x^{future}_{i_f}\) 对应未来图像/未来 proprio，\(x^{value}_{i_v}\) 对应 value return。</p>
+
+        <h3>3. 扩散/EDM 去噪目标</h3>
+        <p>令干净 latent 为 \(x_0\)，噪声为 \(\epsilon\)，噪声尺度为 \(\sigma\)，加噪后的 latent 为：</p>
+        <p>\[
+        x_\sigma = \mu(\sigma)x_0 + s(\sigma)\epsilon
+        \]</p>
+        <p>模型 \(D_\theta\) 根据 noisy latent、噪声尺度和条件 \(c\) 预测干净 latent：</p>
+        <p>\[
+        \hat{x}_0 = D_\theta(x_\sigma, \sigma, c)
+        \]</p>
+        <p>基础 EDM loss 可以写成：</p>
+        <p>\[
+        \mathcal{L}_{edm} =
+        w(\sigma)\left\|\hat{x}_0 - x_0\right\|_2^2
+        \]</p>
+        <p>其中 \(w(\sigma)\) 是噪声尺度相关权重。代码中的 <code>weights_per_sigma_B_T</code> 就对应每个样本、每个 latent frame 的权重。</p>
+
+        <h3>4. 三任务 mask 损失</h3>
+        <p>Cosmos Policy 的关键在于为每个样本构造任务 mask。令 \(m^\pi, m^W, m^V\in\{0,1\}\) 分别表示 policy demo、world-model rollout、value-function rollout。总损失可写成：</p>
+        <p>\[
+        \mathcal{L} =
+        \mathbb{E}_{\tau,t,\sigma}
+        \left[
+        \lambda_a m^\pi \ell_{i_a}
+        +
+        m^W \sum_{j\in \mathcal{F}}\ell_j
+        +
+        \lambda_v m^V \ell_{i_v}
+        \right]
+        \]</p>
+        <p>其中：</p>
+        <ul>
+            <li>\(\ell_j = w(\sigma)\|\hat{x}_{0,j}-x_{0,j}\|_2^2\)，表示第 \(j\) 个 latent slot 的 denoising loss。</li>
+            <li>\(i_a\) 是 action slot，对应 <code>action_latent_idx</code>。</li>
+            <li>\(\mathcal{F}\) 是未来状态 slot 集合，包括未来 wrist image、third-person image、future proprio。</li>
+            <li>\(i_v\) 是 value slot，对应 <code>value_latent_idx</code>。</li>
+            <li>\(\lambda_a=16\) 来自本地配置 <code>action_loss_multiplier: 16</code>。</li>
+        </ul>
+
+        <div class="note">
+            <strong>为什么 rollout 样本还要按 <code>p_world_model=0.5</code> 分给 world/value？</strong>
+            <p>因为 world model 和 value function 对输入 mask 与预测 slot 的要求不同。world 样本把 action 作为条件，预测未来；value 样本把除 value slot 外的信息作为条件，预测 return。分流能避免同一个 rollout 样本同时承担过多目标，降低 mask 复杂度、loss 竞争和显存开销。它不是所有 WAM 的通用必选设计，而是 Cosmos Policy 这类统一 latent-frame 训练里很自然的工程取舍。</p>
+        </div>
+    </section>
+
+    <section id="implementation">
+        <h2>代码实现：每个环节对应哪里</h2>
+        <table>
+            <thead><tr><th>环节</th><th>本地代码/配置</th><th>在做什么</th></tr></thead>
+            <tbody>
+                <tr>
+                    <td>加载 base checkpoint</td>
+                    <td><code>config.yaml:1-31</code></td>
+                    <td>从 Cosmos Predict2.5 2B Video2World checkpoint 初始化；<code>load_training_state=false</code> 表示做后训练而不是恢复原训练状态。</td>
+                </tr>
+                <tr>
+                    <td>配置 RoboCasa dataset</td>
+                    <td><code>config.yaml:32-60</code></td>
+                    <td>指定 batch 25、chunk 32、success_only、all_episodes、T5 embeddings、image/proprio/action normalization。</td>
+                </tr>
+                <tr>
+                    <td>定义 WAM 模型类</td>
+                    <td><code>config.yaml:173-220</code></td>
+                    <td>模型为 <code>CosmosPolicyVideo2WorldModelRectifiedFlow</code>，设置 action loss multiplier 和 Video2World conditioner。</td>
+                </tr>
+                <tr>
+                    <td>区分 demo / rollout</td>
+                    <td><code>robocasa_dataset.py:737-824</code></td>
+                    <td>demo 来自 success_only；success/failure rollout 来自 all_episodes；rollout 再随机变成 world 或 value 样本。</td>
+                </tr>
+                <tr>
+                    <td>构造 action/future/value slot</td>
+                    <td><code>robocasa_dataset.py:925-1078</code></td>
+                    <td>把 blank action image、future image/proprio、blank value image 放进同一个 video 序列，记录各自 latent index。</td>
+                </tr>
+                <tr>
+                    <td>注入 action/proprio/value</td>
+                    <td><code>policy_video2world_model.py:354-390</code></td>
+                    <td>把 action chunk、当前/未来 proprio、value return 写入对应 latent frame。</td>
+                </tr>
+                <tr>
+                    <td>设置条件 mask</td>
+                    <td><code>policy_video2world_model.py:122-180</code></td>
+                    <td>world 样本把 action slot 当条件；value 样本把除 value slot 外的信息当条件。</td>
+                </tr>
+                <tr>
+                    <td>构造 loss mask</td>
+                    <td><code>policy_text2world_model.py:439-561</code></td>
+                    <td>demo 只训 action；world 样本训 future image/proprio；value 样本训 value slot；action slot 乘以 16。</td>
+                </tr>
+                <tr>
+                    <td>记录 loss breakdown</td>
+                    <td><code>policy_text2world_model.py:563-700</code></td>
+                    <td>分别记录 demo action、world future、value return 的 MSE/L1，便于定位训练是否真的学到三类能力。</td>
+                </tr>
+            </tbody>
+        </table>
+    </section>
+
+    <section id="pseudocode">
+        <h2>详细伪代码（带注释）</h2>
+
+        <h3>伪代码 1：RoboCasa WAM 样本构造</h3>
+        <pre><code class="language-python">def build_cosmos_policy_sample(idx):
+    """
+    输入：
+        idx: DataLoader 给出的全局样本索引。
+
+    输出：
+        sample_dict: 一个 Cosmos Policy WAM 训练样本。
+
+    目标：
+        把机器人轨迹中的图像、动作、本体感知、未来状态、value return
+        组织成 Video2World 可以吃的 video-like slot 序列。
+    """
+
+    # 1. 根据 idx 判断样本来源。
+    #    demo: 成功示教，用来训练 policy/action。
+    #    success_rollout / failure_rollout: 执行 rollout，用来训练 world/value。
+    sample_type = determine_sample_type(
+        idx,
+        adjusted_demo_count,
+        adjusted_success_rollout_count,
+    )
+
+    rollout_data_mask = 0 if sample_type == "demo" else 1
+    rollout_data_success_mask = 1 if sample_type == "success_rollout" else 0
+
+    # 2. 读取当前时间步和未来时间步。
+    #    future_frame_idx 通常是 relative_step_idx + chunk_size，
+    #    表示模型要预测一个动作块之后的未来世界。
+    episode_data, relative_step_idx = load_episode_slice(sample_type, idx)
+    future_frame_idx = min(
+        relative_step_idx + chunk_size,
+        episode_data["num_steps"] - 1,
+    )
+
+    # 3. 对 rollout 样本进一步分流。
+    #    world_model_sample: action 是条件，目标是预测 future image/proprio。
+    #    value_function_sample: 未来状态/action 是条件，目标是预测 value return。
+    #    demo 样本默认是 policy/action 样本。
+    is_world_model_sample = False
+    is_value_function_sample = False
+    if sample_type != "demo":
+        if return_value_function_returns:
+            if random_uniform_0_1() &lt; p_world_model:
+                is_world_model_sample = True
+            else:
+                is_value_function_sample = True
+        else:
+            is_world_model_sample = True
+
+    # 4. 构造 video-like slot 序列。
+    #    每个 slot 最终都会变成 latent video 的一个时间位置。
+    image_list = []
+    current_sequence_idx = 0
+
+    # 4.1 当前图像 slot：作为条件输入。
+    current_left = load_current_left_image(episode_data, relative_step_idx)
+    image_list.append(duplicate_for_tokenizer(current_left))
+    current_image_latent_idx = current_sequence_idx
+    current_sequence_idx += 1
+
+    # 4.2 当前 proprio slot：图像位置先放 blank，数值稍后注入 latent。
+    current_proprio = episode_data["proprio"][relative_step_idx]
+    image_list.append(blank_image_like(current_left))
+    current_proprio_latent_idx = current_sequence_idx
+    current_sequence_idx += 1
+
+    # 4.3 action slot：先放 blank，后面用 replace_latent_with_action_chunk 写入动作。
+    image_list.append(blank_image_like(current_left))
+    action_latent_idx = current_sequence_idx
+    current_sequence_idx += 1
+
+    # 4.4 未来 proprio slot：world model 的目标之一。
+    future_proprio = episode_data["proprio"][future_frame_idx]
+    image_list.append(blank_image_like(current_left))
+    future_proprio_latent_idx = current_sequence_idx
+    current_sequence_idx += 1
+
+    # 4.5 未来图像 slot：world model 的主要视觉预测目标。
+    future_left = load_future_left_image(episode_data, future_frame_idx)
+    image_list.append(duplicate_for_tokenizer(future_left))
+    future_image_latent_idx = current_sequence_idx
+    current_sequence_idx += 1
+
+    # 4.6 value slot：先放 blank，后面把 scalar return 扩展成 latent frame。
+    image_list.append(blank_image_like(current_left))
+    value_latent_idx = current_sequence_idx
+    current_sequence_idx += 1
+
+    # 5. 取动作块。
+    #    如果剩余动作不足 chunk_size，就重复最后一个动作补齐。
+    action_chunk = slice_actions_with_padding(
+        episode_data["actions"],
+        start=relative_step_idx,
+        length=chunk_size,  # 本地配置为 32
+    )
+
+    # 6. 取 value return。
+    #    语义上是 scalar G_t；后续模型会把它扩展成 latent frame。
+    value_function_return = episode_data["returns"][future_frame_idx]
+
+    # 7. 组装训练样本。
+    return {
+        "video": preprocess_and_stack(image_list),          # 输入给视频 tokenizer / VAE
+        "command": episode_data["command"],                 # 语言指令文本
+        "t5_text_embeddings": lookup_t5_embedding(command), # 文本条件
+        "actions": action_chunk,                            # [32, 7]
+        "proprio": current_proprio,                         # 当前 proprio
+        "future_proprio": future_proprio,                   # 未来 proprio
+        "rollout_data_mask": rollout_data_mask,
+        "rollout_data_success_mask": rollout_data_success_mask,
+        "world_model_sample_mask": int(is_world_model_sample),
+        "value_function_sample_mask": int(is_value_function_sample),
+        "action_latent_idx": action_latent_idx,
+        "value_latent_idx": value_latent_idx,
+        "current_proprio_latent_idx": current_proprio_latent_idx,
+        "future_proprio_latent_idx": future_proprio_latent_idx,
+        "future_image_latent_idx": future_image_latent_idx,
+        "value_function_return": value_function_return,
+    }</code></pre>
+
+        <h3>伪代码 2：Latent Injection 与 Condition Mask</h3>
+        <pre><code class="language-python">def get_data_and_condition(data_batch):
+    """
+    输入：
+        data_batch: DataLoader collate 后的一批 sample_dict。
+
+    输出：
+        x0: 干净 latent video，包含图像 slot、action slot、future slot、value slot。
+        condition: Video2World 条件对象，内部含 gt_frames 和 condition mask。
+
+    核心思想：
+        Cosmos 原本会把视频帧编码成 latent。Cosmos Policy 额外把机器人动作、
+        proprio、value return 写进指定 latent frame，让这些非图像变量也能
+        用同一个 denoiser 预测。
+    """
+
+    # 1. 调用 Video2World 基类：把 video 编码成 latent_state。
+    raw_state, latent_state, condition = super_video2world_get_data(data_batch)
+
+    # 2. 设置普通视频条件帧。
+    #    例如当前图像作为条件，未来 slot 留给模型预测。
+    condition.set_video_condition(
+        gt_frames=latent_state,
+        conditional_frames_probs={5: 1.0},  # 本地配置中固定条件帧策略
+    )
+
+    # 3. 对 world-model rollout 样本：
+    #    action slot 应该被看成已知条件，因为世界模型要学 p(future | current, action)。
+    if "rollout_data_mask" in data_batch:
+        world_mask = expand_to_latent_mask(data_batch["world_model_sample_mask"])
+        batch_indices = arange(batch_size)
+        condition.condition_video_input_mask[
+            batch_indices,
+            :,
+            data_batch["action_latent_idx"],
+            :,
+            :,
+        ] = world_mask
+
+    # 4. 对 value-function rollout 样本：
+    #    除 value slot 之外，其余 slot 都可以作为条件；
+    #    value slot 留给模型预测 G_t。
+    value_mask = expand_to_latent_mask(data_batch["value_function_sample_mask"])
+    condition.condition_video_input_mask = where(
+        value_mask_applies_to_all_frames(value_mask),
+        ones_like(condition.condition_video_input_mask),
+        condition.condition_video_input_mask,
+    )
+    condition.condition_video_input_mask[
+        batch_indices,
+        :,
+        data_batch["value_latent_idx"],
+        :,
+        :,
+    ] = 0
+
+    # 5. 把 action chunk 写入 action latent frame。
+    #    这一步是 Cosmos Policy 的关键 glue：
+    #    actions 原本是 [B, 32, 7]，会被投影/铺展到 latent frame 的 C,H,W 结构。
+    condition.gt_frames = replace_latent_with_action_chunk(
+        condition.gt_frames,
+        data_batch["actions"],
+        action_indices=data_batch["action_latent_idx"],
+    )
+
+    # 6. 把当前和未来 proprio 写入对应 latent frame。
+    condition.gt_frames = replace_latent_with_proprio(
+        condition.gt_frames,
+        data_batch["proprio"],
+        proprio_indices=data_batch["current_proprio_latent_idx"],
+    )
+    condition.gt_frames = replace_latent_with_proprio(
+        condition.gt_frames,
+        data_batch["future_proprio"],
+        proprio_indices=data_batch["future_proprio_latent_idx"],
+    )
+
+    # 7. 把 scalar value return 扩展成 latent frame。
+    #    注意：语义上仍是一个数 G_t；扩展只是为了复用视频 denoising loss。
+    value_frame = expand_scalar_to_latent_frame(
+        data_batch["value_function_return"],
+        channels=C_latent,
+        height=H_latent,
+        width=W_latent,
+    )
+    condition.gt_frames[
+        batch_indices,
+        :,
+        data_batch["value_latent_idx"],
+        :,
+        :,
+    ] = value_frame
+
+    return condition.gt_frames, condition</code></pre>
+
+        <h3>伪代码 3：训练步与三任务 Loss Mask</h3>
+        <pre><code class="language-python">def cosmos_policy_train_step(data_batch):
+    """
+    输入：
+        data_batch: 包含 video/actions/proprio/future/value/mask/index 的 batch。
+
+    输出：
+        loss: 一个标量，用于反向传播。
+        metrics: action/world/value 三类分解指标。
+
+    这段伪代码对应 policy_text2world_model.py 中的 compute_loss_with_epsilon_and_sigma。
+    """
+
+    # 1. 得到干净 latent x0 和条件 c。
+    #    x0 的时间维 T 中，不同位置代表 current/action/future/value。
+    x0, condition = get_data_and_condition(data_batch)
+
+    # 2. 采样扩散噪声尺度 sigma 和高斯噪声 epsilon。
+    #    训练目标是从 noisy latent 还原 clean latent。
+    sigma = sample_sigma(batch_size=x0.shape[0], time_steps=x0.shape[2])
+    epsilon = randn_like(x0)
+    mean, std = sde_marginal_prob(x0, sigma)
+    x_sigma = mean + epsilon * std
+
+    # 3. 调用 Cosmos Video2World denoiser。
+    #    模型看到 noisy latent、sigma、文本/视频/机器人条件，输出 predicted x0。
+    model_pred = denoise_model(
+        x_sigma,
+        sigma,
+        condition,
+    )
+    x0_hat = model_pred.x0
+
+    # 4. 每个 latent slot 的基础 MSE / EDM loss。
+    per_slot_mse = (x0_hat - x0) ** 2
+    per_slot_weight = get_per_sigma_loss_weights(sigma)
+    per_slot_loss = per_slot_mse * per_slot_weight
+
+    # 5. 构造 final_mask_B_T。
+    #    这是 WAM 后训练最重要的工程对象。
+    #    它告诉模型：当前样本应该在哪些 slot 上计算损失。
+    final_mask = zeros([B, T])
+
+    for b in range(B):
+        if data_batch["rollout_data_mask"][b] == 0:
+            # demo 样本：只监督 action slot，训练 policy。
+            ia = data_batch["action_latent_idx"][b]
+            final_mask[b, ia] = action_loss_multiplier  # 本地配置为 16
+
+        elif data_batch["world_model_sample_mask"][b] == 1:
+            # rollout world 样本：action 已作为条件，目标是预测未来世界。
+            for jf in future_slots_of_sample(data_batch, b):
+                final_mask[b, jf] = 1
+
+        elif data_batch["value_function_sample_mask"][b] == 1:
+            # rollout value 样本：其他 slot 作为条件，目标只监督 value slot。
+            iv = data_batch["value_latent_idx"][b]
+            final_mask[b, iv] = 1
+
+    # 6. 应用 mask 并 reduce。
+    #    如果没有 mask，模型会对所有 latent frame 都算 loss，
+    #    这会把 action/world/value 的训练目标混在一起。
+    masked_loss = per_slot_loss * final_mask[:, None, :, None, None]
+    loss = masked_loss.mean()
+
+    # 7. 记录分解指标，避免只看总 loss。
+    metrics = {
+        "demo_sample_action_mse_loss": mse_on_slot(x0_hat, x0, action_slots, demo_samples),
+        "world_model_sample_future_image_mse_loss": mse_on_slot(x0_hat, x0, future_image_slots, world_samples),
+        "world_model_sample_future_proprio_mse_loss": mse_on_slot(x0_hat, x0, future_proprio_slots, world_samples),
+        "value_function_sample_value_mse_loss": mse_on_slot(x0_hat, x0, value_slots, value_samples),
+    }
+
+    # 8. 反向传播更新。
+    loss.backward()
+    optimizer.step()
+    optimizer.zero_grad()
+
+    return loss, metrics</code></pre>
+
+        <h3>伪代码 4：复现实验的最小评估循环</h3>
+        <pre><code class="language-python">def reproduce_cosmos_policy_wam():
+    """
+    这个流程不是一次性上来跑百万步，而是按风险分层推进。
+    每一层都能排除一类常见失败。
+    """
+
+    # Stage A: 数据契约 smoke test
+    # 目的：确认 sample_dict 字段齐全，action/value/future slot 不错位。
+    batch = next(iter(robocasa_cosmos_policy_dataloader))
+    assert batch["actions"].shape[-2:] == (32, 7)
+    assert is_scalar(batch["value_function_return"])
+    assert mutually_exclusive(
+        batch["world_model_sample_mask"],
+        batch["value_function_sample_mask"],
+    )
+    print_shapes_and_ranges(batch)
+
+    # Stage B: mask 逻辑 smoke test
+    # 目的：即使没有 2B 权重，也能先验证 final_mask 是否正确。
+    x0_mock = make_mock_latent_video(batch)
+    final_mask = build_loss_mask(batch)
+    assert demo_samples_only_have_action_loss(final_mask, batch)
+    assert world_samples_only_have_future_loss(final_mask, batch)
+    assert value_samples_only_have_value_loss(final_mask, batch)
+
+    # Stage C: 小 batch overfit
+    # 目的：拿极少量样本训练几十到几百步，看 action/world/value loss 是否下降。
+    model = load_cosmos_predict25_policy_base_or_small_mock()
+    fixed_batch = freeze_one_or_two_batches()
+    for step in range(200):
+        loss, metrics = cosmos_policy_train_step(fixed_batch)
+        log(metrics)
+    assert metrics["demo_sample_action_mse_loss"] &lt; initial_action_loss
+
+    # Stage D: 真实短跑
+    # 目的：用真实 checkpoint 和真实数据跑 10/100/1000 step，检查显存、速度、checkpoint。
+    run_torchrun_training(
+        base_checkpoint="Cosmos Predict2.5 2B iter_000023000/model",
+        batch_size=25,
+        chunk_size=32,
+        p_world_model=0.5,
+        action_loss_multiplier=16,
+        save_iter=1000,
+    )
+
+    # Stage E: policy closed-loop eval
+    # 目的：不只看 diffusion loss，还看机器人任务成功率。
+    evaluate_on_robocasa_or_libero(
+        metrics=["success_rate", "action_mse", "value_calibration"],
+        ablations=[
+            "action_only",
+            "action_plus_future",
+            "action_plus_future_plus_value",
+            "p_world_model_0_0p5_1",
+            "action_loss_multiplier_1_16",
+        ],
+    )</code></pre>
+    </section>
+
+    <section id="reproduction">
+        <h2>复现路线与资源栈</h2>
+        <h3>推荐切入顺序</h3>
+        <ol>
+            <li><strong>只做数据契约</strong>：复现 <code>robocasa_dataset.py</code> 的 sample 字段、slot index、mask 逻辑。</li>
+            <li><strong>只做 loss mask</strong>：mock latent，不加载 2B 权重，验证 policy/world/value mask。</li>
+            <li><strong>小模型或局部 overfit</strong>：用极小数据检查三类 loss 是否可下降。</li>
+            <li><strong>加载 Cosmos Predict2.5 2B checkpoint 短跑</strong>：对齐 batch、chunk、action multiplier、save_iter。</li>
+            <li><strong>closed-loop eval</strong>：RoboCasa/LIBERO 成功率才是策略能力证据。</li>
+        </ol>
+
+        <h3>资源需求</h3>
+        <table>
+            <thead><tr><th>阶段</th><th>GPU / 存储</th><th>主要风险</th><th>通过标准</th></tr></thead>
+            <tbody>
+                <tr><td>Dataset smoke test</td><td>CPU 或任意 GPU；需要小样本数据</td><td>路径缺失、HDF5 字段不一致、T5 embedding 太大</td><td>字段 shape/dtype/range 正确，mask 互斥。</td></tr>
+                <tr><td>Mask smoke test</td><td>CPU/GPU 均可</td><td>slot index 错位，demo/world/value loss 混算</td><td>单元测试证明三类样本只在目标 slot 上有 loss。</td></tr>
+                <tr><td>小规模 overfit</td><td>取决于模型大小；可先用 mock/small denoiser</td><td>loss 不降，action/value 注入维度错</td><td>固定 batch 上 action/world/value loss 可下降。</td></tr>
+                <tr><td>2B 后训练短跑</td><td>本地证据为 80GB GPU，batch 25，约 68GB 占用</td><td>显存、checkpoint、pin_memory、num_workers、S3 权限</td><td>10/100/1000 step 稳定，checkpoint 可落盘。</td></tr>
+                <tr><td>闭环评估</td><td>LIBERO/RoboCasa 仿真环境</td><td>policy 输出尺度、动作归一化、sim wrapper 不一致</td><td>产生 episode-level success rate 和失败样本分析。</td></tr>
+            </tbody>
+        </table>
+
+        <h3>知识栈</h3>
+        <ul>
+            <li>机器人数据：RoboCasa、LIBERO、LeRobot/RLDS/HDF5、动作归一化、proprio、EEF pose、gripper。</li>
+            <li>生成模型：latent video tokenizer、DiT、EDM / diffusion、rectified flow、condition mask、classifier-free guidance 基础概念。</li>
+            <li>强化学习：Monte Carlo return、value function、success/failure rollout、offline RL 评估。</li>
+            <li>训练工程：PyTorch、Hydra、torchrun、FSDP/DeepSpeed 思维、checkpoint shard、WandB local log、显存监控。</li>
+            <li>评估工程：RoboCasa/LIBERO closed-loop rollout、success rate、action MSE、value calibration、ablation 管理。</li>
+        </ul>
+    </section>
+
+    <section id="comparison">
+        <h2>方法对比与选择建议</h2>
+        <table>
+            <thead><tr><th>路线</th><th>做法</th><th>优点</th><th>缺点</th><th>建议</th></tr></thead>
+            <tbody>
+                <tr>
+                    <td>VLA action-only</td>
+                    <td>只学 \(p(a\mid o,l)\)</td>
+                    <td>最快得到可执行 policy baseline</td>
+                    <td>没有未来想象和 value</td>
+                    <td>作为对照组必须做。</td>
+                </tr>
+                <tr>
+                    <td>Cascaded WAM</td>
+                    <td>VLA 提候选动作，WM rollout，value/heuristic 选动作</td>
+                    <td>模块化，容易调试</td>
+                    <td>延迟高，误差会级联</td>
+                    <td>适合早期验证 WAM 是否有收益。</td>
+                </tr>
+                <tr>
+                    <td>Cosmos Policy Joint WAM</td>
+                    <td>action/future/value 都放进 latent-frame denoising</td>
+                    <td>统一模型，能力边界最接近 WAM</td>
+                    <td>工程复杂，数据契约严格，算力重</td>
+                    <td>这是本报告主推复现路线。</td>
+                </tr>
+                <tr>
+                    <td>从零预训练 DreamDojo/Cosmos</td>
+                    <td>大规模视频世界模型预训练再机器人后训练</td>
+                    <td>研究完整度最高</td>
+                    <td>数据/算力成本极高</td>
+                    <td>不建议作为第一阶段复现。</td>
+                </tr>
+            </tbody>
+        </table>
+    </section>
+
+    <section id="checklist">
+        <h2>复现检查清单</h2>
+        <ul>
+            <li><span class="tag">数据</span>确认 <code>success_only</code> 与 <code>all_episodes</code> 的 episode 数、task 分布、success/failure 比例。</li>
+            <li><span class="tag">动作</span>确认 action dim 为 7，chunk size 为 32，归一化统计与训练配置一致。</li>
+            <li><span class="tag">文本</span>确认 <code>reason1_embeddings.pkl</code> 中每条 command 都可查到 T5 embedding。</li>
+            <li><span class="tag">Value</span>确认 <code>returns</code> 字段存在，\(\gamma=0.99\)，value 是 scalar 而不是向量。</li>
+            <li><span class="tag">Slot</span>确认 action/value/future/current 的 latent index 不越界、不重复误用。</li>
+            <li><span class="tag">Mask</span>确认 demo/world/value 三种样本的 loss mask 与 condition mask 分别正确。</li>
+            <li><span class="tag">日志</span>记录总 loss 之外的 action/world/value loss breakdown。</li>
+            <li><span class="tag">评估</span>closed-loop success rate 必须和 loss 一起看，不能只用生成 loss 宣称 policy 成功。</li>
+        </ul>
+    </section>
+
+    <section id="references">
+        <h2>参考文献（References）</h2>
+        <ol>
+            <li>NVIDIA, "Cosmos Policy", 2026. <a href="https://research.nvidia.com/labs/cosmos-lab/cosmos-policy/">项目页</a>，<a href="https://github.com/NVlabs/cosmos-policy">GitHub</a></li>
+            <li>NVIDIA Cosmos, "Cosmos Predict2.5", 2026. <a href="https://github.com/nvidia-cosmos/cosmos-predict2.5">GitHub</a></li>
+            <li>NVIDIA Cosmos Cookbook, "Robot Policy Post-Training Recipe", 2026. <a href="https://github.com/nvidia-cosmos/cosmos-cookbook/tree/main/recipes/robot_policy/post_training">链接</a></li>
+            <li>World Action Models Survey, "World Action Models: The Next Frontier in Embodied AI", 2026. <a href="https://arxiv.org/abs/2605.12090">arXiv</a></li>
+            <li>DreamDojo, "Generalist Robot Policy by World Model Learning from Human Videos", 2026. <a href="https://arxiv.org/abs/2602.06949">arXiv</a></li>
+            <li>RoboCasa, "Large-Scale Simulation of Everyday Tasks for Generalist Robots", 2024. <a href="https://arxiv.org/abs/2406.02523">arXiv</a></li>
+            <li>LIBERO, "Benchmarking Knowledge Transfer for Lifelong Robot Learning", 2023. <a href="https://arxiv.org/abs/2306.03310">arXiv</a></li>
+            <li>Hugging Face, "LeRobot", 2024-2026. <a href="https://github.com/huggingface/lerobot">GitHub</a></li>
+            <li>本地证据：<code>C:\Users\mousongzhe\pryer\project\13_dreamdojo_world_model\04_remote_progress_20260521</code>，包含 run config、README、Cosmos Policy dataset/model 代码和训练日志摘要。</li>
+        </ol>
+    </section>
+</article>
+</body>
+</html>

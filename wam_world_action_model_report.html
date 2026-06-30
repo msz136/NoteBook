@@ -1,0 +1,914 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WAM / World Action Model 调研报告</title>
+    <script>
+    window.MathJax = {
+        tex: { inlineMath: [['\\(','\\)'], ['$', '$']], displayMath: [['\\[','\\]'], ['$$','$$']] },
+        options: { skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code'] }
+    };
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js" async></script>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+    <script>document.addEventListener('DOMContentLoaded', () => mermaid.initialize({ startOnLoad: true, theme: 'default' }));</script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans SC", sans-serif; font-size: 16px; line-height: 1.8; color: #1a1a1a; background: #fff; padding: 2rem 1rem; }
+        article { max-width: 900px; margin: 0 auto; }
+        h1 { font-size: 2rem; margin-bottom: 0.75rem; border-bottom: 2px solid #333; padding-bottom: 0.6rem; line-height: 1.35; }
+        h2 { font-size: 1.5rem; margin-top: 2.5rem; margin-bottom: 1rem; color: #222; border-left: 4px solid #0066cc; padding-left: 0.75rem; line-height: 1.45; }
+        h3 { font-size: 1.25rem; margin-top: 1.8rem; margin-bottom: 0.8rem; color: #333; line-height: 1.5; }
+        h4 { font-size: 1.1rem; margin-top: 1.2rem; margin-bottom: 0.5rem; color: #444; }
+        p { margin-bottom: 1rem; }
+        ul, ol { margin-bottom: 1rem; padding-left: 1.5rem; }
+        li { margin-bottom: 0.35rem; }
+        a { color: #0066cc; text-decoration: none; overflow-wrap: anywhere; }
+        a:hover { text-decoration: underline; }
+        code { font-family: "Fira Code", Consolas, "Courier New", monospace; background: #f0f0f0; padding: 0.15rem 0.4rem; border-radius: 3px; font-size: 0.9em; }
+        pre { background: #f5f5f5; border-radius: 6px; padding: 1rem; overflow-x: auto; margin: 1rem 0; font-size: 0.9rem; line-height: 1.55; }
+        pre code { background: none; padding: 0; border-radius: 0; font-size: inherit; }
+        .table-wrap { overflow-x: auto; margin: 1.5rem 0; }
+        table { width: 100%; border-collapse: collapse; font-size: 0.92rem; }
+        th, td { border: 1px solid #ddd; padding: 0.6rem 0.8rem; text-align: left; vertical-align: top; }
+        th { background: #f8f8f8; font-weight: 600; }
+        tbody tr:nth-child(even) { background: #fafafa; }
+        .toc { background: #f8fbff; border: 1px solid #d9e8ff; border-left: 4px solid #0066cc; padding: 1rem 1.2rem; margin: 1.5rem 0 2rem; border-radius: 6px; }
+        .toc h2 { border: none; margin: 0 0 0.8rem; padding: 0; font-size: 1.2rem; color: #123; }
+        .toc ol { columns: 2; column-gap: 2rem; margin-bottom: 0; }
+        .toc li { break-inside: avoid; margin-bottom: 0.35rem; }
+        .toc-sub { margin-left: 1rem; font-size: 0.92rem; }
+        .math-block { overflow-x: auto; margin: 1rem 0; padding: 0.4rem 0; }
+        .mermaid { margin: 1.5rem 0; padding: 1rem; background: #fbfbfb; border: 1px solid #e5e5e5; border-radius: 6px; overflow-x: auto; }
+        section { scroll-margin-top: 1rem; }
+        @media (max-width: 600px) { body { padding: 1rem 0.5rem; } h1 { font-size: 1.5rem; } h2 { font-size: 1.25rem; } table { font-size: 0.82rem; } .toc ol { columns: 1; } }
+    </style>
+</head>
+<body>
+<article>
+<h1 id="wam-world-action-model-调研报告">WAM / World Action Model 调研报告</h1>
+<p>生成日期：2026-06-13  <br>本地锚点：<code>C:\Users\mousongzhe\pryer\project</code>，重点是 <code>13_dreamdojo_world_model</code> 与 OpenPI/QwenVL/PiZero VLA 线。</p>
+<nav class="toc" aria-label="目录"><h2>目录</h2><ol><li><a href="#0-一句话结论">0. 一句话结论</a></li><li><a href="#1-外部领域脉络">1. 外部领域脉络</a></li><li><a href="#2-wm-vla-wam-的关键区分">2. WM / VLA / WAM 的关键区分</a></li><li><a href="#3-wam-的典型架构">3. WAM 的典型架构</a></li><li class="toc-sub"><a href="#3-1-宏观结构图">3.1 宏观结构图</a></li><li class="toc-sub"><a href="#3-2-joint-wam-同一-latent-序列的做法">3.2 Joint WAM, 同一 latent 序列的做法</a></li><li class="toc-sub"><a href="#3-3-cascaded-wam-策略和世界模型分开">3.3 Cascaded WAM, 策略和世界模型分开</a></li><li><a href="#4-数学形式">4. 数学形式</a></li><li class="toc-sub"><a href="#4-1-轨迹-上下文与槽位变量">4.1 轨迹、上下文与槽位变量</a></li><li class="toc-sub"><a href="#4-2-三种因子分解-为什么-wam-不等于简单-vla-wm">4.2 三种因子分解：为什么 WAM 不等于简单 VLA + WM</a></li><li class="toc-sub"><a href="#4-3-动作生成的-flow-matching-目标">4.3 动作生成的 Flow Matching 目标</a></li><li class="toc-sub"><a href="#4-4-世界预测的-latent-diffusion-rectified-flow-目标">4.4 世界预测的 latent diffusion / rectified-flow 目标</a></li><li class="toc-sub"><a href="#4-5-价值函数-成功概率与回报监督">4.5 价值函数、成功概率与回报监督</a></li><li class="toc-sub"><a href="#4-6-joint-wam-的统一损失">4.6 Joint WAM 的统一损失</a></li><li class="toc-sub"><a href="#4-7-wam-架构的概率图">4.7 WAM 架构的概率图</a></li><li><a href="#5-典型算法伪代码">5. 典型算法伪代码</a></li><li class="toc-sub"><a href="#5-1-joint-wam-训练">5.1 Joint WAM 训练</a></li><li class="toc-sub"><a href="#5-2-joint-wam-推理-采样-想象-评分-执行">5.2 Joint WAM 推理：采样、想象、评分、执行</a></li><li class="toc-sub"><a href="#5-3-cascaded-wam-推理">5.3 Cascaded WAM 推理</a></li><li class="toc-sub"><a href="#5-4-读-5-1-5-2-5-3-的最短路径">5.4 读 5.1 / 5.2 / 5.3 的最短路径</a></li><li><a href="#6-和本地-pryer-项目的对应关系">6. 和本地 <code>pryer</code> 项目的对应关系</a></li><li class="toc-sub"><a href="#6-1-13dreamdojoworldmodel-是-wm-主线-但已经接近-wam">6.1 <code>13_dreamdojo_world_model</code> 是 WM 主线，但已经接近 WAM</a></li><li class="toc-sub"><a href="#6-2-cosmos-policy-本地配置的-wam-信号">6.2 Cosmos Policy 本地配置的 WAM 信号</a></li><li class="toc-sub"><a href="#6-3-robocasa-dataset-的-latent-slot-设计">6.3 RoboCasa dataset 的 latent slot 设计</a></li><li class="toc-sub"><a href="#6-4-actionconditioned-py-仍是-wm-推理侧">6.4 <code>action_conditioned.py</code> 仍是 WM 推理侧</a></li><li class="toc-sub"><a href="#6-5-openpiqwenvlpizero-是强-vla-对-wam-是-action-generator">6.5 OpenPI/QwenVL/PiZero 是强 VLA，对 WAM 是 action generator</a></li><li><a href="#7-一个面向本地项目的-wam-组合方案">7. 一个面向本地项目的 WAM 组合方案</a></li><li class="toc-sub"><a href="#7-1-低风险-cascaded-wam">7.1 低风险：Cascaded WAM</a></li><li class="toc-sub"><a href="#7-2-中风险-cosmos-policy-风格-joint-wam">7.2 中风险：Cosmos Policy 风格 Joint WAM</a></li><li class="toc-sub"><a href="#7-3-高风险-object-aware-wam">7.3 高风险：Object-aware WAM</a></li><li><a href="#8-宏观领域特征">8. 宏观领域特征</a></li><li><a href="#9-典型风险">9. 典型风险</a></li><li><a href="#10-推荐阅读本地代码顺序">10. 推荐阅读本地代码顺序</a></li><li><a href="#11-最后的小模型">11. 最后的小模型</a></li></ol></nav>
+<h2 id="0-一句话结论">0. 一句话结论</h2>
+<p>WAM, World Action Model, 可以理解为“会行动的世界模型”或“带世界预测的动作模型”：它不只学习</p>
+<div class="math-block">$$
+\pi_\theta(a_{t:t+H-1}\mid o_{\le t}, s_t, c)
+$$</div>
+<p>也不只学习</p>
+<div class="math-block">$$
+W_\theta(x_{t+1:t+H}\mid x_{\le t}, a_{t:t+H-1}, c)
+$$</div>
+<p>而是把动作、未来状态、价值/成功概率放进一个联合生成或联合预测问题里：</p>
+<div class="math-block">$$
+p_\theta(a_{t:t+H-1}, x_{t+1:t+H}, v_t \mid h_t, c)
+$$</div>
+<p>其中 \(h_t\) 是历史观测、机器人状态、历史动作和任务语言的压缩上下文。直观说，VLA 更像“看图听指令后直接动手”，WM 更像“给定动作后想象世界会怎样”，WAM 则尝试在同一个模型中同时回答：“我该怎么动？动完世界会怎样？这个结果值不值得？”</p>
+<h2 id="1-外部领域脉络">1. 外部领域脉络</h2>
+<p>2026 年 5 月的综述论文 <strong>World Action Models: The Next Frontier in Embodied AI</strong> 明确把 WAM 定义为“integrate state prediction with action generation”的新范式，并把它视为连接世界模型、VLA 与具身智能控制的桥。这个说法还很新，因此目前 WAM 更像一个正在形成的范式名，而不是已经有稳定工程标准的模型家族。</p>
+<p>相关主线可以按四层理解：</p>
+<div class="table-wrap"><table>
+<thead><tr><th>层次</th><th>代表问题</th><th>代表模型/项目</th><th>和 WAM 的关系</th></tr></thead>
+<tbody>
+<tr><td>VLA</td><td>从视觉/语言直接生成动作</td><td>RT-2, OpenVLA, pi0, OpenPI</td><td>提供动作生成能力，但通常不显式生成未来世界</td></tr>
+<tr><td>WM / WFM</td><td>根据当前状态和条件生成未来观测</td><td>DreamDojo, Cosmos Predict2.5</td><td>提供想象/预测能力，但常需外部策略或规划器</td></tr>
+<tr><td>Policy + WM + Value</td><td>同一系统同时训练动作、未来和价值</td><td>Cosmos Policy</td><td>非常接近工程意义上的 WAM</td></tr>
+<tr><td>Object-aware / causal WAM</td><td>绑定对象状态、动作和未来变化</td><td>OA-WAM, RepWAM 等新论文</td><td>试图解决对象级因果与泛化问题</td></tr>
+</tbody></table></div>
+<p>可参考资料：</p>
+<ul>
+<li>WAM 综述：<a href="https://arxiv.org/abs/2605.12090" target="_blank" rel="noopener">https://arxiv.org/abs/2605.12090</a></li>
+<li>OA-WAM：<a href="https://arxiv.org/abs/2605.06481" target="_blank" rel="noopener">https://arxiv.org/abs/2605.06481</a></li>
+<li>RepWAM：<a href="https://arxiv.org/abs/2606.13674" target="_blank" rel="noopener">https://arxiv.org/abs/2606.13674</a></li>
+<li>NVIDIA Cosmos Policy：<a href="https://research.nvidia.com/labs/dir/cosmos-policy/" target="_blank" rel="noopener">https://research.nvidia.com/labs/dir/cosmos-policy/</a></li>
+<li>Cosmos Policy GitHub：<a href="https://github.com/NVlabs/cosmos-policy" target="_blank" rel="noopener">https://github.com/NVlabs/cosmos-policy</a></li>
+<li>DreamDojo GitHub：<a href="https://github.com/NVIDIA/DreamDojo" target="_blank" rel="noopener">https://github.com/NVIDIA/DreamDojo</a></li>
+<li>RT-2：<a href="https://arxiv.org/abs/2307.15818" target="_blank" rel="noopener">https://arxiv.org/abs/2307.15818</a></li>
+<li>OpenVLA：<a href="https://arxiv.org/abs/2406.09246" target="_blank" rel="noopener">https://arxiv.org/abs/2406.09246</a></li>
+<li>pi0：<a href="https://arxiv.org/abs/2410.24164" target="_blank" rel="noopener">https://arxiv.org/abs/2410.24164</a></li>
+<li>FAST action tokenizer：<a href="https://arxiv.org/abs/2501.09747" target="_blank" rel="noopener">https://arxiv.org/abs/2501.09747</a></li>
+<li>RoboCasa：<a href="https://arxiv.org/abs/2406.02523" target="_blank" rel="noopener">https://arxiv.org/abs/2406.02523</a></li>
+</ul>
+<h2 id="2-wm-vla-wam-的关键区分">2. WM / VLA / WAM 的关键区分</h2>
+<div class="table-wrap"><table>
+<thead><tr><th>维度</th><th>WM, World Model</th><th>VLA, Vision-Language-Action</th><th>WAM, World Action Model</th></tr></thead>
+<tbody>
+<tr><td>主要条件</td><td>当前/历史状态、动作、语言</td><td>当前/历史视觉、语言、机器人状态</td><td>当前/历史状态、语言，并联合处理动作和未来</td></tr>
+<tr><td>主要输出</td><td>未来图像/状态/奖励</td><td>动作或动作块</td><td>动作、未来状态、价值/成功概率</td></tr>
+<tr><td>数学对象</td><td>\(p(x_{t+1:t+H}\mid h_t,a_{t:t+H-1},c)\)</td><td>\(p(a_{t:t+H-1}\mid h_t,c)\)</td><td>\(p(a_{t:t+H-1},x_{t+1:t+H},v_t\mid h_t,c)\)</td></tr>
+<tr><td>推理方式</td><td>给动作后 rollout，常外接规划器</td><td>直接执行或 action chunk 执行</td><td>生成动作，同时自带想象和评分</td></tr>
+<tr><td>典型失败</td><td>画面像但动作不可控，rollout 误差累积</td><td>反应式强但缺少“后果意识”</td><td>多任务损失冲突、世界预测与控制目标互相拉扯</td></tr>
+<tr><td>本地对应</td><td><code>13_dreamdojo_world_model</code> 的 DreamDojo / Cosmos Predict2.5</td><td><code>01/03/04/05_openpi_*</code> QwenVL/PiZero/FAST/FM</td><td><code>13_dreamdojo_world_model</code> 中 Cosmos Policy RoboCasa finetune 最像</td></tr>
+</tbody></table></div>
+<p>更口语一点：</p>
+<ul>
+<li>WM 是“如果这样做，世界会变成什么样？”</li>
+<li>VLA 是“现在应该做哪个动作？”</li>
+<li>WAM 是“我生成一个动作，同时预测它造成的世界，并估计这个未来是否好。”</li>
+</ul>
+<h2 id="3-wam-的典型架构">3. WAM 的典型架构</h2>
+<h3 id="3-1-宏观结构图">3.1 宏观结构图</h3>
+<pre class="mermaid">flowchart LR
+    O["Observation<br/>RGB / wrist / proprio / history"] --> E["Encoders<br/>VAE or video tokenizer<br/>text encoder<br/>state/action embedding"]
+    C["Command / goal"] --> E
+    E --> Z["Latent token sequence<br/>current state slots<br/>action slots<br/>future state slots<br/>value slot"]
+    Z --> B["Backbone<br/>DiT / Transformer / MLLM<br/>diffusion or flow matching"]
+    B --> A["Action head<br/>continuous chunk or action tokens"]
+    B --> F["Future world head<br/>future images / proprio / states"]
+    B --> V["Value head<br/>return / success / Q"]
+    A --> P["Execution or planning"]
+    F --> P
+    V --> P</pre>
+<h3 id="3-2-joint-wam-同一-latent-序列的做法">3.2 Joint WAM, 同一 latent 序列的做法</h3>
+<p>这一类最像你本地 Cosmos Policy 线。它把“当前观测、当前 proprio、动作块、未来 proprio、未来图像、value return”排列成一个视频/latent 序列。模型本身仍然像 video2world diffusion / rectified-flow 模型，但某些“帧”不再是真实图像，而是动作、状态或价值的占位 latent。</p>
+<pre class="mermaid">flowchart TB
+    subgraph Sample["A training sample"]
+        S0["blank / tokenizer frame"]
+        CP["current proprio slot"]
+        CI["current wrist + left/right images"]
+        AS["action chunk slot"]
+        FP["future proprio slot"]
+        FI["future wrist + left/right images"]
+        VS["value return slot"]
+    end
+
+    S0 --> Seq["latent sequence"]
+    CP --> Seq
+    CI --> Seq
+    AS --> Seq
+    FP --> Seq
+    FI --> Seq
+    VS --> Seq
+
+    Seq --> DIT["Rectified-flow / DiT denoiser"]
+    DIT --> L1["action loss"]
+    DIT --> L2["future state/world loss"]
+    DIT --> L3["value loss"]</pre>
+<h3 id="3-3-cascaded-wam-策略和世界模型分开">3.3 Cascaded WAM, 策略和世界模型分开</h3>
+<p>另一种常见实现是级联式：VLA 先产生候选动作，WM rollout 这些动作造成的未来，再用 reward/value/critic/规则挑选。</p>
+<pre class="mermaid">flowchart LR
+    H["history + instruction"] --> VLA["VLA policy<br/>sample K action chunks"]
+    VLA --> A1["a^(1)"]
+    VLA --> A2["a^(2)"]
+    VLA --> AK["a^(K)"]
+    A1 --> WM["World model rollout"]
+    A2 --> WM
+    AK --> WM
+    WM --> Scorer["value / reward / constraint scorer"]
+    Scorer --> Best["execute best action"]</pre>
+<p>这种方式的优点是工程边界清楚，能复用已有 VLA 和 WM；缺点是慢、误差链长，而且策略和世界模型的表征未必对齐。</p>
+<h2 id="4-数学形式">4. 数学形式</h2>
+<p>这一节把 WAM 先写成清楚的概率图，再落到扩散 / rectified flow 的训练目标。核心思想是：动作 \(a\)、未来世界 \(x^+\) 和价值 \(v\) 不再是三个孤立模块的输出，而是同一个条件联合分布里的三个随机变量。</p>
+<h3 id="4-1-轨迹-上下文与槽位变量">4.1 轨迹、上下文与槽位变量</h3>
+<p>机器人数据通常来自一条带语言任务的轨迹：</p>
+<div class="math-block">$$
+\tau =
+\left(
+c,\;
+o_{1:T},\;
+s_{1:T},\;
+a_{1:T-1},\;
+r_{1:T},\;
+d_{1:T}
+\right)
+$$</div>
+<p>其中 \(c\) 是任务语言，\(o_t\) 是多视角 RGB / wrist 图像，\(s_t\) 是 proprioception，\(a_t\) 是控制动作，\(r_t\) 是奖励，\(d_t\) 是 done / success 标记。给定当前时刻 \(t\) 和 horizon \(H\)，WAM 样本可写成：</p>
+<div class="math-block">$$
+x_t =
+\left(
+h_t,\;
+A_t,\;
+X^+_t,\;
+V_t
+\right)
+$$</div>
+<p>各部分含义是：</p>
+<div class="math-block">$$
+h_t = \phi(o_{\le t},s_{\le t},a_{&lt;t},c)
+$$</div>
+<div class="math-block">$$
+A_t = a_{t:t+H-1}\in\mathbb{R}^{H\times D_a}
+$$</div>
+<div class="math-block">$$
+X^+_t = (o_{t+H},s_{t+H}) \quad \text{或更细的 } (o_{t+1:t+H},s_{t+1:t+H})
+$$</div>
+<div class="math-block">$$
+V_t = \sum_{k=0}^{H&#39;}\gamma^k r_{t+k}
+$$</div>
+<p>如果是 Cosmos Policy / RoboCasa 风格，\(D_a=7\)，\(s_t\in\mathbb{R}^9\)，本地当前配置里 <code>chunk_size=32</code>，也就是 \(H=32\)。证据在 <code>config.yaml</code> 第 38-51 行：dataset 是 <code>RoboCasaDataset</code>，<code>chunk_size: &#39;32&#39;</code>，<code>p_world_model: &#39;0.5&#39;</code>，<code>return_value_function_returns: &#39;True&#39;</code>，<code>rollout_data_dir</code> 指向 <code>all_episodes</code>。</p>
+<p>Joint WAM 会把这些变量放入一个统一 token / latent 序列：</p>
+<div class="math-block">$$
+Y_t =
+\left[
+y^{blank},
+y^{s_t},
+y^{o_t,wrist},
+y^{o_t,left},
+y^{o_t,right},
+y^{A_t},
+y^{s_{t+H}},
+y^{o_{t+H},wrist},
+y^{o_{t+H},left},
+y^{o_{t+H},right},
+y^{V_t}
+\right]
+$$</div>
+<p>这里的 \(y^{A_t}\)、\(y^{s_t}\)、\(y^{V_t}\) 可以不是图像，而是“伪帧”或“latent slot”。本地 <code>robocasa_dataset.py</code> 正是这么组织的：第 883 行放 tokenizer blank frame，第 900 行记录 <code>current_proprio_latent_idx</code>，第 930 行记录 <code>action_latent_idx</code>，第 945/961 行记录 future proprio / future image slot，第 974 行记录 <code>value_latent_idx</code>。</p>
+<h3 id="4-2-三种因子分解-为什么-wam-不等于简单-vla-wm">4.2 三种因子分解：为什么 WAM 不等于简单 VLA + WM</h3>
+<p>最朴素的 VLA 是：</p>
+<div class="math-block">$$
+p_\theta(A_t\mid h_t)
+$$</div>
+<p>最朴素的动作条件世界模型是：</p>
+<div class="math-block">$$
+p_\theta(X^+_t\mid h_t,A_t)
+$$</div>
+<p>如果把两者串起来，可以得到 cascaded WAM：</p>
+<div class="math-block">$$
+p(A_t,X^+_t,V_t\mid h_t)
+=
+p_\pi(A_t\mid h_t)
+p_W(X^+_t\mid h_t,A_t)
+p_V(V_t\mid h_t,A_t,X^+_t)
+$$</div>
+<p>这很好实现，但三个模型的表征可能不一致。Joint WAM 则尝试直接建模：</p>
+<div class="math-block">$$
+p_\theta(A_t,X^+_t,V_t\mid h_t)
+$$</div>
+<p>它也可以自回归分解：</p>
+<div class="math-block">$$
+p_\theta(A_t,X^+_t,V_t\mid h_t)
+=
+p_\theta(A_t\mid h_t)
+p_\theta(X^+_t\mid h_t,A_t)
+p_\theta(V_t\mid h_t,A_t,X^+_t)
+$$</div>
+<p>也可以用扩散 / flow 一次性生成所有非条件 slot：</p>
+<div class="math-block">$$
+p_\theta(Y^{unknown}_t\mid Y^{cond}_t,c)
+$$</div>
+<p>其中：</p>
+<div class="math-block">$$
+Y^{cond}_t=\{y^{s_t},y^{o_t,*},c\},\quad
+Y^{unknown}_t=\{y^{A_t},y^{s_{t+H}},y^{o_{t+H},*},y^{V_t}\}
+$$</div>
+<p>这就是 WAM 的结构本质：同一个 backbone 同时看到“当前世界”和“要生成的动作/未来/价值槽位”，而不是只在最后接一个动作头。</p>
+<h3 id="4-3-动作生成的-flow-matching-目标">4.3 动作生成的 Flow Matching 目标</h3>
+<p>本地 OpenPI/QwenVL/PiZero VLA 线使用的是连续动作 flow matching。令真实动作块为：</p>
+<div class="math-block">$$
+x_0=A_t
+$$</div>
+<p>从高斯噪声采样：</p>
+<div class="math-block">$$
+x_1=\epsilon,\quad \epsilon\sim\mathcal{N}(0,I)
+$$</div>
+<p>插值：</p>
+<div class="math-block">$$
+x_\tau = (1-\tau)x_0+\tau x_1,\quad \tau\in[0,1]
+$$</div>
+<p>若使用最简单的 rectified flow，目标速度场是：</p>
+<div class="math-block">$$
+u^\star(x_\tau,\tau)=x_1-x_0
+$$</div>
+<p>本地 PiZero 里实际有一个小修正项 <code>flow_sig_min</code>，代码第 2458 行附近对应：</p>
+<div class="math-block">$$
+d_\psi=x_1-(1-\sigma_{min})x_0
+$$</div>
+<p>模型预测：</p>
+<div class="math-block">$$
+v_\theta =
+f_\theta(x_\tau,\tau,h_t,c)
+$$</div>
+<p>训练损失：</p>
+<div class="math-block">$$
+\mathcal{L}_{act}
+=
+\mathbb{E}
+\left[
+\left\|
+M_A\odot
+\left(
+v_\theta-d_\psi
+\right)
+\right\|_2^2
+\right]
+$$</div>
+<p>其中 \(M_A\) 是 action mask。本地对应 <code>pizero_qwenvl_fast_fortrainer.py</code> 第 2455 行 <code>v_psi = self.action_decoder(...)</code>，第 2458 行 <code>d_psi = ...</code>，第 2461 行 <code>loss_action = mean((v_psi[action_mask] - d_psi[action_mask]) ** 2)</code>。</p>
+<p>推理时从噪声动作块出发，用数值积分得到动作：</p>
+<div class="math-block">$$
+x_{\tau-\Delta\tau}
+=
+x_\tau-\Delta\tau\cdot v_\theta(x_\tau,\tau,h_t,c)
+$$</div>
+<p>本地对应 <code>sample_actions</code> 第 2651 行进入推理，<code>infer_action</code> 第 1464 行开始，Euler / 其他积分器在第 1776 行附近调用 <code>action_decoder</code> 得到 <code>action_vel</code>。</p>
+<h3 id="4-4-世界预测的-latent-diffusion-rectified-flow-目标">4.4 世界预测的 latent diffusion / rectified-flow 目标</h3>
+<p>视频世界模型通常先用 VAE / video tokenizer 压缩图像：</p>
+<div class="math-block">$$
+z_t=E_\phi(o_t),\quad \hat{o}_t=G_\phi(z_t)
+$$</div>
+<p>把当前条件帧和未来目标帧写成：</p>
+<div class="math-block">$$
+Z^{cond} = E_\phi(o_{\le t}),\quad
+Z^{future} = E_\phi(o_{t+H})
+$$</div>
+<p>动作条件 WM 学：</p>
+<div class="math-block">$$
+p_\theta(Z^{future},s_{t+H}\mid Z^{cond},s_t,A_t,c)
+$$</div>
+<p>如果用 denoising score matching：</p>
+<div class="math-block">$$
+Z_\sigma = Z^{future}+\sigma\epsilon
+$$</div>
+<div class="math-block">$$
+\mathcal{L}_{WM}^{diff}
+=
+\mathbb{E}_{\sigma,\epsilon}
+\left[
+w(\sigma)
+\left\|
+D_\theta(Z_\sigma,\sigma,Z^{cond},A_t,c)-Z^{future}
+\right\|_2^2
+\right]
+$$</div>
+<p>如果用 rectified flow，则：</p>
+<div class="math-block">$$
+Z_\tau=(1-\tau)Z^{future}+\tau\epsilon,\quad
+u_Z^\star=\epsilon-Z^{future}
+$$</div>
+<div class="math-block">$$
+\mathcal{L}_{WM}^{RF}
+=
+\mathbb{E}
+\left[
+\|v_\theta(Z_\tau,\tau,Z^{cond},A_t,c)-u_Z^\star\|_2^2
+\right]
+$$</div>
+<p>本地 <code>action_conditioned.py</code> 更像 WM 推理侧：第 302 行取 <code>actions = data[&quot;action&quot;]...</code>，第 322 行切 <code>actions_chunk</code>，第 349 行调用 <code>video2world_cli.generate_vid2world(... action=actions_chunk ...)</code>。这说明它使用动作块作为条件生成未来视频，但它本身不直接生成动作。</p>
+<h3 id="4-5-价值函数-成功概率与回报监督">4.5 价值函数、成功概率与回报监督</h3>
+<p>WAM 比 WM 多一个关键变量：这个未来是否值得执行。最简单的价值目标是 Monte Carlo return：</p>
+<div class="math-block">$$
+R_t=\sum_{k=0}^{T-t}\gamma^k r_{t+k}
+$$</div>
+<p>价值预测：</p>
+<div class="math-block">$$
+\hat V_\theta = V_\theta(h_t,A_t,X^+_t)
+$$</div>
+<p>监督损失：</p>
+<div class="math-block">$$
+\mathcal{L}_{value}
+=
+\mathbb{E}
+\left[
+M_V
+\left(
+\hat V_\theta-R_t
+\right)^2
+\right]
+$$</div>
+<p>若是二分类成功概率，也可以写成：</p>
+<div class="math-block">$$
+\mathcal{L}_{succ}
+=
+-\mathbb{E}
+\left[
+y\log p_\theta(success\mid h_t,A_t,X^+_t)
++(1-y)\log(1-p_\theta(success\mid h_t,A_t,X^+_t))
+\right]
+$$</div>
+<p>本地 <code>robocasa_dataset.py</code> 第 1030-1038 行从 future timestep 取 <code>value_function_return</code>，第 1064 行返回 <code>value_function_sample_mask</code>，第 1076 行把 <code>value_function_return</code> 放进 sample dict。当前 run 的 <code>config.yaml</code> 第 49-50 行把 <code>p_world_model=0.5</code> 和 <code>return_value_function_returns=True</code> 打开。</p>
+<h3 id="4-6-joint-wam-的统一损失">4.6 Joint WAM 的统一损失</h3>
+<p>令 slot mask 为：</p>
+<div class="math-block">$$
+M_A,\;M_W,\;M_V\in\{0,1\}
+$$</div>
+<p>分别表示 action、world、value 的监督是否对当前样本生效。Cosmos Policy 风格可以写成：</p>
+<div class="math-block">$$
+\mathcal{L}_{WAM}
+=
+\lambda_A M_A\mathcal{L}_{act}
++\lambda_W M_W\mathcal{L}_{world}
++\lambda_V M_V\mathcal{L}_{value}
++\lambda_C\mathcal{L}_{cons}
+$$</div>
+<p>本地配置第 177 行有 <code>action_loss_multiplier: 16</code>，可理解为 \(\lambda_A=16\) 的工程形式。rollout 样本中：</p>
+<div class="math-block">$$
+P(M_W=1)=p_{world}=0.5,\quad
+P(M_V=1)=1-p_{world}=0.5
+$$</div>
+<p>本地代码第 812-823 行就是这个采样逻辑：非 demo 样本如果 <code>random.random() &lt; self.p_world_model</code>，则 <code>is_world_model_sample=True</code>，否则 <code>is_value_function_sample=True</code>。</p>
+<p>一致性项不是所有实现都有，但对理解 WAM 很重要：</p>
+<div class="math-block">$$
+\mathcal{L}_{cons}
+=
+d\left(
+G_\phi(\hat Z^{future}),
+W_\theta(h_t,\hat A_t,c)
+\right)
+$$</div>
+<p>也可以用 dynamics consistency：</p>
+<div class="math-block">$$
+\mathcal{L}_{dyn}
+=
+\left\|
+\hat s_{t+H}
+-
+F_\theta(s_t,\hat A_t)
+\right\|_2^2
+$$</div>
+<p>这类项的意义是让动作生成和世界预测共享同一个物理因果解释：如果模型说这个动作能开抽屉，未来帧 / proprio / value 也必须支持这个说法。</p>
+<h3 id="4-7-wam-架构的概率图">4.7 WAM 架构的概率图</h3>
+<pre class="mermaid">flowchart TB
+    C["task c"] --> H["context h_t"]
+    O["current images o_t"] --> H
+    S["current proprio s_t"] --> H
+
+    H --> A["action chunk A_t"]
+    H --> F["future world X_t+"]
+    H --> V["value V_t"]
+    A --> F
+    A --> V
+    F --> V
+
+    subgraph Joint["Joint WAM implementation"]
+        SlotA["action slot"]
+        SlotF["future image/proprio slots"]
+        SlotV["value slot"]
+        Backbone["shared DiT / Transformer / flow backbone"]
+        SlotA --> Backbone
+        SlotF --> Backbone
+        SlotV --> Backbone
+    end</pre>
+<p>这个图的重点是三条边：\(A_t\to X^+_t\)，\(A_t\to V_t\)，\(X^+_t\to V_t\)。纯 VLA 只学 \(H\to A\)，纯 WM 只学 \(H,A\to X^+\)，WAM 则把这三者放在同一张图里。</p>
+<h2 id="5-典型算法伪代码">5. 典型算法伪代码</h2>
+<p>这里把 5.1 / 5.2 / 5.3 拆成“图、伪代码、代码映射、注释”。你可以把它当作读本地代码的路线图。</p>
+<h3 id="5-1-joint-wam-训练">5.1 Joint WAM 训练</h3>
+<h4 id="5-1-1-可视化架构">5.1.1 可视化架构</h4>
+<pre class="mermaid">flowchart LR
+    IDX["dataset index"] --> ST["sample_type<br/>demo / success rollout / failure rollout"]
+    ST --> MASK["task masks<br/>policy / world / value"]
+    ST --> LOAD["load current+future frames<br/>load action chunk<br/>load return"]
+    LOAD --> SLOTS["construct latent slots<br/>current obs<br/>action<br/>future obs<br/>value"]
+    SLOTS --> BATCH["sample_dict"]
+    BATCH --> MODEL["CosmosPolicyVideo2WorldModelRectifiedFlow"]
+    MODEL --> LOSS["masked multi-task loss<br/>action + world + value"]
+    LOSS --> OPT["backward + optimizer step"]</pre>
+<h4 id="5-1-2-带注释伪代码">5.1.2 带注释伪代码</h4>
+<pre><code class="language-python">for idx in sampler:
+    # 1) 数据集先决定样本来源。
+    # demo: 成功演示，主要用于学好动作。
+    # success_rollout/failure_rollout: 成功或失败 rollout，用于学世界模型和价值。
+    sample_type = determine_sample_type(
+        idx,
+        adjusted_demo_count,
+        adjusted_success_rollout_count,
+    )
+
+    # 2) 对 rollout 样本再抽一个任务类型。
+    # p_world_model=0.5 时，一半 rollout 样本训练 future/world，
+    # 另一半训练 value/return。
+    if sample_type != &quot;demo&quot;:
+        if random() &lt; p_world_model:
+            world_model_sample_mask = 1
+            value_function_sample_mask = 0
+        else:
+            world_model_sample_mask = 0
+            value_function_sample_mask = 1
+
+    # 3) 从同一条轨迹切出当前时刻、未来时刻和动作块。
+    current_frame = images[t]
+    future_frame = images[min(t + chunk_size, T - 1)]
+    action_chunk = actions[t : t + chunk_size]
+    value_return = returns[min(t + chunk_size, T - 1)]
+
+    # 4) 构造 WAM 的 slot 序列。
+    # 注意 action/proprio/value 在数据集里先以 blank image 占位，
+    # 后续模型侧再根据 idx 把真实数值注入 latent slot。
+    slots = [
+        blank_tokenizer_frame,
+        current_proprio_slot,
+        current_wrist_image,
+        current_left_image,
+        current_right_image,
+        action_chunk_slot,
+        future_proprio_slot,
+        future_wrist_image,
+        future_left_image,
+        future_right_image,
+        value_return_slot,
+    ]
+
+    batch = {
+        &quot;video&quot;: preprocess(slots),
+        &quot;actions&quot;: action_chunk,
+        &quot;proprio&quot;: current_proprio,
+        &quot;future_proprio&quot;: future_proprio,
+        &quot;value_function_return&quot;: value_return,
+        &quot;action_latent_idx&quot;: action_slot_index,
+        &quot;future_image_latent_idx&quot;: future_image_slot_index,
+        &quot;value_latent_idx&quot;: value_slot_index,
+        &quot;world_model_sample_mask&quot;: world_model_sample_mask,
+        &quot;value_function_sample_mask&quot;: value_function_sample_mask,
+    }
+
+    # 5) 模型侧：把 video token 化为 latent，在指定 slot 注入 action/proprio/value。
+    # 训练目标是 rectified-flow / diffusion denoising。
+    z0 = tokenizer.encode(batch[&quot;video&quot;])
+    z0[action_idx] = action_embed(batch[&quot;actions&quot;])
+    z0[current_proprio_idx] = proprio_embed(batch[&quot;proprio&quot;])
+    z0[future_proprio_idx] = proprio_embed(batch[&quot;future_proprio&quot;])
+    z0[value_idx] = value_embed(batch[&quot;value_function_return&quot;])
+
+    tau = sample_time()
+    eps = randn_like(z0)
+    z_tau = (1 - tau) * z0 + tau * eps
+    target_velocity = eps - z0
+
+    pred_velocity = model(z_tau, tau, text=batch[&quot;t5_text_embeddings&quot;])
+
+    # 6) 不同 slot 用不同 mask 算 loss。
+    loss_action = mse(pred_velocity[action_idx], target_velocity[action_idx])
+    loss_world = mse(pred_velocity[future_slots], target_velocity[future_slots])
+    loss_value = mse(value_head(pred_velocity[value_idx]), batch[&quot;value_function_return&quot;])
+
+    loss = (
+        lambda_action * policy_mask * loss_action
+        + lambda_world * batch[&quot;world_model_sample_mask&quot;] * loss_world
+        + lambda_value * batch[&quot;value_function_sample_mask&quot;] * loss_value
+    )
+    loss.backward()
+    optimizer.step()</code></pre>
+<h4 id="5-1-3-每一步对应的本地代码">5.1.3 每一步对应的本地代码</h4>
+<div class="table-wrap"><table>
+<thead><tr><th>伪代码环节</th><th>本地代码位置</th><th>实际作用</th></tr></thead>
+<tbody>
+<tr><td><code>sample_type = determine_sample_type(...)</code></td><td><code>robocasa_dataset.py:710</code> 进入 <code>__getitem__</code>，<code>737</code> 调 <code>determine_sample_type</code></td><td>把一个 index 映射到 demo / success rollout / failure rollout</td></tr>
+<tr><td><code>rollout_data_mask</code> / <code>rollout_data_success_mask</code></td><td><code>robocasa_dataset.py:739-740</code></td><td>标注样本是不是 rollout，以及是不是成功 rollout</td></tr>
+<tr><td><code>random() &lt; p_world_model</code></td><td><code>robocasa_dataset.py:812-823</code></td><td>对 rollout 样本随机指定 world model 监督或 value 监督</td></tr>
+<tr><td><code>future_frame_idx = t + chunk_size</code></td><td><code>robocasa_dataset.py:826-829</code></td><td>决定未来帧 / future proprio / value return 读取位置</td></tr>
+<tr><td><code>blank_tokenizer_frame</code></td><td><code>robocasa_dataset.py:883-885</code></td><td>第一个 blank frame 主要服务 video tokenizer 的序列格式</td></tr>
+<tr><td><code>current_proprio_slot</code></td><td><code>robocasa_dataset.py:890-901</code></td><td>取当前 proprio，并记录 <code>current_proprio_latent_idx</code></td></tr>
+<tr><td><code>action_chunk_slot</code></td><td><code>robocasa_dataset.py:926-931</code></td><td>给动作块放一个 blank slot，并记录 <code>action_latent_idx</code></td></tr>
+<tr><td><code>future_proprio_slot</code></td><td><code>robocasa_dataset.py:934-946</code></td><td>取未来 proprio，并记录 <code>future_proprio_latent_idx</code></td></tr>
+<tr><td><code>future image slots</code></td><td><code>robocasa_dataset.py:949-966</code></td><td>取未来 wrist / left / right 图像，并记录 future image indices</td></tr>
+<tr><td><code>value_return_slot</code></td><td><code>robocasa_dataset.py:970-975</code></td><td>给 value 放一个 blank slot，并记录 <code>value_latent_idx</code></td></tr>
+<tr><td><code>action_chunk = actions[t:t+H]</code></td><td><code>robocasa_dataset.py:1008-1027</code></td><td>截取动作块，不足 horizon 时重复最后一个 action padding</td></tr>
+<tr><td><code>value_function_return</code></td><td><code>robocasa_dataset.py:1030-1038</code></td><td>在 future timestep 读取 return 作为 value target</td></tr>
+<tr><td><code>sample_dict</code></td><td><code>robocasa_dataset.py:1042-1079</code></td><td>把 video、actions、proprio、future_proprio、mask、slot index 全部交给模型</td></tr>
+<tr><td>当前训练配置</td><td><code>config.yaml:38-51</code>，<code>175-177</code></td><td>使用 <code>RoboCasaDataset</code>，<code>chunk_size=32</code>，<code>p_world_model=0.5</code>，模型类是 <code>CosmosPolicyVideo2WorldModelRectifiedFlow</code>，<code>action_loss_multiplier=16</code></td></tr>
+</tbody></table></div>
+<h4 id="5-1-4-读代码时要抓住的关键点">5.1.4 读代码时要抓住的关键点</h4>
+<p><code>robocasa_dataset.py</code> 的核心不是普通 dataloader，而是“WAM 样本编排器”。它做三件事：</p>
+<ol>
+<li>把数据源分成 demo / success rollout / failure rollout；</li>
+<li>把 rollout 样本分成 world model 任务和 value 任务；</li>
+<li>把 action、future、value 都变成统一 video latent 序列里的 slot。</li>
+</ol>
+<p>所以当你看到 <code>blank_image</code> 时，不要理解为“丢信息”；它是在占位。真正的数值信息通过 <code>action_latent_idx</code>、<code>future_proprio_latent_idx</code>、<code>value_latent_idx</code> 等索引，在模型侧注入到对应 latent 位置。</p>
+<h3 id="5-2-joint-wam-推理-采样-想象-评分-执行">5.2 Joint WAM 推理：采样、想象、评分、执行</h3>
+<h4 id="5-2-1-可视化架构">5.2.1 可视化架构</h4>
+<pre class="mermaid">flowchart TB
+    OBS["current observation<br/>images + proprio + instruction"] --> COND["condition slots"]
+    COND --> NOISE["sample unknown slots<br/>action / future / value"]
+    NOISE --> FLOW["denoise or flow integration"]
+    FLOW --> DEC["decode slots"]
+    DEC --> ACT["action chunk"]
+    DEC --> FUT["imagined future"]
+    DEC --> VAL["predicted value"]
+    ACT --> SELECT["select / safety check"]
+    FUT --> SELECT
+    VAL --> SELECT
+    SELECT --> EXEC["execute first few steps<br/>then replan"]</pre>
+<h4 id="5-2-2-带注释伪代码">5.2.2 带注释伪代码</h4>
+<pre><code class="language-python">def joint_wam_act(obs, proprio, instruction, K=8):
+    # 1) 构造条件 slot。
+    # 当前图像、当前 proprio、语言任务是已知条件。
+    cond_slots = build_current_slots(obs, proprio, instruction)
+
+    candidates = []
+    for k in range(K):
+        # 2) 对未知 slot 采样噪声：动作、未来图像/proprio、value。
+        # 如果模型是 rectified flow，这些噪声会被积分成数据样本。
+        unknown_slots = {
+            &quot;action&quot;: randn(action_shape),
+            &quot;future&quot;: randn(future_latent_shape),
+            &quot;value&quot;: randn(value_shape),
+        }
+
+        # 3) 反向扩散 / flow integration。
+        # 这里的 model 与训练时共享 backbone。
+        # 它不是只输出 action，而是同时更新 action/future/value slot。
+        latent = integrate_flow(
+            model=model,
+            condition=cond_slots,
+            unknown=unknown_slots,
+            text=instruction,
+            steps=N,
+        )
+
+        # 4) 解码不同 slot。
+        action_chunk = decode_action(latent[&quot;action&quot;])
+        future_obs = video_decoder(latent[&quot;future&quot;])
+        value = decode_value(latent[&quot;value&quot;])
+
+        # 5) 评分。value 是模型内生评分，constraint_score 是外部安全/任务约束。
+        score = value + constraint_score(future_obs, action_chunk, instruction)
+        candidates.append((score, action_chunk, future_obs, value))
+
+    # 6) 只执行 action chunk 前几步，然后重新观测、重新规划。
+    # 这样能降低 rollout error 累积。
+    best = max(candidates, key=lambda item: item[0])
+    return best.action_chunk[:execution_horizon]</code></pre>
+<h4 id="5-2-3-和本地代码的关系">5.2.3 和本地代码的关系</h4>
+<p>目前本地 evidence 里保留最完整的是 dataset / config / action-conditioned inference。完整 <code>CosmosPolicyVideo2WorldModelRectifiedFlow</code> 模型文件没有在整理目录中一比一展开，因此上面第 2-4 步是从配置和数据契约推断的模型侧逻辑，而不是逐行复述本地模型文件。</p>
+<p>能在本地直接对应的部分是：</p>
+<div class="table-wrap"><table>
+<thead><tr><th>推理环节</th><th>本地代码位置</th><th>说明</th></tr></thead>
+<tbody>
+<tr><td>条件构造和 slot contract</td><td><code>robocasa_dataset.py:1042-1079</code></td><td>训练时已经定义了模型输入需要哪些 slot、mask 和 index</td></tr>
+<tr><td>当前 run 的模型类</td><td><code>config.yaml:175</code></td><td><code>CosmosPolicyVideo2WorldModelRectifiedFlow</code>，说明模型侧是 video2world + rectified flow 风格</td></tr>
+<tr><td>action 权重</td><td><code>config.yaml:177</code></td><td><code>action_loss_multiplier: 16</code>，说明动作监督在联合训练中被明显加权</td></tr>
+<tr><td>执行时 receding horizon 思想</td><td><code>action_conditioned.py:320-349</code></td><td>按 <code>chunk_size</code> 切动作块，逐块调用生成模型并用最后一帧继续滚动</td></tr>
+</tbody></table></div>
+<h4 id="5-2-4-为什么要-k-个候选">5.2.4 为什么要 K 个候选</h4>
+<p>WAM 的输出通常是多模态的：同一个任务可以有不同可行动作。因此推理时不应只取一个 deterministic action。更稳的做法是：</p>
+<div class="math-block">$$
+\{A_t^{(k)},X_t^{+(k)},V_t^{(k)}\}_{k=1}^{K}
+\sim
+p_\theta(A_t,X^+_t,V_t\mid h_t,c)
+$$</div>
+<p>然后选择：</p>
+<div class="math-block">$$
+k^\star
+=
+\arg\max_k
+\left[
+V_t^{(k)}
+-\alpha C_{safety}(A_t^{(k)},X_t^{+(k)})
++\beta S_{goal}(X_t^{+(k)},c)
+\right]
+$$</div>
+<p>其中 \(C_{safety}\) 是碰撞、越界、动作幅度等约束，\(S_{goal}\) 是目标匹配得分。这个选择过程让 WAM 比普通 VLA 更适合长程任务：它不仅问“动作像不像训练数据”，还问“这个动作造成的未来是否满足目标”。</p>
+<h3 id="5-3-cascaded-wam-推理">5.3 Cascaded WAM 推理</h3>
+<h4 id="5-3-1-可视化架构">5.3.1 可视化架构</h4>
+<pre class="mermaid">flowchart LR
+    H["history + instruction"] --> VLA["OpenPI / QwenVL / PiZero<br/>sample action chunks"]
+    VLA --> A["candidate actions A^(1..K)"]
+    A --> WM["Cosmos action-conditioned video2world<br/>rollout each action"]
+    WM --> FUT["future videos / states"]
+    FUT --> VALUE["critic / value / heuristic scorer"]
+    VALUE --> BEST["best action chunk"]
+    BEST --> ROBOT["execute short prefix"]
+    ROBOT --> H</pre>
+<h4 id="5-3-2-带注释伪代码">5.3.2 带注释伪代码</h4>
+<pre><code class="language-python">def cascaded_wam_step(observation, instruction, K=8):
+    # 1) VLA 只负责提出动作候选。
+    # 本地对应 OpenPI/QwenVL/PiZero 的 sample_actions。
+    action_chunks = []
+    for k in range(K):
+        action = vla.sample_actions(
+            observation=observation,
+            prompt=instruction,
+            stochastic=True,
+        )
+        action_chunks.append(action)
+
+    scored = []
+    for action in action_chunks:
+        # 2) WM 给每个动作候选做未来想象。
+        # 本地 action_conditioned.py 是这一路线的直接证据：
+        # 它把 actions_chunk 传给 generate_vid2world。
+        future_video = world_model.rollout(
+            current_image=observation.image,
+            action_chunk=action,
+            instruction=instruction,
+        )
+
+        # 3) 用 value / heuristic / safety 对想象结果打分。
+        # 如果没有训练好的 value head，可以先用任务启发式或外部 reward model。
+        value = scorer(future_video, action, instruction)
+        scored.append((value, action, future_video))
+
+    # 4) 执行最高分动作的一小段，而不是整个 chunk。
+    # 真实机器人里通常执行 1-4 步后重新观测。
+    best_value, best_action, imagined = max(scored, key=lambda x: x[0])
+    return best_action[:execution_horizon]</code></pre>
+<h4 id="5-3-3-每一步对应的本地代码">5.3.3 每一步对应的本地代码</h4>
+<div class="table-wrap"><table>
+<thead><tr><th>伪代码环节</th><th>本地代码位置</th><th>实际作用</th></tr></thead>
+<tbody>
+<tr><td><code>vla.sample_actions(...)</code></td><td><code>pizero_qwenvl_fast_fortrainer.py:2651</code></td><td>本地 QwenVL/PiZero VLA 的推理入口，输入 observation + prompt，输出动作块</td></tr>
+<tr><td>VLA 动作 flow loss</td><td><code>pizero_qwenvl_fast_fortrainer.py:2455-2461</code></td><td>训练动作速度场，<code>action_decoder</code> 输出 \(v_\psi\)，与目标速度 \(d_\psi\) 做 MSE</td></tr>
+<tr><td>VLA 积分生成动作</td><td><code>pizero_qwenvl_fast_fortrainer.py:1464</code>，<code>1776-1783</code></td><td><code>infer_action</code> 中通过积分器和 <code>action_decoder</code> 从噪声动作得到 action chunk</td></tr>
+<tr><td><code>actions = data[&quot;action&quot;]...</code></td><td><code>action_conditioned.py:302</code></td><td>从 dataset 中读取动作序列</td></tr>
+<tr><td><code>actions_chunk = actions[i:i+chunk_size]</code></td><td><code>action_conditioned.py:322-323</code></td><td>把长动作序列切成固定 horizon 的 chunk</td></tr>
+<tr><td><code>generate_vid2world(... action=...)</code></td><td><code>action_conditioned.py:349-357</code></td><td>将动作块作为条件输入 Cosmos video2world，生成未来视频</td></tr>
+<tr><td>receding rollout</td><td><code>action_conditioned.py:366-368</code></td><td>取生成视频最后一帧作为下一轮输入，实现滚动预测</td></tr>
+</tbody></table></div>
+<h4 id="5-3-4-cascaded-和-joint-的区别">5.3.4 Cascaded 和 Joint 的区别</h4>
+<p>Cascaded WAM 的数学形式是：</p>
+<div class="math-block">$$
+A^{(k)}\sim \pi_\psi(A\mid h_t,c)
+$$</div>
+<div class="math-block">$$
+X^{+(k)}\sim W_\theta(X^+\mid h_t,A^{(k)},c)
+$$</div>
+<div class="math-block">$$
+k^\star=\arg\max_k Q_\omega(h_t,A^{(k)},X^{+(k)},c)
+$$</div>
+<p>Joint WAM 则是：</p>
+<div class="math-block">$$
+(A^{(k)},X^{+(k)},V^{(k)})
+\sim
+p_\theta(A,X^+,V\mid h_t,c)
+$$</div>
+<p>前者容易落地，因为你本地已经有 VLA 和 action-conditioned WM 两条线；后者更优雅，因为 action、future、value 共享模型内部表征，但训练和调参难度更高。</p>
+<h3 id="5-4-读-5-1-5-2-5-3-的最短路径">5.4 读 5.1 / 5.2 / 5.3 的最短路径</h3>
+<p>如果你想按代码理解 WAM，建议按这个顺序读：</p>
+<ol>
+<li>先读 <code>robocasa_dataset.py:710-1079</code>，理解一个 WAM sample 如何从轨迹变成 slot 序列。</li>
+<li>再读 <code>config.yaml:38-51</code> 和 <code>175-177</code>，理解当前训练把 dataset、model、action loss 权重怎样接起来。</li>
+<li>再读 <code>pizero_qwenvl_fast_fortrainer.py:2455-2461</code>，理解本地 VLA 的 action flow loss。</li>
+<li>再读 <code>pizero_qwenvl_fast_fortrainer.py:2651</code> 和 <code>1464/1776</code> 附近，理解 VLA 如何在推理时采样动作。</li>
+<li>最后读 <code>action_conditioned.py:302-357</code>，理解如何把一个动作块交给 Cosmos video2world 去想象未来。</li>
+</ol>
+<p>把这五段合起来，你就能看到：本地已有一个 cascaded WAM 的拼图，也已有 Cosmos Policy 风格 joint WAM 的数据/配置雏形。</p>
+<h2 id="6-和本地-pryer-项目的对应关系">6. 和本地 <code>pryer</code> 项目的对应关系</h2>
+<h3 id="6-1-13dreamdojoworldmodel-是-wm-主线-但已经接近-wam">6.1 <code>13_dreamdojo_world_model</code> 是 WM 主线，但已经接近 WAM</h3>
+<p>本地 <code>C:\Users\mousongzhe\pryer\project\13_dreamdojo_world_model\README.md</code> 对这条线的定位很清楚：</p>
+<ul>
+<li>这是 2026-04-16 新增的独立“机器人世界模型”主线，不属于 OpenPI 或 VERL。</li>
+<li>任务链包括 LAM 训练、DreamDojo 预训练、DreamDojo 后训练、教师到学生蒸馏、离线评估、真机/交互式推理。</li>
+<li>2026-05-21 后，活跃重心从 DreamDojo 快照转向 Cosmos Predict2.5 / Cosmos Policy RoboCasa finetune，以及 VGG-T / DA3 / LIBERO 辅助 pipeline。</li>
+</ul>
+<p>从 WAM 角度看：</p>
+<ul>
+<li>DreamDojo 是“世界模型 + 潜在动作”的上游范式，更偏 WM。</li>
+<li>Cosmos Predict2.5 action-conditioned video2world 是“给动作预测未来”的 WM。</li>
+<li>Cosmos Policy RoboCasa finetune 把 policy/world/value 放到同一训练配置里，最接近 WAM。</li>
+</ul>
+<h3 id="6-2-cosmos-policy-本地配置的-wam-信号">6.2 Cosmos Policy 本地配置的 WAM 信号</h3>
+<p>本地证据：</p>
+<p><code>C:\Users\mousongzhe\pryer\project\13_dreamdojo_world_model\04_remote_progress_20260521\README.md</code></p>
+<p>核心配置：</p>
+<ul>
+<li>experiment：<code>cosmos_predict2p5_2b_480p_robocasa_50_demos_per_task_no_s3</code></li>
+<li>base checkpoint：Cosmos Predict2.5 2B video2world</li>
+<li>dataset：<code>success_only</code></li>
+<li>rollout data：<code>all_episodes</code></li>
+<li>batch size：25</li>
+<li>chunk size：32</li>
+<li>action dim：7</li>
+<li>proprio dim：9</li>
+<li><code>p_world_model=0.5</code></li>
+<li><code>action_loss_multiplier=16</code></li>
+<li>model：<code>CosmosPolicyVideo2WorldModelRectifiedFlow</code></li>
+</ul>
+<p>这不是普通 VLA 配置，因为它显式同时关心：</p>
+<ol>
+<li>success demonstrations 上的高质量动作生成；</li>
+<li>all rollouts 上的世界模型训练；</li>
+<li>value function returns；</li>
+<li>future image / future proprio / action latent / value latent 的统一索引。</li>
+</ol>
+<h3 id="6-3-robocasa-dataset-的-latent-slot-设计">6.3 RoboCasa dataset 的 latent slot 设计</h3>
+<p>本地代码：</p>
+<p><code>C:\Users\mousongzhe\pryer\project\13_dreamdojo_world_model\04_remote_progress_20260521\evidence\code\cosmos-policy\cosmos_policy\datasets\robocasa_dataset.py</code></p>
+<p>关键行为：</p>
+<ul>
+<li><code>__getitem__</code> 先判断样本来自 demo、success rollout 还是 failure rollout。</li>
+<li>rollout 样本再按 <code>p_world_model</code> 随机分成 world model sample 或 value function sample。</li>
+<li>构造图像序列时，会加入 blank slot，后续由模型/latent 逻辑注入 proprio、action、future proprio、future image、value。</li>
+<li>返回字典里带有 <code>world_model_sample_mask</code>、<code>value_function_sample_mask</code>、<code>action_latent_idx</code>、<code>future_proprio_latent_idx</code>、<code>future_image_latent_idx</code>、<code>value_latent_idx</code> 等字段。</li>
+</ul>
+<p>这套数据结构是本地最像 WAM 的地方。它把动作、未来世界和价值变成同一个模型里的不同 latent 位置，而不是三个松散模型。</p>
+<h3 id="6-4-actionconditioned-py-仍是-wm-推理侧">6.4 <code>action_conditioned.py</code> 仍是 WM 推理侧</h3>
+<p>本地代码：</p>
+<p><code>C:\Users\mousongzhe\pryer\project\13_dreamdojo_world_model\01_pretraining_and_posttraining\cosmos_predict2\action_conditioned.py</code></p>
+<p>它做的是：</p>
+<ul>
+<li>从 robot states 中计算相对 action 序列；</li>
+<li>对 action 做缩放；</li>
+<li>调 <code>Video2WorldInference.generate_vid2world(..., action=actions_chunk, ...)</code>；</li>
+<li>输出 action-conditioned future video。</li>
+</ul>
+<p>这属于“给动作预测未来”的 WM 推理接口。它本身不是完整 WAM，但可以作为 WAM 的 imagination/world rollout 部件。</p>
+<h3 id="6-5-openpiqwenvlpizero-是强-vla-对-wam-是-action-generator">6.5 OpenPI/QwenVL/PiZero 是强 VLA，对 WAM 是 action generator</h3>
+<p>本地 VLA 主线在：</p>
+<ul>
+<li><code>C:\Users\mousongzhe\pryer\project\01_openpi_ace_vla_pretraining</code></li>
+<li><code>C:\Users\mousongzhe\pryer\project\03_openpi_qwen3_hf_trainer</code></li>
+<li><code>C:\Users\mousongzhe\pryer\project\04_openpi_fast_zhi_training</code></li>
+<li><code>C:\Users\mousongzhe\pryer\project\05_openpi_iql_training</code></li>
+</ul>
+<p>关键特征：</p>
+<ul>
+<li><code>PiZero</code> 里有 <code>joint_model.mixtures.vlm / fastobs / action</code>。</li>
+<li>action 主路径是 flow matching 连续动作块，不是纯语言 token。</li>
+<li>FAST action token 是辅助 CE 或 fast-only 路径。</li>
+<li>训练脚本里把 action loss、FAST CE、VLM loss 做联合训练。</li>
+<li>IQL 线尝试引入 value/advantage，但现有证据里 <code>final_loss = policy_loss + policy_loss</code>，说明 value loss 没真正进入最终 loss，是一个需要修复的风险点。</li>
+</ul>
+<p>和 WAM 的关系：</p>
+<ul>
+<li>这是优秀的 action generator / VLA policy。</li>
+<li>若单独使用，它仍主要是 \(p(a\mid h,c)\)。</li>
+<li>若接 Cosmos WM rollout 和 value scorer，就能形成 cascaded WAM。</li>
+<li>若把 action、future、value 融入同一个 latent 序列训练，就变成 joint WAM。</li>
+</ul>
+<h2 id="7-一个面向本地项目的-wam-组合方案">7. 一个面向本地项目的 WAM 组合方案</h2>
+<h3 id="7-1-低风险-cascaded-wam">7.1 低风险：Cascaded WAM</h3>
+<pre class="mermaid">flowchart LR
+    Obs["multi-view obs + proprio + instruction"] --> PiZero["QwenVL / PiZero VLA<br/>generate K action chunks"]
+    PiZero --> Act["candidate action chunks"]
+    Act --> Cosmos["Cosmos action-conditioned video2world<br/>predict future frames/proprio"]
+    Cosmos --> Score["value / CLIP goal match / task heuristic / safety checks"]
+    Score --> Exec["execute first N steps"]</pre>
+<p>训练成本较低，因为可以复用已有 VLA 和 WM；但推理慢，并且需要解决动作空间、归一化、时间尺度和数据 schema 对齐。</p>
+<h3 id="7-2-中风险-cosmos-policy-风格-joint-wam">7.2 中风险：Cosmos Policy 风格 Joint WAM</h3>
+<p>直接沿用 RoboCasa dataset 的做法：</p>
+<pre><code class="language-text">[blank]
+[current proprio]
+[current wrist image]
+[current left image]
+[current right image]
+[action chunk]
+[future proprio]
+[future wrist image]
+[future left image]
+[future right image]
+[value return]</code></pre>
+<p>然后用 rectified-flow / diffusion DiT 统一训练 action、future 和 value。这个方向更“正统 WAM”，但工程成本高，模型和数据集都要严格统一。</p>
+<h3 id="7-3-高风险-object-aware-wam">7.3 高风险：Object-aware WAM</h3>
+<p>引入对象 slot / 3D slot：</p>
+<div class="math-block">$$
+z_t = \{z_t^{robot}, z_t^{obj_1}, \ldots, z_t^{obj_N}, z_t^{scene}\}
+$$</div>
+<p>动作生成和未来预测都在对象级状态上建模：</p>
+<div class="math-block">$$
+p_\theta(a_{t:t+H-1}, z_{t+H}^{1:N}\mid z_t^{1:N}, c)
+$$</div>
+<p>这个方向能解决“画面像但因果不对”的问题，适合复杂操作、遮挡和对象交互，但本地需要更强的 object/3D perception pipeline。你当前 VGG-T / DA3 / VGGT-Omega action regression 辅助线可以成为这个方向的几何感知基础。</p>
+<h2 id="8-宏观领域特征">8. 宏观领域特征</h2>
+<ol>
+<li>从 reactive policy 走向 predictive policy  </li>
+</ol>
+<p>   VLA 解决“怎么动”，WAM 追问“动完会发生什么”。这对长程任务、可逆性、安全约束和多步规划很关键。</p>
+<ol>
+<li>从动作 token 到连续 action flow  </li>
+</ol>
+<p>   RT-2 / FAST 等路线把动作语言化，pi0 / OpenPI / 本地 QwenVL-PiZero 更偏连续 flow matching。WAM 两者都能接，但对真实机器人来说连续动作流更自然。</p>
+<ol>
+<li>从像素世界模型到 latent/video foundation model  </li>
+</ol>
+<p>   大多数新方法不直接在像素上建模，而是用 VAE/video tokenizer/DiT 在 latent 中预测未来。Cosmos Predict2.5 和 DreamDojo 都在这个趋势里。</p>
+<ol>
+<li>从演示数据到 rollout 数据  </li>
+</ol>
+<p>   单靠 success demos 容易得到 imitation policy；WAM 需要 success/failure rollout 来训练 value 和世界模型。你本地 <code>success_only</code> + <code>all_episodes</code> 的划分正是这个方向。</p>
+<ol>
+<li>从单任务 loss 到 mask-controlled multi-task loss  </li>
+</ol>
+<p>   WAM 的难点不是“多加几个头”，而是不同样本、不同 latent slot、不同目标之间如何 mask、加权、采样，避免梯度冲突。</p>
+<ol>
+<li>从图像相似到任务有效性评估  </li>
+</ol>
+<p>   世界模型的 FVD/PSNR/LPIPS 不够；WAM 必须看 success rate、value calibration、action plausibility、closed-loop recovery 和安全约束。</p>
+<h2 id="9-典型风险">9. 典型风险</h2>
+<div class="table-wrap"><table>
+<thead><tr><th>风险</th><th>表现</th><th>应对</th></tr></thead>
+<tbody>
+<tr><td>future looks good, action unusable</td><td>生成视频合理，但动作无法执行</td><td>action normalization、控制频率、robot state 对齐必须严格</td></tr>
+<tr><td>compounding error</td><td>多步 rollout 越滚越假</td><td>receding horizon、short chunk、closed-loop replanning</td></tr>
+<tr><td>loss conflict</td><td>action loss 降，future/value 不稳，或反之</td><td>mask、loss weight、梯度监控、分阶段训练</td></tr>
+<tr><td>value hallucination</td><td>value 高但真实成功率低</td><td>rollout calibration、failure data、offline-to-online 验证</td></tr>
+<tr><td>object causality weak</td><td>物体位置变化不符合动作因果</td><td>object slots、3D features、contact-aware data</td></tr>
+<tr><td>sim-to-real</td><td>仿真里可行，真机失败</td><td>domain randomization、real rollout fine-tune、视觉/动作延迟补偿</td></tr>
+</tbody></table></div>
+<h2 id="10-推荐阅读本地代码顺序">10. 推荐阅读本地代码顺序</h2>
+<ol>
+<li><code>C:\Users\mousongzhe\pryer\project\13_dreamdojo_world_model\README.md</code></li>
+<li><code>C:\Users\mousongzhe\pryer\project\13_dreamdojo_world_model\04_remote_progress_20260521\README.md</code></li>
+<li><code>C:\Users\mousongzhe\pryer\project\13_dreamdojo_world_model\04_remote_progress_20260521\evidence\code\cosmos-policy\cosmos_policy\datasets\robocasa_dataset.py</code></li>
+<li><code>C:\Users\mousongzhe\pryer\project\13_dreamdojo_world_model\01_pretraining_and_posttraining\cosmos_predict2\action_conditioned.py</code></li>
+<li><code>C:\Users\mousongzhe\pryer\project\03_openpi_qwen3_hf_trainer\qwenvl\pizero_qwenvl_fast_fortrainer.py</code></li>
+<li><code>C:\Users\mousongzhe\pryer\project\01_openpi_ace_vla_pretraining\scripts\train_acebrain.py</code></li>
+</ol>
+<p>读完这些，你会看到三条线的拼图：</p>
+<ul>
+<li>OpenPI/QwenVL/PiZero：强 action generator。</li>
+<li>Cosmos Predict2.5 / DreamDojo：强 video/world generator。</li>
+<li>Cosmos Policy RoboCasa：把 action、future、value 放到同一训练过程的 WAM 雏形。</li>
+</ul>
+<h2 id="11-最后的小模型">11. 最后的小模型</h2>
+<p>如果只记一个 mental model，可以记这个：</p>
+<pre><code class="language-text">VLA = policy(action | now)
+WM  = imagination(future | now, action)
+WAM = joint_model(action, future, value | now)</code></pre>
+<p>更工程一点：</p>
+<pre><code class="language-text">VLA 关心 action slot。
+WM 关心 future slot。
+WAM 同时关心 action slot + future slot + value slot，
+并要求它们在同一个任务语义和物理因果下自洽。</code></pre>
+</article>
+</body>
+</html>

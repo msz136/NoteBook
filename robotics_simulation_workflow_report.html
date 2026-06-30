@@ -119,21 +119,39 @@
 <body>
 <article>
 <h1>机器人与机器狗仿真平台：ROS2、Sandbox、Isaac 与生产力流程报告</h1>
-<p class="subtitle">技术调研报告 | 2026-05-28 | 本地项目取证：<code>agent</code> 与 <code>19_sensebot_robotics_system</code></p>
+<p class="subtitle">技术调研报告 | 2026-05-28，规划链路补充于 2026-05-29 | 本地项目取证：<code>agent</code> 与 <code>19_sensebot_robotics_system</code></p>
 
 <div class="toc">
     <h3>目录</h3>
     <ol>
         <li><a href="#question">问题（Question）</a></li>
         <li><a href="#background">背景与动机（Background &amp; Motivation）</a></li>
+        <li><a href="#concepts">基础概念索引</a></li>
         <li><a href="#ros">ROS 是什么</a></li>
         <li><a href="#aceagent">本地项目一：AceAgent 仿真环境</a></li>
         <li><a href="#sensebot">本地项目二：SenseBot 仿真与部署环境</a></li>
+        <li><a href="#sensebot-planning">SenseBot 规划、避障与速度生成深挖</a></li>
         <li><a href="#public">公版项目与工具链对照</a></li>
         <li><a href="#workflow">机器人/机器狗仿真的生产力流程</a></li>
         <li><a href="#comparison">方法对比与选择建议</a></li>
         <li><a href="#references">参考文献（References）</a></li>
     </ol>
+    <p class="small">概念快速跳转：
+        <a href="#concept-node">Node</a> /
+        <a href="#concept-topic">Topic</a> /
+        <a href="#concept-bag">Bag</a> /
+        <a href="#concept-launch">Launch</a> /
+        <a href="#concept-tf">tf2</a> /
+        <a href="#concept-qos">QoS</a> /
+        <a href="#concept-sandbox">Sandbox</a> /
+        <a href="#concept-sil-hil">SIL/HIL</a> /
+        <a href="#concept-perception">感知</a> /
+        <a href="#concept-slam">SLAM</a> /
+        <a href="#concept-planning">规划</a> /
+        <a href="#sensebot-planning">SenseBot规划链路</a> /
+        <a href="#concept-control">控制</a> /
+        <a href="#concept-backend">后端与部署</a>
+    </p>
 </div>
 
 <section id="question">
@@ -161,11 +179,174 @@
       └─ 真实地图、传感器数据、任务脚本</div>
 </section>
 
+<section id="concepts">
+<h2>3. 基础概念索引</h2>
+<p>这一节把机器人系统里最容易混在一起的概念拆开讲。它不讨论 LLM/VLM/VLA 模型本身，只解释仿真、ROS、感知、定位建图、规控和部署后端的基础语言。理解这些词之后，再看 <code>agent</code> 和 SenseBot 的项目结构会顺很多。</p>
+
+<h3>3.1 一张概念地图</h3>
+<table>
+    <thead>
+        <tr><th>领域</th><th>核心概念</th><th>一句话理解</th></tr>
+    </thead>
+    <tbody>
+        <tr><td>ROS 通信</td><td><a href="#concept-node">Node</a>、<a href="#concept-topic">Topic</a>、<a href="#concept-message">Message</a>、<a href="#concept-service">Service</a>、<a href="#concept-action">Action</a></td><td>把机器人软件拆成多个进程，用标准消息互相通信。</td></tr>
+        <tr><td>ROS 运行</td><td><a href="#concept-parameter">Parameter</a>、<a href="#concept-launch">Launch</a>、<a href="#concept-qos">QoS</a>、<a href="#concept-tf">tf2</a>、<a href="#concept-bag">Bag</a></td><td>配置、启动、时序、坐标、录制回放这些运行时问题。</td></tr>
+        <tr><td>仿真</td><td><a href="#concept-sandbox">Sandbox</a>、<a href="#concept-simulator">Simulator</a>、<a href="#concept-physics">物理引擎</a>、<a href="#concept-bridge">Bridge</a>、<a href="#concept-sil-hil">SIL/HIL</a></td><td>从“假 API 返回”到“物理世界闭环”的多层替身系统。</td></tr>
+        <tr><td>感知</td><td><a href="#concept-sensor">Sensor</a>、<a href="#concept-calibration">Calibration</a>、<a href="#concept-pointcloud">Point Cloud</a>、<a href="#concept-occupancy">Occupancy</a>、<a href="#concept-bev">BEV</a></td><td>把相机、雷达、IMU 等原始信号变成可规划的空间表示。</td></tr>
+        <tr><td>定位建图</td><td><a href="#concept-odom">Odometry</a>、<a href="#concept-localization">Localization</a>、<a href="#concept-slam">SLAM</a>、<a href="#concept-map">Map</a></td><td>回答“我在哪、地图是什么、我如何持续更新位置”。</td></tr>
+        <tr><td>规控</td><td><a href="#concept-planning">Planning</a>、<a href="#concept-trajectory">Trajectory</a>、<a href="#concept-costmap">Costmap</a>、<a href="#concept-control">Control</a>、<a href="#concept-pnc">PNC</a></td><td>从目标点生成路径，再把路径变成机器人能执行的运动命令。</td></tr>
+        <tr><td>后端部署</td><td><a href="#concept-workspace">Workspace</a>、<a href="#concept-colcon">colcon</a>、<a href="#concept-docker">Docker</a>、<a href="#concept-jetson">Jetson</a>、<a href="#concept-monitor">监控/HMI</a>、<a href="#concept-onnx">ONNX</a></td><td>把研发代码变成可构建、可启动、可观测、可部署的机器人服务。</td></tr>
+    </tbody>
+</table>
+
+<h3>3.2 ROS 通信基础</h3>
+<h4 id="concept-node">Node（节点）</h4>
+<p>节点是 ROS 程序的最小运行单元，通常对应一个进程或进程内组件。例如相机驱动是一个节点，SLAM 是一个节点，规划器也是一个节点。节点之间不直接调用彼此的函数，而是通过 ROS graph 上的通信机制交换消息。这样做的好处是模块可以独立启动、重启、替换和记录。</p>
+
+<h4 id="concept-topic">Topic（话题）</h4>
+<p>话题是发布/订阅（publish/subscribe）通道，适合连续数据流。相机图像、点云、里程计、局部地图、规划路径都常用 topic。一个节点可以向 <code>/dog_odom</code> 发布里程计，多个节点可以同时订阅它。Topic 名本质上是系统契约：名字、消息类型、频率、坐标系、QoS 都要对上。</p>
+
+<h4 id="concept-message">Message（消息）</h4>
+<p>消息是 topic、service、action 传输的数据结构。ROS 有标准消息，如 <code>std_msgs/String</code>、<code>geometry_msgs/PoseStamped</code>、<code>nav_msgs/Odometry</code>、<code>nav_msgs/Path</code>；项目也可以定义自定义消息，如 SenseBot 的 <code>sensebot_msgs/TrajectoryWithTime</code>。消息字段固定，便于跨语言、跨节点通信。</p>
+
+<h4 id="concept-service">Service（服务）</h4>
+<p>服务是同步请求/响应接口，适合“问一次、答一次”的操作。例如查询地图列表、重置状态、开关某个功能。它不像 topic 那样持续流动，而是客户端发请求，服务端返回结果。服务适合短任务，不适合导航这种持续几十秒且需要反馈/取消的任务。</p>
+
+<h4 id="concept-action">Action（动作）</h4>
+<p>动作是 ROS 中处理长任务的通信模式，包含 goal、feedback、result 和 cancel。导航到目标点、机械臂抓取、长时间扫描都适合 action。它比 service 更适合机器人任务，因为任务执行中可以持续反馈进度，也可以被取消。</p>
+
+<h4 id="concept-parameter">Parameter（参数）</h4>
+<p>参数是节点的运行配置，例如发布频率、地图分辨率、传感器外参文件路径、规划器阈值。参数可以由 YAML、launch 文件或命令行传入。仿真环境常通过参数切换地图大小、机器人初始位姿、是否开启传感器模拟。</p>
+
+<h4 id="concept-launch">Launch（启动系统）</h4>
+<p>Launch 文件负责一次性启动多个节点、设置参数、命名空间、remap 和环境变量。真实机器人不是手动开十几个终端运行节点，而是用 launch 或脚本编排。SenseBot 的 <code>setup_and_launch.sh</code> 实际上就是把 statemachine、SLAM、perception、planning、control 等节点按生产方式拉起来。</p>
+
+<h4 id="concept-qos">QoS（Quality of Service，服务质量）</h4>
+<p>QoS 决定消息传输策略，例如可靠传输还是尽力而为、队列深度是多少、是否保留最后一条消息。相机/点云高频数据常用 best effort，配置/状态类消息更偏 reliable。仿真和实机出现“topic 明明有发布但订阅不到”时，QoS 不匹配是常见原因。</p>
+
+<h4 id="concept-tf">tf2（坐标变换系统）</h4>
+<p>tf2 维护机器人各坐标系之间的时变关系，例如 <code>map</code>、<code>odom</code>、<code>base_link</code>、<code>camera_link</code>、<code>lidar_link</code>。感知、SLAM 和规划必须知道同一个点在不同坐标系下的位置，否则地图会漂、障碍物会错位、规划轨迹也会错。tf2 是机器人系统里最基础也最容易出错的部分之一。</p>
+
+<h4 id="concept-bag">Bag / rosbag2（数据包、录制回放）</h4>
+<p>Bag 是 ROS 的“黑匣子录音”。它把一段时间内多个 topic 的消息按时间戳录下来，之后可以像真实传感器一样回放。一个 bag 可能包含 <code>/camera/color/image_raw</code>、<code>/dog_odom</code>、<code>/perception/occ3d</code>、<code>/slam/localization_stateinfo</code> 等。生产上 bag 很重要，因为它能把实机问题冻结下来：同一段数据可以反复喂给新版本感知、SLAM 或规划代码。</p>
+
+<h4>DDS 与 ROS_DOMAIN_ID</h4>
+<p>DDS（Data Distribution Service）是 ROS2 底层通信机制。<code>ROS_DOMAIN_ID</code> 用来隔离不同 ROS2 网络域；同一个 domain 内的节点能互相发现，不同 domain 通常互不可见。SenseBot DLP 的仿真测试把 <code>ROS_DOMAIN_ID</code> 设为 60，就是为了让 Isaac、DLP、planning、control 处在同一个 ROS2 通信域。</p>
+
+<h3>3.3 ROS 工程基础</h3>
+<h4 id="concept-workspace">Workspace（工作空间）</h4>
+<p>ROS2 workspace 是一组 package 的开发根目录，常见结构是 <code>ros_ws/src/package_name</code>。构建后会生成 <code>build/</code>、<code>install/</code>、<code>log/</code>。运行前通常要 <code>source install/setup.bash</code>，这样 shell 才能找到新编译的 package、消息类型和可执行文件。</p>
+
+<h4>Package（功能包）</h4>
+<p>Package 是 ROS2 代码组织单元。一个 package 可以包含节点源码、消息定义、launch 文件、配置文件和资源。SenseBot 里 <code>perception</code>、<code>slam</code>、<code>planning</code>、<code>control</code>、<code>sensebot_msgs</code> 都是不同功能包。</p>
+
+<h4 id="concept-colcon">colcon（构建工具）</h4>
+<p><code>colcon</code> 是 ROS2 常用构建工具，负责按依赖顺序编译多个 package。SenseBot 的 Makefile 本质上是在不同平台、不同 ROS 版本、不同 package 集合上封装 <code>colcon build</code>。当只改一个包时，可以用 <code>colcon build --packages-select package_name</code> 缩短迭代时间。</p>
+
+<h4>Remap（重映射）</h4>
+<p>Remap 是把节点内部使用的 topic 名换成系统中的另一个 topic 名。例如 simulator 发布 <code>/simulator/robot_pose</code>，launch 中可以 remap 到 <code>/dog_odom</code>，让下游节点以为数据来自真实机器人里程计。Remap 很有用，但也很脆弱：源 topic 拼错，整个链路就会沉默。</p>
+
+<h3>3.4 仿真基础</h3>
+<h4 id="concept-sandbox">Sandbox（沙盒）</h4>
+<p>Sandbox 是受控实验环境。它可以完全不模拟物理，只模拟 API、状态机和评估函数。<code>agent</code> 的 sandbox 就是这种：导航工具不会真的让机器狗移动，而是更新虚拟位置、记录工具调用、计算轨迹 loss。它适合验证上层决策逻辑，不能证明真实运动安全。</p>
+
+<h4 id="concept-simulator">Simulator（仿真器）</h4>
+<p>Simulator 是更广义的仿真运行环境，可以模拟状态、传感器、地图、物理、机器人运动或网络通信。SenseBot 的 PNC simulator 模拟的是 heightmap 与 odometry；Isaac/Gazebo/MuJoCo 模拟的层次更深，可以包含视觉、雷达、碰撞和动力学。</p>
+
+<h4 id="concept-physics">物理引擎、动力学与碰撞</h4>
+<p>物理引擎负责计算刚体运动、关节、接触、摩擦、碰撞和重力。机器狗比轮式机器人更依赖物理仿真，因为足端接触、打滑、跌倒、姿态稳定都会影响策略是否可用。MuJoCo 和 Isaac Lab 常用于这类接触丰富的控制训练。</p>
+
+<h4>传感器仿真</h4>
+<p>传感器仿真生成虚拟相机图像、深度图、LiDAR 点云、IMU、GNSS 等。高保真传感器仿真能测试感知模型，但成本高；低保真 synthetic 数据便宜，但容易和真实数据分布不一致。生产中常把传感器仿真和真实 bag 回放结合使用。</p>
+
+<h4>Digital Twin（数字孪生）</h4>
+<p>数字孪生是尽量还原真实场地、机器人模型、传感器位置、动力学和任务流的仿真系统。它比普通 demo 场景要求更高：地图尺寸、材质、障碍物、光照、传感器外参、机器人质量和控制参数都要接近实机。</p>
+
+<h4 id="concept-bridge">Bridge（桥接）</h4>
+<p>Bridge 把两个系统的通信协议连接起来。例如 <code>ros_gz</code> 把 Gazebo 和 ROS2 topic 接起来，Isaac ROS2 Bridge 把 Isaac 场景里的传感器和 ROS2 节点接起来，<code>agent_sandbox_bridge</code> 把 AceAgent 2D sandbox 接成 ROS2 topic。Bridge 的核心问题是消息类型、时间戳、坐标系和频率是否一致。</p>
+
+<h4 id="concept-sil-hil">SIL / HIL / MIL（软件、硬件、模型在环）</h4>
+<p>SIL（Software-in-the-Loop）是软件在环：真实控制软件跑起来，但输入来自仿真或回放。HIL（Hardware-in-the-Loop）是硬件在环：部分真实硬件也接入闭环，例如控制板或传感器。MIL（Model-in-the-Loop）是模型在环：感知或规划模型接入仿真/回放流程，验证模型输出对系统的影响。SenseBot 的 DLP + Isaac 流程就是典型模型在环。</p>
+
+<h3 id="concept-perception">3.5 感知与空间表示基础</h3>
+<h4 id="concept-sensor">Sensor（传感器）</h4>
+<p>机器人常见传感器包括 RGB/RGBD 相机、LiDAR、IMU、GNSS、轮速/关节编码器。相机提供纹理和语义，LiDAR 提供几何距离，IMU 提供角速度和加速度，GNSS 提供室外全局位置。不同传感器的频率、延迟、噪声和坐标系都不同。</p>
+
+<h4 id="concept-calibration">Calibration（标定）</h4>
+<p>标定包括内参和外参。内参描述相机焦距、畸变等自身参数；外参描述相机、雷达、IMU 相对机器人底盘的位置和朝向。标定错了，点云投影、相机融合、占据栅格都会偏。SenseBot 启动脚本里反复设置 calibration，正是因为它是生产系统的地基。</p>
+
+<h4 id="concept-pointcloud">Point Cloud（点云）</h4>
+<p>点云是一组 3D 点，常来自 LiDAR 或深度相机。每个点通常包含 \(x,y,z\)，可能还有 intensity、ring、timestamp。点云适合几何建图和障碍物检测，但数据量大，需要滤波、配准、体素化和坐标变换。</p>
+
+<h4 id="concept-occupancy">Occupancy Grid / Voxel Grid（占据栅格 / 体素栅格）</h4>
+<p>占据栅格把空间切成格子，每个格子表示是否被障碍物占据，或者属于道路、草地、楼梯、路沿等类别。2D occupancy grid 用于平面导航；3D voxel grid 能表达高度和立体结构。SenseBot 感知输出的 <code>/perception/occ3d</code> 和 <code>/perception/occ3d_single</code> 就是这类空间表示。</p>
+
+<h4 id="concept-bev">BEV（Bird's-Eye View，鸟瞰图）</h4>
+<p>BEV 是从上往下看的空间表示。自动驾驶和机器人规划常把相机/雷达信息投到 BEV，因为规划器更关心地面平面上的可通行区域、障碍物和路线。BEV 的优势是和路径规划天然对齐，缺点是要处理高度、遮挡和传感器融合误差。</p>
+
+<h4 id="concept-costmap">Costmap（代价地图）</h4>
+<p>代价地图是在 occupancy 或语义地图上进一步计算出来的规划地图。障碍物附近代价高，可通行区域代价低，未知区域可按策略设为高代价或中等代价。局部规划器会在 costmap 上寻找低风险轨迹。机器狗还可能把坡度、高度差、楼梯、草地等加入代价。</p>
+
+<h4 id="concept-heightmap">Heightmap（高度图）</h4>
+<p>Heightmap 是每个平面网格对应一个高度值的地图。它适合表达坡、台阶、矮障碍。SenseBot 的 PNC simulator 会创建全局 heightmap，设置矩形障碍物，再根据机器人位姿裁出局部 heightmap 发布给下游。</p>
+
+<h3>3.6 定位、建图与运动状态</h3>
+<h4 id="concept-odom">Odometry（里程计）</h4>
+<p>里程计估计机器人相对运动，常来自轮速、IMU、视觉、LiDAR 或腿部运动估计。它短期平滑，但长期会漂移。ROS 中 <code>nav_msgs/Odometry</code> 通常包含 pose、twist 和协方差。SenseBot 将 simulator 的 <code>/simulator/robot_pose</code> remap 到 <code>/dog_odom</code>，就是为了模拟里程计输入。</p>
+
+<h4 id="concept-localization">Localization（定位）</h4>
+<p>定位是在已有地图或全局坐标中估计机器人当前 pose。它回答“我在地图中的哪里”。定位可能融合 GNSS、IMU、LiDAR map matching、视觉特征等。定位质量直接影响规划：位置偏了，目标点和障碍物都会偏。</p>
+
+<h4 id="concept-slam">SLAM（Simultaneous Localization and Mapping，同步定位与建图）</h4>
+<p>SLAM 同时估计机器人轨迹和环境地图。它常用于未知或半未知环境。SenseBot 的 SLAM 输出包括 <code>/slam/odom_stateinfo</code>、<code>/slam/localization_stateinfo</code> 和 <code>/slam/nav_map</code>，下游规划和感知都依赖这些结果。</p>
+
+<h4 id="concept-map">Map（地图）</h4>
+<p>地图可以是几何点云、2D 栅格、3D voxel、语义地图、拓扑点位图或导航路线图。<code>agent</code> 的 xian_10th fixture 更接近“点位/语义地图”；SenseBot 更接近“传感器建图 + 导航地图 + 规划代价地图”。不同地图服务不同层级，不能用一种地图概念解释所有模块。</p>
+
+<h3>3.7 规划与控制基础</h3>
+<h4 id="concept-planning">Planning（规划）</h4>
+<p>规划负责从当前状态到目标状态生成可执行方案。全局规划关注从 A 到 B 的大路线；局部规划关注短时间内如何绕障、平滑和避碰。规划输入通常包括目标点、地图、定位、障碍物、机器人运动约束，输出是 path 或 trajectory。</p>
+
+<h4 id="concept-trajectory">Path 与 Trajectory（路径与轨迹）</h4>
+<p>Path 通常只是一串空间点，表示走哪条线；trajectory 还包含时间、速度、加速度或姿态，表示什么时候以什么状态到达每个点。SenseBot 的 <code>TrajectoryWithTime</code> 就是带时间的轨迹，PNC simulator 可以按时间插值机器人位置。</p>
+
+<h4>Global Planner 与 Local Planner（全局/局部规划器）</h4>
+<p>全局规划器在较大地图上找路线，常用 A*、Dijkstra、Hybrid A* 等；局部规划器在机器人附近根据动态障碍和运动学限制生成短期轨迹，常见方法包括 DWA、TEB、MPC。SenseBot README 提到 planning 使用 TEB local planner，这是局部轨迹优化的一类方法。</p>
+
+<h4 id="concept-control">Control（控制）</h4>
+<p>控制把规划轨迹转成机器人底层命令，例如速度、姿态、关节目标或电机指令。轮式机器人通常输出线速度/角速度；机器狗还涉及步态、足端力、姿态稳定和底层 SDK。SenseBot 的 control 包通过 Unitree SDK2 接到底层机器人。</p>
+
+<h4 id="concept-pnc">PNC（Planning and Control，规划与控制）</h4>
+<p>PNC 是规划与控制的合称。在机器人系统里，PNC 层通常连接地图/感知/定位与底盘控制：它既要知道哪里能走，也要知道机器人怎么走得稳。SenseBot 的 <code>src/pnc</code> 包含规划控制相关代码和轻量 simulator。</p>
+
+<h4>State Machine（状态机）</h4>
+<p>状态机负责管理机器人任务状态，例如 idle、navigating、paused、charging、error。它把多个节点的信号组织成产品行为。没有状态机，感知、规划、控制可能都能跑，但系统不知道当前应该响应用户任务、避障、停止还是恢复。</p>
+
+<h3>3.8 后端、部署与观测基础</h3>
+<h4 id="concept-backend">后端服务</h4>
+<p>机器人后端负责把机器人能力变成网络 API 或管理系统：鉴权、任务下发、工具路由、状态缓存、日志、模型选择、设备绑定、HMI 数据转发都属于后端范畴。<code>agent</code> 就是偏后端/Agent runtime 的项目，SenseBot 则更偏机器人端运行时。</p>
+
+<h4 id="concept-docker">Docker / 容器</h4>
+<p>Docker 把编译环境、系统依赖、CUDA、ROS2、Python 包固定下来。机器人项目依赖复杂，容器能避免“这台机器能编，那台不能编”。SenseBot 明确要求构建和运行命令在 Docker 容器内执行，说明它把容器当作生产环境边界。</p>
+
+<h4 id="concept-jetson">Jetson / Orin / aarch64</h4>
+<p>Jetson Orin 是 NVIDIA 面向边缘 AI 和机器人的计算平台，aarch64 是其 CPU 架构。x86 开发机和 Jetson 目标机架构不同，所以 SenseBot Makefile 区分 x86 构建和 ARM 交叉编译。涉及传感器、CUDA、第三方库时，平台差异会非常实际。</p>
+
+<h4 id="concept-monitor">日志、监控与 HMI</h4>
+<p>日志记录节点输出和错误，监控关注 CPU/GPU/内存/进程/温度，HMI（Human-Machine Interface）提供人机界面。机器人调试离不开这些，因为现场问题往往不是算法单点错误，而是进程没启动、topic 断流、传感器掉线、资源打满或网络不通。SenseBot 的 rosboard/web_visual、monitor、diag_monitor 都属于这条线。</p>
+
+<h4 id="concept-onnx">ONNX 与模型部署</h4>
+<p>ONNX 是模型交换格式，用来把训练框架里的模型导出到更适合部署的推理引擎。DLP 的 <code>export_onnx.py</code> 把 PyTorch planning model 导出为 ONNX，并保存输入输出样例与 checker 校验结果。实际量产还可能继续转 TensorRT 或其他加速格式。</p>
+
+<h4>OTA 与打包</h4>
+<p>打包是把编译产物、配置、脚本整理成可部署压缩包；OTA（Over-the-Air）是远程更新机器人软件。SenseBot 的 <code>pack.sh</code> 生成 <code>sensebot.tar.gz</code>，再拷贝到 Go2 Orin 上解压运行。这一步决定了研发代码能否稳定进入设备。</p>
+</section>
+
 <section id="ros">
-<h2>3. ROS 是什么</h2>
+<h2>4. ROS 是什么</h2>
 <p>机器人操作系统（Robot Operating System, ROS）不是传统意义上的操作系统，而是一套机器人软件中间件：它提供节点（Node）、话题（Topic）、服务（Service）、动作（Action）、参数（Parameter）、启动系统（Launch）、坐标变换（tf2）、日志和 bag 录制回放等机制。ROS2 在通信层使用 DDS（Data Distribution Service），适合分布式、多进程、实时性更强的机器人系统。</p>
 
-<h3>3.1 ROS2 图模型</h3>
+<h3>4.1 ROS2 图模型</h3>
 <p>ROS2 程序由一组节点组成。节点通过 topic 发布/订阅连续数据，通过 service 做同步请求/响应，通过 action 执行可取消、可反馈的长任务。典型导航链路如下：</p>
 <pre><code class="language-text">/camera, /lidar, /imu
       ↓
@@ -176,7 +357,7 @@ control_node     → Unitree SDK2 / motor command
       ↓
 robot</code></pre>
 
-<h3>3.2 坐标系与局部地图</h3>
+<h3>4.2 坐标系与局部地图</h3>
 <p>仿真和真实机器人都会不断做坐标转换。若机器人在世界坐标中的位姿为 \((x_r, y_r, \theta_r)\)，世界点 \(p_w=(x_w,y_w)\) 转到机器人局部坐标可写为：</p>
 \[
 p_{ego} =
@@ -192,15 +373,15 @@ p_{ego} =
 \]
 <p>SenseBot 的 PNC simulator 正是在这个意义上从全局 heightmap 按机器人 pose 裁出局部 heightmap，再发布给规划/控制链路。</p>
 
-<h3>3.3 rosbag2 为什么重要</h3>
+<h3>4.3 rosbag2 为什么重要</h3>
 <p>rosbag2 是 ROS2 的数据录制与回放机制。它让真实机器上的传感器、定位、规划输出变成可复现实验。生产中常见做法是：实机采集 bag，离线回放给感知/SLAM/规划节点，保存日志与轨迹，再把失败片段转成回归测试。</p>
 </section>
 
 <section id="aceagent">
-<h2>4. 本地项目一：AceAgent 仿真环境</h2>
+<h2>5. 本地项目一：AceAgent 仿真环境</h2>
 <p class="evidence">主要证据：<code>agent/server/agent/sandbox.py</code>、<code>agent/scripts/build_xian10th_sim_assets.py</code>、<code>agent/data/agent_sandbox/xian10th_real_fixture.json</code>、<code>agent/examples/agent_sandbox_cases_xian10th_real.jsonl</code>、<code>agent/ros2/agent_sandbox_bridge/</code>。</p>
 
-<h3>4.1 这是工具层 sandbox，不是物理仿真</h3>
+<h3>5.1 这是工具层 sandbox，不是物理仿真</h3>
 <p><code>agent</code> 的主系统是 OpenAI-compatible 对话服务，工具包括机器人控制、天气、地图、视觉分析、店铺下单等。其 sandbox 的重点是验证模型的“工具调用轨迹”：模型是否先查库存、再导航到小卖部、再播报、再下单、再检查订单、最后回到目标点。</p>
 <p><code>sandbox.py</code> 把工具分成三类：fixture-backed 查询工具、安全查询工具、执行类工具。默认情况下，查询工具从离线 fixture 返回，执行类工具被 sandbox 模拟，不会调用真实机器人、真实导航或真实下单 API。</p>
 
@@ -217,11 +398,11 @@ p_{ego} =
     </tbody>
 </table>
 
-<h3>4.2 xian_10th 场景是怎样搭出来的</h3>
+<h3>5.2 xian_10th 场景是怎样搭出来的</h3>
 <p><code>build_xian10th_sim_assets.py</code> 从只读地图/机器人列表中提取 <code>xian_10th</code> 地图，构建 fixture、用例和地图可视化。当前 fixture 中 preferred robot 是 <code>xian_10</code>，地图 id 为 <code>181</code>，包含 8 个真实点位：前台、贩卖机、茶水间、男卫生间、王老师办公室、充电桩、女卫生间、小卖部。</p>
 <p>这类 fixture 的价值是可重复：同一个模型、同一批任务、同一个离线地图，可以稳定比较工具轨迹和 response time。</p>
 
-<h3>4.3 评估公式</h3>
+<h3>5.3 评估公式</h3>
 <p><code>score_trace()</code> 的综合 loss 可抽象为：</p>
 \[
 L =
@@ -234,7 +415,7 @@ w_s L_{seq}
 \]
 <p>当存在状态检查时，源码使用的权重是 \(w_s=0.35, w_a=0.25, w_f=0.15, w_t=0.05, w_r=0.10, w_b=0.10\)。没有状态检查时，序列和参数权重分别提高到 0.40 和 0.30。</p>
 
-<h3>4.4 本地结果</h3>
+<h3>5.4 本地结果</h3>
 <p>在 <code>data/agent_sandbox/runs/</code> 中，真实 xian_10th fixture 的两组摘要都显示 10 个用例全部通过。需要注意，“通过”表示 loss 没超过每个 case 的 <code>max_loss</code>，不是物理仿真里的碰撞安全通过。</p>
 <table>
     <thead>
@@ -249,7 +430,7 @@ w_s L_{seq}
     <strong>工程观察：</strong><code>interrupt_store_then_meeting_xian_10</code> 被标注为真实 xian_10th 不支持，因为点位列表没有“会议室”。这是一个好的仿真设计信号：它没有伪造不存在的点位让用例看起来完美，而是保留 loss 和 unsupported reason。
 </div>
 
-<h3>4.5 ROS2 bridge 的作用</h3>
+<h3>5.5 ROS2 bridge 的作用</h3>
 <p><code>agent/ros2/agent_sandbox_bridge</code> 是一个最小 ROS2 bridge：读取 <code>xian10th_real_fixture.json</code>，发布 <code>/agent_sandbox/robot_pose</code> 和 <code>/agent_sandbox/state</code>，订阅 <code>/agent_sandbox/goal</code>。输入可以是文本点位，也可以是 JSON 目标；如果目标点位存在，节点立即更新 2D pose。</p>
 <pre><code class="language-text">/agent_sandbox/goal  -- std_msgs/String(JSON or text) --> xian10th_sim_node
 xian10th_sim_node    -- geometry_msgs/Pose2D ------------> /agent_sandbox/robot_pose
@@ -258,10 +439,10 @@ xian10th_sim_node    -- std_msgs/String(JSON) -----------> /agent_sandbox/state<
 </section>
 
 <section id="sensebot">
-<h2>5. 本地项目二：SenseBot 仿真与部署环境</h2>
+<h2>6. 本地项目二：SenseBot 仿真与部署环境</h2>
 <p class="evidence">主要证据：<code>19_sensebot_robotics_system/congq_sensebot/CLAUDE.md</code>、<code>README.md</code>、<code>Makefile</code>、<code>scripts/start_all.sh</code>、<code>scripts/setup_and_launch.sh</code>、<code>src/pnc/*simulator*</code>、<code>congq_sensebot_dlp/README.md</code>、<code>dlp_node.py</code>、<code>config/isaac.yaml</code>。</p>
 
-<h3>5.1 SenseBot 是 ROS2 生产系统快照</h3>
+<h3>6.1 SenseBot 是 ROS2 生产系统快照</h3>
 <p>SenseBot 主工程是面向 Unitree Go2/HG 四足机器人的 ROS2 自主导航系统。目标硬件包括 NVIDIA Jetson Orin/aarch64，支持 Ubuntu 20.04/ROS2 Foxy 与 Ubuntu 22.04/ROS2 Humble。构建和运行均要求在 Docker 容器内执行。</p>
 <div class="flow">Sensors → Perception → SLAM → Planning → Control → Unitree SDK2 → Robot
             │           │        │           │
@@ -270,7 +451,7 @@ xian10th_sim_node    -- std_msgs/String(JSON) -----------> /agent_sandbox/state<
             │           └─ /slam/odom_stateinfo, /slam/localization_stateinfo, /slam/nav_map
             └─ RealSense, Hesai/RSLiDAR, GNSS, IMU</div>
 
-<h3>5.2 构建与部署</h3>
+<h3>6.2 构建与部署</h3>
 <p>构建链路使用 <code>colcon build</code> 和 Makefile 封装。x86 目标更像开发/回放环境，ARM 目标包含传感器驱动与机器人部署包。典型命令包括：</p>
 <pre><code class="language-bash"># 容器内执行
 make x86_u22      # Ubuntu 22.04 / ROS2 Humble 开发构建
@@ -282,13 +463,13 @@ make arm_u22      # aarch64 / Jetson Orin 目标构建
 ./scripts/stop_all.sh</code></pre>
 <p><code>start_all.sh</code> 的职责包括停止旧进程、设置环境变量和校准、启动诊断、启动传感器、启动应用层节点、启动 voice agent、monitor 和 util 服务。<code>setup_and_launch.sh</code> 单独启动 statemachine、slam、perception、planning、control、device_control 等应用层节点。</p>
 
-<h3>5.3 传感器与运行时配置</h3>
+<h3>6.3 传感器与运行时配置</h3>
 <p><code>start_sensor.sh</code> 会读取 <code>~/config/config.sh</code> 中的 <code>robot_id</code>、<code>gnss_type</code>、<code>robot_model</code>，设置 <code>UNITREE_SDK2_DIR=/opt/unitree_sdk2</code>，再启动 Hesai、M20 RSLiDAR、RealSense、GNSS、H30、RID 等节点。它还会检查特定设备或服务是否在线，例如 JT128 LiDAR、M20 multicast relay、RealSense USB 模式。</p>
 
-<h3>5.4 bag 回灌是生产仿真的主力</h3>
+<h3>6.4 bag 回灌是生产仿真的主力</h3>
 <p><code>scripts/batch_bag_replay.sh</code> 把每条回放命令包装成严格顺序：更新 calibration 软链接，<code>start_all</code>，执行 <code>robot bag play</code>，<code>stop_all</code>，归档日志，再用 SLAM SDK 绘制轨迹。它体现了生产测试的关键思想：真实数据回放比随机写一个 simulator 更能暴露传感器、SLAM 和规划的工程问题。</p>
 
-<h3>5.5 PNC 轻量 simulator</h3>
+<h3>6.5 PNC 轻量 simulator</h3>
 <p>SenseBot 的 <code>src/pnc</code> 下有一个轻量级 simulator。它不是完整物理引擎，而是为了给规划/控制链路提供局部 heightmap 和机器人 odometry：</p>
 <ul>
     <li><code>simulator.launch.py</code> 声明全局/局部 heightmap 尺寸、分辨率、机器人初始 pose 和发布频率。</li>
@@ -305,7 +486,7 @@ simulator_node: trajectory interpolation
     <strong>工程观察：</strong><code>simulator.launch.py</code> 中 remap 的源 topic 是 <code>/simulator/local_heightmap</code>，但 <code>simulator_node.cpp</code> 实际发布 <code>/simulator/local_heightmapa</code>；remap 目标还写成 <code>/utlidar/height_map_arra</code>。此外主 <code>launch/sensebot.launch.py</code> 在 SLAM include 附近存在明显语法断裂。报告只把这些作为本地快照的审阅发现，不假设当前目录可直接运行。
 </div>
 
-<h3>5.6 DLP 与 Isaac 模型在环</h3>
+<h3>6.6 DLP 与 Isaac 模型在环</h3>
 <p><code>congq_sensebot_dlp</code> 是基于 PyTorch Lightning 和 Hydra 的路径规划模型训练/评估框架。它提供了训练、评估、批量评估、指标聚合、ONNX 导出和 ROS2 推理节点。</p>
 <p><code>README.md</code> 的仿真测试流程显示：启动 <code>isaaclab_dev</code> conda 环境，source ROS2 Humble，构建 <code>ros_ws</code>，设置 <code>ROS_DOMAIN_ID=60</code>，运行 <code>python dlp_node.py</code>；另起容器运行 planning/control；最后在 <code>isaac_go2_ros2</code> 中运行 <code>isaac_go2_ros2.py --livestream 2 --enable_cameras --scene scene_5/route_4</code>。</p>
 <p><code>dlp_node.py</code> 的 ROS2 输入输出如下：</p>
@@ -322,13 +503,217 @@ simulator_node: trajectory interpolation
 </table>
 <p>ONNX 部署脚本 <code>export_onnx.py</code> 使用输入 <code>occ_grid</code>、<code>mask_camera</code>、<code>route</code>、<code>state</code>，输出 <code>trajs</code>、<code>confidences</code>、<code>best_mode</code>，并调用 <code>onnx.checker.check_model</code> 做导出校验。</p>
 
-<h3>5.7 感知 OCC 与仿真数据</h3>
+<h3>6.7 感知 OCC 与仿真数据</h3>
 <p><code>congq_sensebot_perception</code> 负责 occupancy / 3D 感知训练和部署。README 中包含 Docker 镜像、<code>train_occ_sensebot.py</code>、<code>test_occ.py</code>、可视化、deploy eval、数据结构和 OCC ground truth 命名规则。<code>script/occ_infer/model_release/r30.3/README.md</code> 还提供了 release 版 OCCDLP 的推理命令、视频/可视化保存参数和训练命令。</p>
 <p>这说明 SenseBot 的模型生产流并不是“仿真环境单独存在”，而是由真实数据、OCC 训练、DLP 规划、ROS2 节点、bag 回灌和 Isaac 场景共同构成。</p>
+
+<h3 id="sensebot-planning">6.8 SenseBot 规划、避障与速度生成深挖</h3>
+<p class="evidence">主要证据：<code>src/planning/src/planning_node.cc</code>、<code>src/planning/src/planning_regulator.cc</code>、<code>src/planning/conf/planning_conf.pb.txt</code>、<code>src/planning/src/feature/preprocess.cc</code>、<code>src/planning/src/state_machine/state_machine_manager.cc</code>、<code>src/planning/src/chassis_tasks/navigator/*</code>、<code>src/planning/src/chassis_tasks/motion/*</code>、<code>src/control/src/control_node.cc</code>、<code>src/control/src/controller/base/base_chassis_mpc_controller.cc</code>、<code>src/control/src/interface/unitree_go2/sport_client.cc</code>、<code>src/sensebot_msgs/statemachine/StateChange.msg</code>、<code>src/sensebot_msgs/TrajectoryWithTime.msg</code>。</p>
+
+<h4>6.8.1 结论：路径和主要避障在 planning，但安全闭环跨模块</h4>
+<p>SenseBot 中的路径演算、局部避障、轨迹生成主要落在 <code>planning</code> 模块；但“避障能力”不是单个 planning 文件独立完成的。感知提供障碍物和占据栅格，SLAM/定位提供机器人当前位姿和速度，状态机提供任务目标与模式，planning 把这些信息变成带时间的轨迹，control 再把轨迹跟踪成 <code>vx / vy / vyaw</code> 速度命令。</p>
+<table>
+    <thead>
+        <tr><th>模块</th><th>它提供什么</th><th>它不主要负责什么</th></tr>
+    </thead>
+    <tbody>
+        <tr><td>statemachine</td><td>发布 <code>/state_change</code>，说明当前任务是室外、室内、定点、动态导航等。</td><td>不计算路径，不直接控制底盘速度。</td></tr>
+        <tr><td>perception</td><td>发布 <code>/perception/occ3d_single</code>、<code>/perception/occ3d_lidar</code>、<code>/perception/objects</code> 等障碍与目标信息。</td><td>不决定“绕哪边走”。</td></tr>
+        <tr><td>slam/localization</td><td>发布定位、里程计、地图相关状态，告诉下游“我在哪里、我怎么动”。</td><td>不选择导航路线。</td></tr>
+        <tr><td>planning</td><td>订阅任务、定位、占据栅格和目标物，生成 path、obstacle debug、PNC 状态和 <code>/pnc_planner_path_with_time</code>。</td><td>不直接调用机器狗 SDK。</td></tr>
+        <tr><td>control</td><td>订阅 <code>/pnc_planner_path_with_time</code> 和定位，跟踪轨迹并输出速度命令。</td><td>通常不重新做全局找路。</td></tr>
+        <tr><td>Unitree SDK2 / device interface</td><td>把 <code>Move(vx, vy, vyaw)</code> 这类请求发给机器狗底层运动控制。</td><td>不理解高层导航目标和地图。</td></tr>
+    </tbody>
+</table>
+<div class="flow">StateChange + Localization + OCC/Objects
+        ↓
+planning: 任务解析 → 地图/障碍预处理 → 路径搜索 → 轨迹优化
+        ↓
+/pnc_planner_path_with_time
+        ↓
+control: 轨迹跟踪/MPC → vx, vy, vyaw
+        ↓
+Unitree SportClient::Move(vx, vy, vyaw)</div>
+
+<h4>6.8.2 StateChange 是任务状态，不是速度命令</h4>
+<p><code>StateChange</code> 消息包含 <code>state</code>、<code>id</code>、<code>description</code> 三类核心字段。<code>state</code> 表示 IDLE、COMPANION、NAVIGATION、ACTION、ERROR、MAPPING、RELOCATION、VLN、CHARGING 等产品状态；<code>id</code> 是状态切换次数；<code>description</code> 是 JSON 字符串，用来携带导航模式和任务上下文，例如 <code>mode</code>、<code>route_json</code>、<code>destination</code>、<code>map_path</code>、<code>localization_mode</code>、<code>detection_type</code>。</p>
+<p>因此，<code>StateChange</code> 的作用更像“任务开关和任务说明书”：它告诉 planning 现在要进入哪类导航任务，以及目标、路线、地图在哪里。它不是 <code>vx</code>、<code>vy</code>、<code>vyaw</code>，也不是底盘控制命令。planning 会把 <code>description.mode</code> 中的 <code>OUTDOOR</code>、<code>INDOOR</code>、<code>FIXED_POINT</code>、<code>DYNAMIC</code> 转成内部 planning 状态。</p>
+<pre><code class="language-text">StateChange.description
+  mode = OUTDOOR       → planning state: NAVIGATION
+  mode = INDOOR        → planning state: INDOOR_NAVIGATION
+  mode = FIXED_POINT   → planning state: FIXED_POINT_NAVIGATION
+  mode = DYNAMIC       → planning state: DYNAMIC_NAVIGATION</code></pre>
+
+<h4>6.8.3 planning 周期：每 0.1 秒重算一次局部未来</h4>
+<p><code>planning_conf.pb.txt</code> 中 <code>planning_period: 0.1</code>，说明规划周期约为 10Hz。配置里还出现 <code>total_time: 6.0</code>、<code>delta_t: 0.2</code>、<code>obs_stop_distance: 0.5</code> 等参数，可以理解为：每次规划都生成未来数秒的轨迹，并按离散时间点表达，同时保留障碍停车距离等安全约束。</p>
+<p>主循环由 <code>PlanningRegulator::Proc()</code> 串起来：先创建当前 <code>Frame</code>，把最新 ROS 消息和上一帧结果放进去；再做预处理、远程动作执行、状态机 pipeline、后处理；任何关键环节失败时进入 fail-safe，生成保守轨迹或停车轨迹。</p>
+<pre><code class="language-text">function planning_cycle():
+    frame = collect_latest_messages()
+    frame.pose = localization_state
+    frame.task = state_change
+    frame.occ3d = perception_occ3d
+    frame.objects = perception_objects
+    frame.last_result = previous_planning_output
+
+    if diagnose(frame) fails:
+        return fallback_stop()
+
+    preprocess(frame)          # OCC/点云/障碍物 → 2D costmap
+    execute_remote_action(frame)
+    state_manager.execute(frame)
+        pipeline = select_pipeline(frame.task.mode)
+        for task in pipeline:
+            task.execute(frame)
+    postprocess(frame)
+
+    publish(frame.planning_output.trajectory_with_time)</code></pre>
+
+<h4>6.8.4 导航能力：先回答“往哪走”</h4>
+<p>这里的导航不是一个单独算法，而是不同任务形态下的“目标解释 + 路径初始化”。室内导航会基于离线地图或局部地图做 A* 搜索；室外导航会把 <code>route_json</code> / 高德路线处理成 UTM/Frenet 参考线，再生成局部可跟踪路径；定点和动态导航则围绕目标点或目标物构造初始路径。</p>
+<table>
+    <thead>
+        <tr><th>模式</th><th>pipeline 配置</th><th>路径初始化思路</th></tr>
+    </thead>
+    <tbody>
+        <tr><td>室外导航</td><td><code>OUTDOOR → ILQR_PLANNER</code></td><td>处理 <code>route_json</code>，构建 Frenet 参考线，生成局部路径，再交给 ILQR 优化。</td></tr>
+        <tr><td>室内导航</td><td><code>INDOOR → ILQR_PLANNER</code></td><td>在室内地图/局部地图上用 A* 类搜索得到初始路径，再交给 ILQR 优化。</td></tr>
+        <tr><td>定点导航</td><td><code>FIXED_POINT → TEB_PLANNER</code></td><td>从当前位姿到目标点生成初始路径，再用 TEB 做局部时间弹性优化。</td></tr>
+        <tr><td>动态导航</td><td><code>DYNAMIC → TEB_PLANNER</code></td><td>围绕动态目标更新目标点和初始路径，再用 TEB 持续优化。</td></tr>
+        <tr><td>伴随模式</td><td><code>FOLLOW → TEB_PLANNER</code></td><td>跟随目标对象，偏局部目标追踪和局部避障。</td></tr>
+    </tbody>
+</table>
+<pre><code class="language-text">function navigation_task(frame):
+    mode = parse(frame.state_change.description.mode)
+
+    if mode == INDOOR:
+        map = load_indoor_map(frame.map_path)
+        init_path = astar_search(map, frame.pose, frame.destination)
+
+    else if mode == OUTDOOR:
+        route = parse_route_json(frame.route_json)
+        reference = build_frenet_reference(route)
+        init_path = sample_local_path(reference, frame.pose)
+
+    else if mode == FIXED_POINT:
+        init_path = connect_pose_to_goal(frame.pose, frame.destination)
+
+    else if mode == DYNAMIC:
+        target = estimate_dynamic_target(frame.objects, frame.detection_type)
+        init_path = connect_pose_to_target(frame.pose, target)
+
+    frame.init_path = init_path</code></pre>
+
+<h4>6.8.5 避障能力：不是“看到障碍就躲”，而是把障碍变成代价和约束</h4>
+<p>SenseBot 的避障信息先来自感知输出。<code>preprocess.cc</code> 会把 <code>/perception/occ3d_single</code> 和 <code>/perception/occ3d_lidar</code> 转成 <code>Occ2d</code>，再转成 <code>Costmap2D</code>，分别放入 <code>obstacle_avoid_costmap_</code> 和 <code>heightmap_costmap_</code>。这一步是规划能避障的前提：规划器不直接处理原始相机图像，而是处理已经结构化的占据、代价和目标物。</p>
+<p>进入 motion planner 后，ILQR 路线会进一步做静态障碍提取、动态障碍加入、障碍轨迹预测、costmap 膨胀与融合、走廊构造和碰撞检查；TEB 路线则把初始路径、机器人状态、障碍物和速度限制放进时间弹性带优化器中。简化理解：避障不是一个“avoid()”函数，而是一组贯穿预处理、搜索、优化和 fail-safe 的约束。</p>
+<pre><code class="language-text">function obstacle_avoidance(frame):
+    occ2d_camera = project_occ3d_to_2d(frame.perception_occ3d)
+    occ2d_lidar = project_lidar_occ3d_to_2d(frame.lidar_occ3d)
+
+    costmap_obs = convert_occ2d_to_costmap(occ2d_camera)
+    costmap_height = convert_occ2d_to_costmap(occ2d_lidar)
+
+    static_obstacles = extract_obstacles(costmap_obs)
+    dynamic_obstacles = filter_and_predict(frame.perception_objects)
+
+    inflated_costmap = inflate_and_merge(costmap_obs, dynamic_obstacles)
+
+    frame.obstacles = static_obstacles + dynamic_obstacles
+    frame.costmap = inflated_costmap</code></pre>
+
+<h4>6.8.6 规划能力：ILQR、Hybrid A* 与 TEB 各司其职</h4>
+<p>室内/室外导航主要配置为 <code>ILQR_PLANNER</code>。它的代码结构很典型：先做障碍处理，再构造 nominal path，再做速度层障碍处理和 nominal speed，最后联合优化轨迹并后处理。局部路径生成中还会用 <code>HybridAStarOCC</code> 生成满足朝向和占据约束的 nominal path；速度障碍处理中也出现 <code>HybridAStarST</code> 这类时空搜索思想。</p>
+<p>定点、动态、伴随等任务主要配置为 <code>TEB_PLANNER</code>。TEB（Timed Elastic Band，时间弹性带）可以把路径看成一串带时间间隔的姿态点，通过优化这些姿态点和时间间隔，让轨迹同时满足避障、速度、转向、平滑性等约束。它适合短视野、目标持续变化、需要滚动优化的局部导航。</p>
+<pre><code class="language-text">function ilqr_planner(frame):
+    obstacles = build_path_obstacles(frame.costmap, frame.objects)
+
+    frenet = build_frenet(frame.init_path)
+    nominal_path = hybrid_astar_occ(frenet, frame.costmap, frame.pose)
+    corridor = build_static_corridor(nominal_path, frame.costmap)
+
+    speed_constraints = check_static_and_dynamic_collision(
+        nominal_path,
+        obstacles,
+        frame.speed_limit
+    )
+
+    nominal_speed = compute_reference_speed(frame.target_speed, speed_constraints)
+
+    trajectory = joint_optimize_path_and_speed(
+        nominal_path,
+        nominal_speed,
+        corridor,
+        obstacles,
+        robot_kinematics
+    )
+
+    return postprocess_trajectory(trajectory)</code></pre>
+<pre><code class="language-text">function teb_planner(frame):
+    band = initialize_timed_elastic_band(frame.pose, frame.init_path)
+    obstacles = convert_costmap_and_objects_to_teb_obstacles(frame.costmap, frame.objects)
+
+    repeat until convergence or max_iter:
+        add_cost(band close to init_path)
+        add_cost(no collision with obstacles)
+        add_cost(velocity and angular_velocity limits)
+        add_cost(acceleration and smoothness limits)
+        optimize_band_pose_and_time()
+
+    return convert_band_to_trajectory_with_time(band)</code></pre>
+
+<h4>6.8.7 控制能力：最终给机器狗的是速度，但速度来自轨迹跟踪</h4>
+<p>最终给 Go2 的调用确实是速度形式：<code>SportClient::Move(vx, vy, vyaw)</code>，并且控制节点也发布 <code>/unitree_go2/cmd_vel</code> 这样的速度消息用于观测或兼容。但这些速度不是 Agent 直接写出来的，也不是状态机直接给出的；它们来自 planning 生成的 <code>TrajectoryWithTime</code>，再由 control 根据当前定位状态做轨迹跟踪。</p>
+<p><code>TrajectoryWithTime</code> 消息包含 <code>trajectory_points</code>、<code>trajectory_rpys</code>、<code>trajectory_vels</code>、<code>trajectory_angular_vels</code>、<code>timestamps</code>、<code>total_duration</code>、<code>num_points</code> 等字段。control 每个周期根据“当前时刻机器人在哪里”和“规划轨迹此时希望机器人在哪里/多快”计算速度命令。由于 planning 约 10Hz 滚动重算，速度会被持续更新和维护，而不是一次导航开始时生成一组固定速度跑到底。</p>
+<pre><code class="language-text">function control_cycle():
+    traj = latest("/pnc_planner_path_with_time")
+    pose = latest_localization()
+
+    target_point = sample_trajectory_by_time(traj, now)
+    station_error = target_point.pose - pose
+    speed_error = target_point.velocity - pose.velocity
+
+    vx, vy, vyaw = mpc_or_tracking_controller(
+        station_error,
+        speed_error,
+        target_point,
+        robot_limits
+    )
+
+    if trajectory_invalid_or_timeout:
+        vx, vy, vyaw = 0, 0, 0
+
+    publish_unitree_request(SportClient.Move(vx, vy, vyaw))</code></pre>
+
+<h4>6.8.8 Agent 调 nav 与 Bot 调机器的层级不同</h4>
+<p>从 <code>agent</code> 项目看，<code>nav</code> 是一个高层工具能力：Agent 说“导航到某点”，sandbox 更新虚拟位姿、记录调用轨迹、计算任务是否完成。这是任务层/后端层的原子能力，适合评估模型有没有正确用工具。</p>
+<p>SenseBot 这一侧不是再去调用一个同名的“nav 工具”。它的原子能力更接近 ROS2 graph 内部的节点协作：状态机广播任务，planning 根据感知、定位和地图生成轨迹，control 跟踪轨迹并通过 Unitree SDK2 发速度。也就是说，bot 项目最终是通过底层运动接口操控机器狗；导航只是它在 ROS2 系统中组合出来的一条闭环能力链。</p>
+<div class="flow">Agent 层 nav 工具:
+    navigate_to("小卖部") → sandbox/API 状态更新
+
+SenseBot 端侧导航链:
+    StateChange(NAVIGATION, description)
+        → planning pipeline
+        → TrajectoryWithTime
+        → control tracking
+        → SportClient::Move(vx, vy, vyaw)</div>
+
+<h4>6.8.9 四个能力的最小心智模型</h4>
+<table>
+    <thead>
+        <tr><th>能力</th><th>输入</th><th>核心算法思想</th><th>输出</th></tr>
+    </thead>
+    <tbody>
+        <tr><td>导航</td><td>目标、地图、任务模式</td><td>把产品目标翻译成可规划的参考路径；室内偏 A*，室外偏 route/Frenet，动态目标偏实时目标更新。</td><td><code>init_path</code> 或参考线。</td></tr>
+        <tr><td>规划</td><td>初始路径、位姿、速度、代价地图、障碍物</td><td>用搜索和优化把“能走的路径”变成“可执行的时序轨迹”。</td><td><code>TrajectoryWithTime</code>。</td></tr>
+        <tr><td>避障</td><td>OCC、点云、目标物、costmap</td><td>把障碍物转成栅格代价、几何障碍、时空约束和碰撞惩罚，必要时触发停车。</td><td>避障后的路径/轨迹约束。</td></tr>
+        <tr><td>控制</td><td>规划轨迹、当前定位、机器人运动限制</td><td>轨迹跟踪/MPC，根据误差持续计算底盘速度。</td><td><code>vx / vy / vyaw</code>。</td></tr>
+    </tbody>
+</table>
+<p>所以，回答“系统的避障/路径演算是不是都通过规划模块完成”：工程上可以说主要通过 planning 完成，但不要把它理解成 planning 单独拥有全部信息和全部安全责任。更准确的说法是：<strong>感知发现世界，定位确定自身，状态机给任务，planning 计算可行轨迹，control 把轨迹维持成速度，底层 SDK 执行动作。</strong></p>
 </section>
 
 <section id="public">
-<h2>6. 公版项目与工具链对照</h2>
+<h2>7. 公版项目与工具链对照</h2>
 <p>本地项目已经覆盖工具层 sandbox、ROS2 生产系统、PNC 轻量 simulator、DLP Isaac 模型在环。若要补全机器人/机器狗仿真工具链，建议把下列公版项目作为对照基线。</p>
 
 <table>
@@ -348,14 +733,14 @@ simulator_node: trajectory interpolation
     </tbody>
 </table>
 
-<h3>6.1 其他本地项目线索</h3>
+<h3>7.1 其他本地项目线索</h3>
 <p>本地还检索到 <code>dimensional-applications/local_git_snapshots/dimos_improved_bbox_codeonly</code>，它包含 Unitree Go2/G1 blueprints、replay、MuJoCo simulation、Genesis simulator、occupancy-to-MuJoCo scene、agentic MCP 等能力；<code>20_vln_vla_navigation_models</code> 包含 JanusVLN、StreamVLN、OpenTrackVLA、Uni-NaVid 等导航模型，部分使用 Habitat simulator、websocket 推理和轨迹输出。它们不是本次重点审阅对象，但可作为“模型层/仿真层/机器人接口层”的补充样本。</p>
 </section>
 
 <section id="workflow">
-<h2>7. 机器人/机器狗仿真的生产力流程</h2>
+<h2>8. 机器人/机器狗仿真的生产力流程</h2>
 
-<h3>7.1 从最小可复现开始</h3>
+<h3>8.1 从最小可复现开始</h3>
 <ol>
     <li><strong>定义任务契约</strong>：用户指令、地图点位、允许工具、禁止工具、预期状态、成功指标。</li>
     <li><strong>做 fixture/sandbox</strong>：先用离线地图和模拟状态验证 LLM 或调度器是否会按正确顺序调用工具。</li>
@@ -366,7 +751,7 @@ simulator_node: trajectory interpolation
     <li><strong>实机灰度</strong>：在低风险场景、低速度、可急停条件下部署，失败日志回灌到前面几层。</li>
 </ol>
 
-<h3>7.2 推荐目录与产物</h3>
+<h3>8.2 推荐目录与产物</h3>
 <pre><code class="language-text">robot_sim_project/
   maps/                 # 地图、点位、场景配置
   fixtures/             # sandbox fixture
@@ -378,7 +763,7 @@ simulator_node: trajectory interpolation
   sim/                  # Gazebo/Isaac/MuJoCo 场景
   reports/              # loss、latency、轨迹图、失败分析</code></pre>
 
-<h3>7.3 关键验收指标</h3>
+<h3>8.3 关键验收指标</h3>
 <table>
     <thead>
         <tr><th>层级</th><th>指标</th><th>示例</th></tr>
@@ -395,7 +780,7 @@ simulator_node: trajectory interpolation
 </section>
 
 <section id="comparison">
-<h2>8. 方法对比与选择建议</h2>
+<h2>9. 方法对比与选择建议</h2>
 <table>
     <thead>
         <tr><th>目标</th><th>优先环境</th><th>原因</th><th>不适合做什么</th></tr>
@@ -415,7 +800,7 @@ simulator_node: trajectory interpolation
 </section>
 
 <section id="references">
-<h2>9. 参考文献（References）</h2>
+<h2>10. 参考文献（References）</h2>
 <ol>
     <li>ROS 2 Documentation, "Concepts", Humble. <a href="https://docs.ros.org/en/humble/Concepts.html">链接</a></li>
     <li>ROS 2 Documentation, "Recording and playing back data", Humble. <a href="https://docs.ros.org/en/humble/Tutorials/Beginner-CLI-Tools/Recording-And-Playing-Back-Data/Recording-And-Playing-Back-Data.html">链接</a></li>

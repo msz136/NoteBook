@@ -1,0 +1,668 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Action Tokenization 方法报告</title>
+    <script>
+    window.MathJax = {
+        tex: { inlineMath: [['\\(','\\)'], ['$', '$']], displayMath: [['\\[','\\]'], ['$$','$$']] },
+        options: { skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code'] }
+    };
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js" async></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Noto Sans SC", sans-serif;
+            font-size: 16px;
+            line-height: 1.8;
+            color: #1a1a1a;
+            background: #fff;
+            padding: 2rem 1rem;
+        }
+        article { max-width: 900px; margin: 0 auto; }
+        h1 { font-size: 2rem; margin-bottom: 0.75rem; border-bottom: 2px solid #333; padding-bottom: 0.6rem; line-height: 1.35; }
+        h2 { font-size: 1.5rem; margin-top: 2.5rem; margin-bottom: 1rem; color: #222; border-left: 4px solid #0066cc; padding-left: 0.75rem; line-height: 1.45; }
+        h3 { font-size: 1.25rem; margin-top: 1.8rem; margin-bottom: 0.8rem; color: #333; line-height: 1.5; }
+        h4 { font-size: 1.08rem; margin-top: 1.2rem; margin-bottom: 0.5rem; color: #444; }
+        p { margin-bottom: 1rem; }
+        ul, ol { margin-bottom: 1rem; padding-left: 1.5rem; }
+        li { margin-bottom: 0.35rem; }
+        a { color: #0066cc; text-decoration: none; overflow-wrap: anywhere; }
+        a:hover { text-decoration: underline; }
+        code { font-family: "Fira Code", Consolas, "Courier New", monospace; background: #f0f0f0; padding: 0.15rem 0.4rem; border-radius: 3px; font-size: 0.9em; }
+        pre { background: #f5f5f5; border-radius: 6px; padding: 1rem; overflow-x: auto; margin: 1rem 0; font-size: 0.9rem; line-height: 1.55; }
+        pre code { background: none; padding: 0; border-radius: 0; font-size: inherit; }
+        .table-wrap { overflow-x: auto; margin: 1.5rem 0; }
+        table { width: 100%; border-collapse: collapse; font-size: 0.92rem; }
+        th, td { border: 1px solid #ddd; padding: 0.6rem 0.8rem; text-align: left; vertical-align: top; }
+        th { background: #f8f8f8; font-weight: 600; }
+        tbody tr:nth-child(even) { background: #fafafa; }
+        .meta { color: #666; font-size: 0.92rem; margin-bottom: 1.5rem; }
+        .toc { background: #f8fbff; border: 1px solid #d9e8ff; border-left: 4px solid #0066cc; padding: 1rem 1.2rem; margin: 1.5rem 0 2rem; border-radius: 6px; }
+        .toc h2 { border: none; margin: 0 0 0.8rem; padding: 0; font-size: 1.2rem; color: #123; }
+        .toc ol { columns: 2; column-gap: 2rem; margin-bottom: 0; }
+        .toc li { break-inside: avoid; margin-bottom: 0.35rem; }
+        .note { background: #f8fbff; border-left: 4px solid #0066cc; padding: 0.9rem 1rem; border-radius: 4px; margin: 1rem 0; }
+        .warn { background: #fff8ef; border-left: 4px solid #c77700; padding: 0.9rem 1rem; border-radius: 4px; margin: 1rem 0; }
+        section { scroll-margin-top: 1rem; }
+        .math-block { overflow-x: auto; margin: 1rem 0; }
+        @media (max-width: 600px) {
+            body { padding: 1rem 0.5rem; }
+            h1 { font-size: 1.5rem; }
+            h2 { font-size: 1.25rem; }
+            table { font-size: 0.82rem; }
+            .toc ol { columns: 1; }
+        }
+    </style>
+</head>
+<body>
+<article>
+<h1>Action Tokenization 方法报告</h1>
+<p class="meta">生成日期：2026-06-14；主题：机器人动作 token 表达方法、数学形式、具体例子与选型建议。</p>
+
+<nav class="toc" aria-label="目录">
+<h2>目录</h2>
+<ol>
+<li><a href="#question">问题（Question）</a></li>
+<li><a href="#background">背景与动机（Background &amp; Motivation）</a></li>
+<li><a href="#setup">0. 统一例子：一段 action chunk</a></li>
+<li><a href="#taxonomy">1. 方法总览</a></li>
+<li><a href="#scalar-bin">2. 逐维分桶 token</a></li>
+<li><a href="#grouped-token">3. 分组 / factorized token</a></li>
+<li><a href="#fast-token">4. FAST：DCT + 量化 + BPE</a></li>
+<li><a href="#bet-token">5. BeT：动作模式 token + 连续残差</a></li>
+<li><a href="#vq-token">6. VQ / RVQ：学习式 latent action token</a></li>
+<li><a href="#oat-token">7. OAT：有序 action token</a></li>
+<li><a href="#spline-token">8. B-spline / BEAST token</a></li>
+<li><a href="#waypoint-token">9. waypoint / keyframe token</a></li>
+<li><a href="#voxel-token">10. voxel / heatmap / affordance token</a></li>
+<li><a href="#skill-token">11. skill / primitive / code token</a></li>
+<li><a href="#internal-token">12. 连续 action token：不是词表 token</a></li>
+<li><a href="#comparison">方法对比与选择建议</a></li>
+<li><a href="#references">参考文献（References）</a></li>
+</ol>
+</nav>
+
+<section id="question">
+<h2>问题（Question）</h2>
+<p>除了 FAST 这种“频域压缩 + BPE”的 action token 表达方式，机器人 VLA / imitation learning 里还有哪些 action tokenization 方法？每一种方法如何把连续 action chunk 编码成 token，又如何从 token 还原或执行动作？</p>
+</section>
+
+<section id="background">
+<h2>背景与动机（Background &amp; Motivation）</h2>
+<p>视觉-语言-动作模型（Vision-Language-Action model, VLA）要把图像、语言和机器人动作放进同一个学习系统。图像和语言天然可以变成 token，但机器人动作通常是连续浮点数，例如末端位移、旋转、夹爪、底盘速度、关节目标。action tokenization 的核心问题就是：如何把连续动作变成离散或结构化的符号，让 Transformer / VLM / LLM 可以建模。</p>
+<p>早期 VLA 如 RT-1、RT-2、OpenVLA 常用逐维分桶，把动作写成一串离散 token；FAST 进一步把 action chunk 先变到频域再压缩；BeT / VQ-BeT / OAT 则尝试学习 latent action token；PerAct、Transporter、Spatial Action Maps 把动作变成空间格子或热力图；SayCan、Code as Policies 则把动作提升到技能或程序层面 [1][2][3][4][5][6][7][8][9][10][11]。</p>
+<div class="note">
+<p><strong>一句话：</strong>action token 可以表示“一个数值桶”“一组物理维度”“一段动作曲线”“一个动作模式”“一个空间位置”“一个关键帧”“一个技能”或“内部连续 hidden token”。不同表示的本质差异是：token 究竟承载低层控制值、轨迹形状、空间目标，还是高层行为语义。</p>
+</div>
+</section>
+
+<section id="setup">
+<h2>0. 统一例子：一段 action chunk</h2>
+<p>为了每个方法都讲清楚，本文使用同一个简化例子：任务是“把杯子向右前方移动并夹住”。机器人每步动作只保留 4 维：</p>
+<div class="math-block">$$
+a_h=[\Delta x_h,\Delta y_h,\Delta z_h,g_h],
+$$</div>
+<p>其中 \(\Delta x,\Delta y,\Delta z\) 是末端位移增量，单位可以理解为米；\(g\in[0,1]\) 是夹爪闭合程度，0 表示打开，1 表示闭合。一个 \(H=4,D_a=4\) 的 action chunk 为：</p>
+<div class="math-block">$$
+A=
+\begin{bmatrix}
+0.02 & 0.00 & -0.01 & 0.00\\
+0.03 & 0.01 & -0.01 & 0.20\\
+0.02 & 0.02 &  0.00 & 0.80\\
+0.00 & 0.01 &  0.01 & 1.00
+\end{bmatrix}
+\in\mathbb{R}^{4\times4}.
+$$</div>
+<p>直观解释：前两步手往右前下方靠近杯子，第三步开始闭合夹爪，第四步完全夹住并微微上抬。</p>
+<p>真实 VLA 中 \(H\) 可能是 32、50 或更长，\(D_a\) 可能是 7、14、32 或更多；本文用小矩阵只是为了看清每种 tokenization 的机制。</p>
+</section>
+
+<section id="taxonomy">
+<h2>1. 方法总览</h2>
+<div class="table-wrap"><table>
+<thead><tr><th>方法</th><th>token 表示什么</th><th>是否离散</th><th>是否可还原完整 action chunk</th><th>代表</th></tr></thead>
+<tbody>
+<tr><td>逐维分桶</td><td>每个动作维度的数值区间</td><td>是</td><td>近似还原</td><td>RT-1、RT-2、OpenVLA</td></tr>
+<tr><td>分组 token</td><td>位置、旋转、夹爪、底盘等物理组</td><td>通常是</td><td>近似还原</td><td>VLA 工程常用变体</td></tr>
+<tr><td>FAST</td><td>动作曲线的频域压缩片段</td><td>是</td><td>可还原 action chunk</td><td>π0-FAST、FAST+</td></tr>
+<tr><td>BeT</td><td>动作模式簇 id + 连续 offset</td><td>半离散</td><td>可还原单步或短段动作</td><td>Behavior Transformer</td></tr>
+<tr><td>VQ / RVQ</td><td>学习出来的 latent action code</td><td>是</td><td>通过 decoder 还原</td><td>VQ-BeT、FASTerVQ</td></tr>
+<tr><td>OAT</td><td>有因果顺序的 latent action code</td><td>是</td><td>前缀即可粗还原</td><td>Ordered Action Tokenization</td></tr>
+<tr><td>B-spline / BEAST</td><td>轨迹样条控制点</td><td>可离散或连续</td><td>天然还原平滑轨迹</td><td>BEAST</td></tr>
+<tr><td>waypoint</td><td>关键帧或目标点</td><td>可离散或连续</td><td>需低层 controller 插值</td><td>Code as Policies、VIMA 风格任务</td></tr>
+<tr><td>voxel / heatmap</td><td>空间格子、像素、体素或 affordance</td><td>是</td><td>输出目标位置，再转换成动作</td><td>Transporter、PerAct、Spatial Action Maps</td></tr>
+<tr><td>skill / code</td><td>技能名、API、程序片段</td><td>是</td><td>由技能库/程序执行</td><td>SayCan、Code as Policies</td></tr>
+<tr><td>连续 action token</td><td>Transformer 内部 action hidden</td><td>否</td><td>由 action head 直接解码</td><td>π0 / OpenPI flow</td></tr>
+</tbody>
+</table></div>
+</section>
+
+<section id="scalar-bin">
+<h2>2. 逐维分桶 token</h2>
+<p>逐维分桶（per-dimension binning）是最直观的 action tokenization。每个连续动作维度被裁剪到固定范围，再量化成 \(K\) 个桶。RT-1、RT-2、OpenVLA 一类模型都采用过这种“动作即文本 token”的路线 [1][2][3]。</p>
+
+<h3>数学形式</h3>
+<p>设第 \(d\) 个动作维度的范围是 \([l_d,u_d]\)，分成 \(K\) 个 bin：</p>
+<div class="math-block">$$
+z_{h,d}
+=
+\left\lfloor
+K\cdot
+\frac{\mathrm{clip}(a_{h,d},l_d,u_d)-l_d}{u_d-l_d}
+\right\rfloor,
+\qquad
+z_{h,d}\in\{0,\ldots,K-1\}.
+$$</div>
+<p>反解码时取 bin 中心：</p>
+<div class="math-block">$$
+\hat a_{h,d}
+=
+l_d+\frac{z_{h,d}+0.5}{K}(u_d-l_d).
+$$</div>
+
+<h3>具体例子</h3>
+<p>假设 \(\Delta x,\Delta y,\Delta z\in[-0.04,0.04]\)，夹爪 \(g\in[0,1]\)，为了示意只用 \(K=8\) 个桶。第一步动作是：</p>
+<div class="math-block">$$
+a_1=[0.02,0.00,-0.01,0.00].
+$$</div>
+<p>按上式量化，大致得到：</p>
+<pre><code class="language-text">dx = 0.02  -> bin 6
+dy = 0.00  -> bin 4
+dz = -0.01 -> bin 3
+g  = 0.00  -> bin 0
+
+step_1 tokens = [&lt;dx_6&gt;, &lt;dy_4&gt;, &lt;dz_3&gt;, &lt;grip_0&gt;]</code></pre>
+<p>整个 action chunk 会变成：</p>
+<pre><code class="language-text">A -> [
+  &lt;dx_6&gt; &lt;dy_4&gt; &lt;dz_3&gt; &lt;grip_0&gt;
+  &lt;dx_7&gt; &lt;dy_5&gt; &lt;dz_3&gt; &lt;grip_1&gt;
+  &lt;dx_6&gt; &lt;dy_6&gt; &lt;dz_4&gt; &lt;grip_6&gt;
+  &lt;dx_4&gt; &lt;dy_5&gt; &lt;dz_5&gt; &lt;grip_7&gt;
+]</code></pre>
+<p>模型训练就是普通 next-token prediction：</p>
+<div class="math-block">$$
+\mathcal{L}
+=-\sum_i \log p_\theta(z_i\mid I,q,z_{&lt;i}).
+$$</div>
+
+<h3>优缺点</h3>
+<ul>
+<li>优点：实现最简单，直接复用语言模型词表、LM head 和 cross entropy。</li>
+<li>优点：每个 token 可解释，调试时能看到哪一维动作错了。</li>
+<li>缺点：序列长，长度约为 \(H\times D_a\)。\(H=50,D_a=7\) 时就是 350 个 token。</li>
+<li>缺点：量化误差固定存在，bin 太少不准，bin 太多又使词表和学习难度增加。</li>
+<li>缺点：每个维度独立编码，无法天然表达“向右下靠近并闭合夹爪”这种相关动作模式。</li>
+</ul>
+</section>
+
+<section id="grouped-token">
+<h2>3. 分组 / factorized token</h2>
+<p>分组 token 是逐维分桶的工程增强版。它不把所有动作维度平铺，而是按物理含义分成 position、rotation、gripper、base、terminate 等组。RT-2 等 action-as-token VLA 通常会把动作维度离散后放入文本 token 序列；具体工程中经常按维度类型加不同 token 前缀，避免语义混乱 [2][3]。</p>
+
+<h3>数学形式</h3>
+<p>把单步动作拆成几组：</p>
+<div class="math-block">$$
+a_h=[a_h^{pos},a_h^{rot},a_h^{grip},a_h^{term}].
+$$</div>
+<p>每组使用自己的 tokenizer：</p>
+<div class="math-block">$$
+z_h^{pos}=T_{pos}(a_h^{pos}),\quad
+z_h^{rot}=T_{rot}(a_h^{rot}),\quad
+z_h^{grip}=T_{grip}(a_h^{grip}).
+$$</div>
+<p>最后拼成：</p>
+<div class="math-block">$$
+Z_h=[z_h^{pos};z_h^{rot};z_h^{grip};z_h^{term}].
+$$</div>
+
+<h3>具体例子</h3>
+<p>还是第一步：</p>
+<div class="math-block">$$
+a_1=[0.02,0.00,-0.01,0.00].
+$$</div>
+<p>可以写成：</p>
+<pre><code class="language-text">&lt;pos_dx_6&gt; &lt;pos_dy_4&gt; &lt;pos_dz_3&gt; &lt;gripper_open&gt;</code></pre>
+<p>如果有旋转和终止标记，则可变为：</p>
+<pre><code class="language-text">&lt;pos_dx_6&gt; &lt;pos_dy_4&gt; &lt;pos_dz_3&gt;
+&lt;rot_roll_4&gt; &lt;rot_pitch_4&gt; &lt;rot_yaw_5&gt;
+&lt;gripper_open&gt; &lt;continue&gt;</code></pre>
+
+<h3>为什么有用</h3>
+<p>它仍然是 binning，但 token 命名和 loss mask 更清晰。比如 gripper 本来就是接近二值的动作，不需要和 \(\Delta x\) 一样用很多桶；terminate 是逻辑控制 token，也不该和连续位移共用同一套范围。</p>
+<div class="warn">
+<p>分组 token 不会从根本上解决长序列问题。它解决的是可解释性、不同物理维度的范围差异、以及动作模板管理问题。</p>
+</div>
+</section>
+
+<section id="fast-token">
+<h2>4. FAST：DCT + 量化 + BPE</h2>
+<p>FAST（Frequency-space Action Sequence Tokenization，频域动作序列 token 化）把一整段 action chunk 当作时间序列来压缩，而不是逐个时间步、逐个维度分桶。它的核心步骤是：归一化、离散余弦变换（Discrete Cosine Transform, DCT）、量化、展平、BPE 压缩、映射到 VLM 词表 [4]。</p>
+
+<h3>数学形式</h3>
+<p>先归一化动作：</p>
+<div class="math-block">$$
+\tilde A_{h,d}=\mathrm{Norm}(A_{h,d}).
+$$</div>
+<p>对每个动作维度沿时间轴做 DCT：</p>
+<div class="math-block">$$
+C_{k,d}=\mathrm{DCT}(\tilde A_{:,d})_k.
+$$</div>
+<p>量化频域系数：</p>
+<div class="math-block">$$
+Q_{k,d}=\mathrm{round}(\alpha C_{k,d}),
+\qquad Q\in\mathbb{Z}^{H\times D_a}.
+$$</div>
+<p>展平成整数序列 \(r\)，再用 BPE 压缩：</p>
+<div class="math-block">$$
+r=\mathrm{flatten}(Q),
+\qquad
+Z=\mathrm{BPE}(r)=[z_1,\ldots,z_L].
+$$</div>
+<p>反解码时：</p>
+<div class="math-block">$$
+\hat r=\mathrm{BPE}^{-1}(Z),\quad
+\hat C=\mathrm{reshape}(\hat r)/\alpha,\quad
+\hat A=\mathrm{IDCT}(\hat C).
+$$</div>
+
+<h3>具体例子</h3>
+<p>只看夹爪这一维：</p>
+<div class="math-block">$$
+g=[0.00,0.20,0.80,1.00].
+$$</div>
+<p>这是一条“逐步闭合”的曲线。DCT 后可以理解为：</p>
+<pre><code class="language-text">time-domain gripper: [0.00, 0.20, 0.80, 1.00]
+DCT coefficients:    [overall_close_amount, rising_trend, small_detail, tiny_detail]
+quantized Q:         [10, -7, 0, 1]      # 示意值，不要求手算精确
+BPE tokens:          [&lt;fast_884&gt;, &lt;fast_21&gt;]</code></pre>
+<p>FAST 的好处是：一个 token 可能代表一段常见频域模式，而不是一个单独数值。完整 action chunk 可能从 \(H\times D_a=16\) 个数压成更短的 token 序列；在真实高频动作上压缩优势更明显。</p>
+
+<h3>适用场景</h3>
+<ul>
+<li>高频、连续、平滑但有局部细节的动作，例如灵巧抓取、擦拭、插拔。</li>
+<li>希望让 VLM 自回归生成动作，但不想承受逐维分桶的长序列。</li>
+<li>已有 FAST / FAST+ tokenizer 可复用，且动作归一化与解码流程稳定。</li>
+</ul>
+</section>
+
+<section id="bet-token">
+<h2>5. BeT：动作模式 token + 连续残差</h2>
+<p>Behavior Transformer（BeT）不是把动作每一维分桶，而是先用聚类找出若干常见动作模式。模型预测“当前应该选哪个模式 token”，再预测一个连续 offset 修正该模式。这样既保留离散多模态，又避免纯离散 token 的粗糙 [5]。</p>
+
+<h3>数学形式</h3>
+<p>先用 k-means 在动作数据上学习 \(K\) 个中心：</p>
+<div class="math-block">$$
+\mathcal{C}=\{c_1,c_2,\ldots,c_K\},
+\qquad c_k\in\mathbb{R}^{D_a}.
+$$</div>
+<p>对真实动作 \(a\)，找到最近模式：</p>
+<div class="math-block">$$
+z=\arg\min_k \|a-c_k\|_2^2.
+$$</div>
+<p>同时学习残差：</p>
+<div class="math-block">$$
+\delta=a-c_z.
+$$</div>
+<p>模型输出为：</p>
+<div class="math-block">$$
+\hat z = \arg\max_k p_\theta(k\mid o),
+\qquad
+\hat a=c_{\hat z}+r_\theta(o,\hat z).
+$$</div>
+<p>其中 \(o\) 是 observation，包括图像、状态、语言等条件。</p>
+
+<h3>具体例子</h3>
+<p>假设聚类学到几个动作模式：</p>
+<pre><code class="language-text">cluster 3: move right, keep gripper open      c3 = [ 0.025, 0.000, 0.000, 0.0]
+cluster 7: move down-right, start closing     c7 = [ 0.020, 0.010,-0.010, 0.3]
+cluster 9: lift up, gripper closed            c9 = [ 0.000, 0.000, 0.020, 1.0]</code></pre>
+<p>对第二步真实动作：</p>
+<div class="math-block">$$
+a_2=[0.03,0.01,-0.01,0.20].
+$$</div>
+<p>最近的是 \(c_7\)，于是：</p>
+<pre><code class="language-text">mode token: &lt;cluster_7&gt;
+residual:   [0.010, 0.000, 0.000, -0.100]
+decoded:    c7 + residual = [0.030, 0.010, -0.010, 0.200]</code></pre>
+
+<h3>优缺点</h3>
+<ul>
+<li>优点：多模态动作更自然。模型可以在“左绕”“右绕”“直接靠近”等模式之间分类。</li>
+<li>优点：连续 residual 提供精度，不完全受离散桶限制。</li>
+<li>缺点：k-means 对长 action chunk 和高维动作扩展困难。</li>
+<li>缺点：token 主要表示单步或局部模式，不一定能压缩完整长轨迹。</li>
+</ul>
+</section>
+
+<section id="vq-token">
+<h2>6. VQ / RVQ：学习式 latent action token</h2>
+<p>VQ（Vector Quantization，向量量化）不手工定义 bin，也不只用 k-means，而是训练一个 encoder、codebook 和 decoder。VQ-BeT 使用层级向量量化来编码连续动作，缓解 BeT 在高维、长序列上的扩展问题 [6]。FASTerVQ 进一步把 action chunk 作为单通道图像式结构编码，以提高压缩和泛化 [12]。</p>
+
+<h3>数学形式</h3>
+<p>训练一个 action encoder：</p>
+<div class="math-block">$$
+h=E_\phi(A)\in\mathbb{R}^{m}.
+$$</div>
+<p>在 codebook 中找最近的离散 code：</p>
+<div class="math-block">$$
+z=\arg\min_k \|h-e_k\|_2^2,\qquad e_k\in\mathcal{C}.
+$$</div>
+<p>decoder 还原动作：</p>
+<div class="math-block">$$
+\hat A=D_\psi(e_z).
+$$</div>
+<p>Residual VQ（RVQ）使用多个 codebook 逐层修正：</p>
+<div class="math-block">$$
+h \approx e^{(1)}_{z_1}+e^{(2)}_{z_2}+\cdots+e^{(M)}_{z_M}.
+$$</div>
+
+<h3>具体例子</h3>
+<p>我们的 4 步动作块可能被编码成：</p>
+<pre><code class="language-text">VQ tokens:
+  &lt;vq_12&gt;
+
+meaning:
+  "approach object from right-front and close gripper late"</code></pre>
+<p>如果用 RVQ，则可能是：</p>
+<pre><code class="language-text">RVQ tokens:
+  &lt;coarse_12&gt;  # 大体模式：右前靠近
+  &lt;detail_41&gt;  # 细节修正：第三步开始闭合
+  &lt;detail_07&gt;  # 细节修正：最后一步微上抬</code></pre>
+<p>数学上：</p>
+<div class="math-block">$$
+\hat A=D_\psi(e^{(1)}_{12}+e^{(2)}_{41}+e^{(3)}_{7}).
+$$</div>
+
+<h3>优缺点</h3>
+<ul>
+<li>优点：token 很短，一个 token 可以表示一整段动作模式。</li>
+<li>优点：tokenizer 是数据驱动的，能适应不同机器人和任务。</li>
+<li>缺点：需要额外训练 tokenizer，训练不稳时会 codebook collapse，即很多 code 永远不用。</li>
+<li>缺点：token 可解释性弱。<code>&lt;vq_12&gt;</code> 的物理意义需要事后分析。</li>
+</ul>
+</section>
+
+<section id="oat-token">
+<h2>7. OAT：有序 action token</h2>
+<p>OAT（Ordered Action Tokenization，有序动作 token 化）关注一个很关键的问题：自回归模型是从左到右生成 token 的，因此 token 顺序本身应当有意义。普通 VQ token 可能压缩强，但 \(z_1,z_2,z_3\) 未必具有“先粗后细”的因果顺序；OAT 希望 token 前缀就能解码出粗动作，生成更多 token 后动作更精细 [13]。</p>
+
+<h3>数学形式</h3>
+<p>OAT 希望满足前缀可解码（prefix detokenization）：</p>
+<div class="math-block">$$
+\hat A^{(m)}=D(z_1,\ldots,z_m),
+\qquad m=1,\ldots,L.
+$$</div>
+<p>并且随着 \(m\) 增大，重建误差逐步下降：</p>
+<div class="math-block">$$
+\|A-\hat A^{(1)}\|_2
+\ge
+\|A-\hat A^{(2)}\|_2
+\ge
+\cdots
+\ge
+\|A-\hat A^{(L)}\|_2.
+$$</div>
+
+<h3>具体例子</h3>
+<pre><code class="language-text">OAT tokens:
+  z1 = &lt;move_right_front&gt;
+  z2 = &lt;descend_then_lift&gt;
+  z3 = &lt;close_gripper_late&gt;
+  z4 = &lt;small_smooth_correction&gt;</code></pre>
+<p>只生成前 1 个 token：</p>
+<pre><code class="language-text">decoded action: move roughly right-front</code></pre>
+<p>生成前 3 个 token：</p>
+<pre><code class="language-text">decoded action: move right-front, descend, then close gripper late</code></pre>
+<p>这带来一个工程好处：如果推理时间不够，可以用短前缀先执行一个粗动作；如果时间充裕，再生成更多 token 提升精度。</p>
+
+<h3>适用场景</h3>
+<ul>
+<li>需要自回归生成，但又希望 anytime inference，即随时停止也能得到可用动作。</li>
+<li>动作 chunk 长、但希望 token 数短且有顺序语义。</li>
+<li>愿意训练专门 tokenizer，而不是只做手工 DCT 或 binning。</li>
+</ul>
+</section>
+
+<section id="spline-token">
+<h2>8. B-spline / BEAST token</h2>
+<p>B-spline token 把 action chunk 看成一条平滑曲线，用少量控制点表示整段轨迹。BEAST（B-spline Encoded Action Sequence Tokenizer）把动作序列编码成 B-spline 控制点，再作为离散或连续 token 供模型生成 [14]。</p>
+
+<h3>数学形式</h3>
+<p>对每个动作维度 \(d\)，用 \(M\) 个 B-spline 基函数表示：</p>
+<div class="math-block">$$
+a_d(t)=\sum_{i=1}^{M}B_i(t)c_{i,d}.
+$$</div>
+<p>整个 action chunk 由控制点矩阵 \(C\in\mathbb{R}^{M\times D_a}\) 表示：</p>
+<div class="math-block">$$
+A\approx \mathrm{SplineDecode}(C).
+$$</div>
+<p>如果要离散 token 化，可以对控制点分桶：</p>
+<div class="math-block">$$
+z_{i,d}=\mathrm{Quantize}(c_{i,d}).
+$$</div>
+
+<h3>具体例子</h3>
+<p>我们的 4 步 \(\Delta x\) 为：</p>
+<div class="math-block">$$
+x=[0.02,0.03,0.02,0.00].
+$$</div>
+<p>它可以用两个或三个控制点近似：</p>
+<pre><code class="language-text">control points for dx:
+  c1 = 0.020
+  c2 = 0.032
+  c3 = 0.000
+
+tokens:
+  &lt;spline_dx_6&gt; &lt;spline_dx_7&gt; &lt;spline_dx_4&gt;</code></pre>
+<p>夹爪维度也可以用控制点描述“从打开到闭合”的曲线：</p>
+<pre><code class="language-text">gripper curve: [0.00, 0.20, 0.80, 1.00]
+control points: [0.00, 0.70, 1.00]
+tokens: &lt;spline_g_0&gt; &lt;spline_g_6&gt; &lt;spline_g_7&gt;</code></pre>
+
+<h3>优缺点</h3>
+<ul>
+<li>优点：轨迹天然平滑，适合高频控制。</li>
+<li>优点：token 长度固定，解码可以并行，不必一个动作点一个动作点生成。</li>
+<li>缺点：对突然接触、碰撞响应、快速开合等高频变化，需要更多控制点或额外事件 token。</li>
+<li>缺点：如果任务动作并不平滑，样条先验可能过强。</li>
+</ul>
+</section>
+
+<section id="waypoint-token">
+<h2>9. waypoint / keyframe token</h2>
+<p>waypoint token 不直接表示每一帧低层动作，而是表示少量关键帧或目标位姿。低层 controller 再从 waypoint 插值或规划出完整 action chunk。Code as Policies 展示了语言模型生成机器人策略代码和 waypoint / 控制 API 的路线；VIMA 等多模态 prompt 机器人也常把目标对象、目标区域和动作参数结构化输出 [9][10]。</p>
+
+<h3>数学形式</h3>
+<p>把长动作 \(A\) 压缩为 \(M\) 个关键点：</p>
+<div class="math-block">$$
+W=[w_1,\ldots,w_M],
+\qquad
+w_i=[p_i,R_i,g_i],
+\qquad M\ll H.
+$$</div>
+<p>每个 waypoint 可以离散化：</p>
+<div class="math-block">$$
+z_i^p=\mathrm{Quantize3D}(p_i),\quad
+z_i^R=\mathrm{QuantizeRot}(R_i),\quad
+z_i^g=\mathrm{QuantizeGrip}(g_i).
+$$</div>
+<p>低层控制器生成动作：</p>
+<div class="math-block">$$
+A=\pi_{\mathrm{low}}(W,I,s).
+$$</div>
+
+<h3>具体例子</h3>
+<p>对“抓杯子”可以只生成三个 keyframes：</p>
+<pre><code class="language-text">waypoint tokens:
+  &lt;approach cup_top&gt;
+  &lt;close_gripper&gt;
+  &lt;lift_up 5cm&gt;</code></pre>
+<p>如果数值化：</p>
+<pre><code class="language-text">w1 = [x=0.42, y=0.13, z=0.08, gripper=open]
+w2 = [x=0.42, y=0.13, z=0.03, gripper=close]
+w3 = [x=0.42, y=0.13, z=0.12, gripper=close]</code></pre>
+<p>然后低层控制器把它插值成 50Hz 的连续控制：</p>
+<div class="math-block">$$
+a_t = \mathrm{Controller}(s_t,w_i).
+$$</div>
+
+<h3>优缺点</h3>
+<ul>
+<li>优点：序列短、可解释、适合长程任务。</li>
+<li>优点：把高层规划和低层控制解耦，容易接已有 motion planner。</li>
+<li>缺点：不是端到端低层动作，效果依赖 controller 和感知定位。</li>
+<li>缺点：接触丰富的灵巧操作很难只靠少量 waypoint 表达。</li>
+</ul>
+</section>
+
+<section id="voxel-token">
+<h2>10. voxel / heatmap / affordance token</h2>
+<p>空间 token 把动作看成“在图像、像素或 3D voxel 中选择一个位置”。Transporter Networks 用空间特征匹配做 pick-and-place；PerAct 把 3D voxel 观测和 action space 结构化，让模型检测下一个最佳 voxel action；Spatial Action Maps 把动作表示为与状态图像对齐的空间图 [7][8][15]。</p>
+
+<h3>数学形式</h3>
+<p>2D heatmap：</p>
+<div class="math-block">$$
+P(u,v\mid I,q)=\mathrm{softmax}(H_\theta(I,q))_{u,v}.
+$$</div>
+<p>取最大概率位置：</p>
+<div class="math-block">$$
+(u^\*,v^\*)=\arg\max_{u,v}P(u,v\mid I,q).
+$$</div>
+<p>3D voxel token：</p>
+<div class="math-block">$$
+z=(i,j,k),\qquad
+(i^\*,j^\*,k^\*)=\arg\max_{i,j,k}P(i,j,k\mid X_{\mathrm{3D}},q).
+$$</div>
+<p>再把 voxel 中心转成机器人目标位姿：</p>
+<div class="math-block">$$
+p^\*=\mathrm{VoxelCenter}(i^\*,j^\*,k^\*),
+\qquad
+a=\mathrm{Controller}(p^\*,R^\*,g^\*).
+$$</div>
+
+<h3>具体例子</h3>
+<p>任务“抓杯子”可以输出：</p>
+<pre><code class="language-text">pick heatmap max:  pixel (143, 88)
+place heatmap max: pixel (210, 96)
+rotation token:    &lt;yaw_12&gt;
+gripper token:     &lt;close&gt;</code></pre>
+<p>3D voxel 版本：</p>
+<pre><code class="language-text">voxel token:
+  &lt;x_21&gt; &lt;y_08&gt; &lt;z_05&gt; &lt;yaw_12&gt; &lt;gripper_close&gt;</code></pre>
+<p>这个 token 不直接说“dx=0.02”，而是说“末端应该去这个空间位置”。低层控制器负责从当前位置移动过去。</p>
+
+<h3>优缺点</h3>
+<ul>
+<li>优点：和视觉空间强绑定，适合抓取、放置、推、拖等空间任务。</li>
+<li>优点：多峰自然，heatmap 可以同时表达多个可抓点。</li>
+<li>缺点：高分辨率 3D voxel 很贵。</li>
+<li>缺点：旋转、力控、夹爪时序仍需要额外 token 或 controller。</li>
+</ul>
+</section>
+
+<section id="skill-token">
+<h2>11. skill / primitive / code token</h2>
+<p>skill token 把动作从低层控制提升到高层技能。例如 \(\texttt{PICK(cup)}\)、\(\texttt{PLACE(plate)}\)、\(\texttt{OPEN(drawer)}\)。SayCan 用语言模型提出候选技能，再用 affordance / value 约束可执行性；Code as Policies 让语言模型生成调用机器人 API 的策略代码 [9][11]。</p>
+
+<h3>数学形式</h3>
+<p>高层 token：</p>
+<div class="math-block">$$
+z_i\in\mathcal{Z}_{skill}.
+$$</div>
+<p>技能库把 token 转成低层策略：</p>
+<div class="math-block">$$
+A_i=\pi_{\mathrm{skill}}(z_i,I,s).
+$$</div>
+<p>长程任务就是技能序列：</p>
+<div class="math-block">$$
+Z=[\texttt{PICK(cup)},\texttt{MOVE\_TO(plate)},\texttt{PLACE(cup)}].
+$$</div>
+
+<h3>具体例子</h3>
+<pre><code class="language-python"># Code-token / program-style action
+cup = detect("cup")
+plate = detect("plate")
+move_to(cup.top)
+close_gripper()
+move_to(plate.center + [0, 0, 0.08])
+open_gripper()</code></pre>
+<p>这里 token 不是低层 \(\Delta x,\Delta y,\Delta z\)，而是 API 调用、函数名、对象引用和参数。最终动作由这些 API 内部的 controller 产生。</p>
+
+<h3>优缺点</h3>
+<ul>
+<li>优点：极强可解释性，适合长程组合任务。</li>
+<li>优点：可以利用 LLM 的规划、代码生成和常识。</li>
+<li>缺点：依赖技能库、检测器、几何 API 和错误恢复机制。</li>
+<li>缺点：不适合直接学习精细接触动力学。</li>
+</ul>
+</section>
+
+<section id="internal-token">
+<h2>12. 连续 action token：不是词表 token</h2>
+<p>最后要单独强调：OpenPI / π0 flow 中也会说 action token，但它不是离散词表 token，而是 Transformer 内部连续 embedding。它的形式通常是：</p>
+<div class="math-block">$$
+E_A=W_A A_\tau\in\mathbb{R}^{B\times H\times d_a}.
+$$</div>
+<p>模型输出 velocity：</p>
+<div class="math-block">$$
+\hat u_\theta=W_oY_A\in\mathbb{R}^{B\times H\times D_a}.
+$$</div>
+<p>再积分得到 action chunk：</p>
+<div class="math-block">$$
+A^{(k+1)}=A^{(k)}+\Delta t\,v_\theta(A^{(k)},t_k,I,q,s).
+$$</div>
+<p>这类“action token”是连续 latent token，不进入 VLM 词表，也不通过 cross entropy 学习。它的训练目标通常是 flow matching 或 diffusion denoising 的 MSE。它适合高频、连续、多自由度控制，但推理需要多步采样。</p>
+</section>
+
+<section id="comparison">
+<h2>方法对比与选择建议</h2>
+<div class="table-wrap"><table>
+<thead><tr><th>目标</th><th>优先考虑</th><th>原因</th><th>注意事项</th></tr></thead>
+<tbody>
+<tr><td>最快做 baseline</td><td>逐维分桶</td><td>实现简单，直接接 LM head</td><td>动作精度和序列长度是主要瓶颈。</td></tr>
+<tr><td>接 VLM 词表并压缩 action chunk</td><td>FAST</td><td>DCT+BPE 对高频 action chunk 更友好</td><td>归一化、BPE tokenizer、反解码必须严格一致。</td></tr>
+<tr><td>表达多模态动作</td><td>BeT / VQ / RVQ</td><td>token 表示动作模式，不只是数值桶</td><td>需要训练 tokenizer，注意 codebook 利用率。</td></tr>
+<tr><td>自回归但希望随时可停</td><td>OAT</td><td>token 有粗到细顺序，前缀可解码</td><td>方法较新，工程复现成本高。</td></tr>
+<tr><td>轨迹要平滑、频率高</td><td>B-spline / BEAST</td><td>样条控制点天然平滑，token 长度可控</td><td>突发接触动作可能需要额外事件 token。</td></tr>
+<tr><td>抓取/放置空间定位</td><td>voxel / heatmap</td><td>动作 token 与视觉空间对齐</td><td>3D 分辨率和旋转表示会带来成本。</td></tr>
+<tr><td>长程任务规划</td><td>skill / code token</td><td>可解释，适合组合技能</td><td>依赖低层技能库，非端到端低层控制。</td></tr>
+<tr><td>高精度连续控制</td><td>连续 flow action token</td><td>不受离散化误差限制</td><td>推理多步，延迟更高。</td></tr>
+</tbody>
+</table></div>
+
+<p>对 OpenPI/QwenVL/PiZero 这条线，最值得做的对照实验是：</p>
+<ol>
+<li><strong>逐维分桶 baseline</strong>：确认最简单 action-as-token 在当前数据上能到什么上限。</li>
+<li><strong>FAST token</strong>：作为 VLM 词表兼容且压缩 action chunk 的强基线。</li>
+<li><strong>VQ/RVQ 或 OAT</strong>：探索学习式 action tokenizer 是否比 FAST 更适合本地机器人数据。</li>
+<li><strong>continuous flow</strong>：作为高精度连续动作主输出路径，与离散 token 路线做成功率、延迟和误差对照。</li>
+</ol>
+</section>
+
+<section id="references">
+<h2>参考文献（References）</h2>
+<ol>
+<li>Anthony Brohan et al., "RT-1: Robotics Transformer for Real-World Control at Scale", 2022. <a href="https://arxiv.org/abs/2212.06817" target="_blank" rel="noopener">链接</a></li>
+<li>Anthony Brohan et al., "RT-2: Vision-Language-Action Models Transfer Web Knowledge to Robotic Control", 2023. <a href="https://arxiv.org/abs/2307.15818" target="_blank" rel="noopener">链接</a></li>
+<li>Moo Jin Kim et al., "OpenVLA: An Open-Source Vision-Language-Action Model", 2024. <a href="https://arxiv.org/abs/2406.09246" target="_blank" rel="noopener">链接</a></li>
+<li>Karl Pertsch et al., "FAST: Efficient Action Tokenization for Vision-Language-Action Models", 2025. <a href="https://arxiv.org/abs/2501.09747" target="_blank" rel="noopener">链接</a></li>
+<li>Nur Muhammad Mahi Shafiullah et al., "Behavior Transformers: Cloning k modes with one stone", 2022. <a href="https://arxiv.org/abs/2206.11251" target="_blank" rel="noopener">链接</a></li>
+<li>Seungjae Lee et al., "Behavior Generation with Latent Actions", 2024. <a href="https://arxiv.org/abs/2403.03181" target="_blank" rel="noopener">链接</a></li>
+<li>Andy Zeng et al., "Transporter Networks: Rearranging the Visual World for Robotic Manipulation", 2020. <a href="https://arxiv.org/abs/2010.14406" target="_blank" rel="noopener">链接</a></li>
+<li>Mohit Shridhar et al., "Perceiver-Actor: A Multi-Task Transformer for Robotic Manipulation", 2022. <a href="https://arxiv.org/abs/2209.05451" target="_blank" rel="noopener">链接</a></li>
+<li>Jacky Liang et al., "Code as Policies: Language Model Programs for Embodied Control", 2022. <a href="https://arxiv.org/abs/2209.07753" target="_blank" rel="noopener">链接</a></li>
+<li>Yunfan Jiang et al., "VIMA: General Robot Manipulation with Multimodal Prompts", 2022. <a href="https://arxiv.org/abs/2210.03094" target="_blank" rel="noopener">链接</a></li>
+<li>Michael Ahn et al., "Do As I Can, Not As I Say: Grounding Language in Robotic Affordances", 2022. <a href="https://arxiv.org/abs/2204.01691" target="_blank" rel="noopener">链接</a></li>
+<li>Yicheng Liu et al., "FASTer: Toward Efficient Autoregressive Vision Language Action Modeling via neural Action Tokenization", 2025. <a href="https://arxiv.org/abs/2512.04952" target="_blank" rel="noopener">链接</a></li>
+<li>Chaoqi Liu et al., "OAT: Ordered Action Tokenization", 2026. <a href="https://arxiv.org/abs/2602.04215" target="_blank" rel="noopener">链接</a></li>
+<li>Hongyi Zhou et al., "BEAST: Efficient Tokenization of B-Splines Encoded Action Sequences for Imitation Learning", 2025. <a href="https://arxiv.org/abs/2506.06072" target="_blank" rel="noopener">链接</a></li>
+<li>Jimmy Wu et al., "Spatial Action Maps for Mobile Manipulation", 2020. <a href="https://arxiv.org/abs/2004.09141" target="_blank" rel="noopener">链接</a></li>
+</ol>
+</section>
+
+</article>
+</body>
+</html>
