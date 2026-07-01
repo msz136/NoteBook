@@ -1,0 +1,1074 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RoboCasa-UWM 迁移复现与工程恢复报告</title>
+    <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            font-size: 16px;
+            line-height: 1.8;
+            color: #18212f;
+            background: #ffffff;
+            padding: 2rem 1rem;
+        }
+        article { max-width: 900px; margin: 0 auto; }
+        h1 {
+            font-size: 2rem;
+            line-height: 1.25;
+            margin-bottom: 0.5rem;
+            border-bottom: 2px solid #26323f;
+            padding-bottom: 0.6rem;
+        }
+        h2 {
+            font-size: 1.48rem;
+            margin-top: 2.6rem;
+            margin-bottom: 1rem;
+            border-left: 4px solid #2563eb;
+            padding-left: 0.75rem;
+        }
+        h3 { font-size: 1.23rem; margin-top: 1.7rem; margin-bottom: 0.75rem; }
+        h4 { font-size: 1.08rem; margin-top: 1.2rem; margin-bottom: 0.45rem; }
+        p, ul, ol { margin-bottom: 1rem; }
+        ul, ol { padding-left: 1.5rem; }
+        li { margin-bottom: 0.25rem; }
+        pre {
+            background: #f8fafc;
+            border: 1px solid #dfe7ef;
+            border-radius: 6px;
+            padding: 1rem;
+            overflow-x: auto;
+            margin: 1rem 0 1.2rem;
+        }
+        code {
+            font-family: "Fira Code", "Consolas", "SFMono-Regular", monospace;
+            background: #f1f5f9;
+            padding: 0.12rem 0.35rem;
+            border-radius: 3px;
+            font-size: 0.9em;
+        }
+        pre code { background: none; padding: 0; border-radius: 0; }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1rem 0 1.5rem;
+            font-size: 0.92rem;
+        }
+        th, td {
+            border: 1px solid #d9e1ea;
+            padding: 0.58rem 0.72rem;
+            text-align: left;
+            vertical-align: top;
+        }
+        th { background: #f7fafc; font-weight: 650; }
+        tr:nth-child(even) { background: #fbfdff; }
+        a { color: #1d4ed8; text-decoration: none; }
+        a:hover { text-decoration: underline; }
+        .meta { color: #5c6775; font-size: 0.92rem; margin-bottom: 1.4rem; }
+        .toc {
+            background: #f8fbff;
+            border: 1px solid #d6e5ff;
+            border-left: 4px solid #2563eb;
+            padding: 1rem 1.2rem;
+            margin: 1.4rem 0 2rem;
+            border-radius: 6px;
+        }
+        .toc h2 {
+            border: none;
+            margin: 0 0 0.7rem;
+            padding: 0;
+            font-size: 1.15rem;
+        }
+        .toc ol { columns: 2; column-gap: 2rem; margin-bottom: 0; }
+        .note {
+            background: #eff6ff;
+            border-left: 4px solid #2563eb;
+            padding: 0.8rem 1rem;
+            margin: 1rem 0;
+            border-radius: 4px;
+        }
+        .warning {
+            background: #fff7ed;
+            border-left: 4px solid #f97316;
+            padding: 0.8rem 1rem;
+            margin: 1rem 0;
+            border-radius: 4px;
+        }
+        .evidence {
+            background: #f7f2ff;
+            border-left: 4px solid #7c3aed;
+            padding: 0.8rem 1rem;
+            margin: 1rem 0;
+            border-radius: 4px;
+        }
+        .metric-grid {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 0.8rem;
+            margin: 1rem 0 1.3rem;
+        }
+        .metric {
+            border: 1px solid #d9e1ea;
+            border-radius: 6px;
+            padding: 0.8rem;
+            background: #fbfdff;
+        }
+        .metric strong { display: block; font-size: 1.25rem; color: #0f172a; }
+        .metric span { display: block; color: #64748b; font-size: 0.88rem; }
+        .svg-wrap {
+            overflow-x: auto;
+            border: 1px solid #d9e1ea;
+            border-radius: 6px;
+            padding: 0.5rem;
+            background: #ffffff;
+            margin: 1rem 0 1.2rem;
+        }
+        .small { font-size: 0.9rem; color: #5c6775; }
+        .nowrap { white-space: nowrap; }
+        @media (max-width: 700px) {
+            body { padding: 1rem 0.5rem; }
+            h1 { font-size: 1.48rem; }
+            table { display: block; overflow-x: auto; font-size: 0.86rem; }
+            .toc ol { columns: 1; }
+            .metric-grid { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+<article>
+    <h1>RoboCasa-UWM 迁移复现与工程恢复报告</h1>
+    <p class="meta">报告日期：2026-07-01 | 证据截止：2026-07-01 12:52 +08:00 | 项目：<code>C:\Users\mousongzhe\project\wm\uwm_robocasa_transfer</code></p>
+
+    <nav class="toc" aria-label="目录">
+        <h2>目录</h2>
+        <ol>
+            <li><a href="#question">问题</a></li>
+            <li><a href="#scope">范围与证据边界</a></li>
+            <li><a href="#timeline">工作时间线</a></li>
+            <li><a href="#concepts">基础知识栈</a></li>
+            <li><a href="#uwm-io">UWM 输入到输出流程</a></li>
+            <li><a href="#robocasa-data">RoboCasa 数据适配</a></li>
+            <li><a href="#architecture">模型架构与头部改造</a></li>
+            <li><a href="#losses">训练目标与 Loss</a></li>
+            <li><a href="#pipeline">Pipeline 与伪代码</a></li>
+            <li><a href="#run-ledger">Run 总账</a></li>
+            <li><a href="#runs">逐 Run 记录</a></li>
+            <li><a href="#curves">训练 Loss 曲线</a></li>
+            <li><a href="#eval">在线评估与 Rollout</a></li>
+            <li><a href="#debug">原因分析与修复日志</a></li>
+            <li><a href="#comparison">方法对比与结论</a></li>
+            <li><a href="#recovery">恢复工作清单</a></li>
+            <li><a href="#references">参考文献</a></li>
+        </ol>
+    </nav>
+
+    <section id="question">
+        <h2>问题（Question）</h2>
+        <p>本报告回答的问题是：如何从本地与远端证据中恢复 <code>robocasa-uwm</code> 的完整工作流，包括最早的朴素 fine-tune 与 online eval、7D 动作错配定位、12D 官方动作格式与任务条件改造、state/prompt/right-view/weighted-loss 试验，以及 Human300 pretrain 后再 fine-tune 的阶段性结果。</p>
+        <p>报告特别关注四个工程事实：旧 UWM 原本吃什么数据并输出什么；RoboCasa 任务数据怎样转成 UWM 可消费的输入；模型需要输出怎样的机器人动作；每个阶段的训练与评估结果是否真正改善了闭环成功率。</p>
+    </section>
+
+    <section id="scope">
+        <h2>报告范围与证据边界</h2>
+        <div class="evidence">
+            <p><strong>证据分类。</strong>公开上游用于解释 UWM、RoboCasa 与 RoboCasa365 benchmark 的设计背景；本地源码、脚本、README、analysis summary 与远端日志用于恢复你自己的工程改造与 run 结果；对失败原因的判断只作为由本地证据推断的分析，不把低样本 success 当成稳定 benchmark 结论。</p>
+        </div>
+        <table>
+            <thead>
+            <tr>
+                <th>类别</th>
+                <th>证据来源</th>
+                <th>在报告中的用法</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr>
+                <td>公有设计 / 上游公开流程</td>
+                <td>UWM arXiv 与项目页；RoboCasa / RoboCasa365 arXiv、文档与 GitHub。</td>
+                <td>解释世界模型、动作扩散、视频扩散、RoboCasa 数据集和 benchmark 评估方式。</td>
+            </tr>
+            <tr>
+                <td>本地源码证据</td>
+                <td><code>uwm_robocasa_dataset.py</code>、<code>uwm_robocasa_lerobot_dataset.py</code>、<code>uwm_robocasa_train.py</code>、<code>uwm_robocasa_rollout.py</code>。</td>
+                <td>解释数据字段、action reorder、state/prompt/right-view 残差输入、分组输出头、loss 和 rollout 解析。</td>
+            </tr>
+            <tr>
+                <td>本地 run / eval 证据</td>
+                <td>项目 README、已有 debug report、<code>analysis\robocasa_human300_loss_curves\summary.json</code> 与 eval 摘要。</td>
+                <td>恢复每个阶段训练配置、loss、success rate 与失败现象。</td>
+            </tr>
+            <tr>
+                <td>远端运行中证据</td>
+                <td><code>root@100.77.83.126:/data/msz/uwm_robocasa_transfer_muxi</code> 当前进程与日志。</td>
+                <td>仅记录截至 2026-07-01 12:52 +08 的最新边界：actionheadfix Human300 3ep pretrain 正在跑，尚无 finetune/eval 结论。</td>
+            </tr>
+            </tbody>
+        </table>
+        <div class="warning">
+            <p><strong>重要边界。</strong>报告中的闭环成功率多为 54 个 round-robin scenario 或更小 sweep，不等价于 RoboCasa 官方 50 rollout/task 的完整 benchmark。低成功率与 0 success 结论适合工程调试，不适合作为模型能力排名。</p>
+        </div>
+    </section>
+
+    <section id="timeline">
+        <h2>工作时间线（Timeline）</h2>
+        <table>
+            <thead>
+            <tr>
+                <th>阶段</th>
+                <th>核心问题</th>
+                <th>关键变化</th>
+                <th>主要结果</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr>
+                <td>朴素 7D fine-tune + eval</td>
+                <td>能否直接用 UWM 的 LIBERO 风格 7D action 训练 RoboCasa target_atomic_seen。</td>
+                <td>HDF5 wrapper 输出双视角 RGB + 7D action；rollout 用诊断 adapter。</td>
+                <td>offline loss 可下降，但 online 仅小样本 <span class="nowrap">1/9</span>，50/54 类评估基本 0。</td>
+            </tr>
+            <tr>
+                <td>7D action alignment debug</td>
+                <td>为什么 loss 看起来正常但闭环几乎 0。</td>
+                <td>确认 raw7 并不是完整 EE7，而更像 base4 + control1 + EE xy。</td>
+                <td>定位为动作语义错配；7D 只能作为诊断，不适合正式环境动作。</td>
+            </tr>
+            <tr>
+                <td>official12 + task-conditioned UWM</td>
+                <td>怎样输出 RoboCasa env 需要的 12D 动作，同时保留 UWM trunk checkpoint。</td>
+                <td>动作重排为 <code>[EE7, base4, control1]</code>；task/prompt/state/right-view 走 residual，不改变 AdaLN cond_dim；加入 hierarchical action decoder。</td>
+                <td>30ep official12 taskcond eval <span class="nowrap">1/54</span>；100ep resume <span class="nowrap">0/54</span>，说明只延长训练不解决闭环。</td>
+            </tr>
+            <tr>
+                <td>state/prompt/right/weighted loss</td>
+                <td>加入任务文本、proprio state、右视角与动作分组权重是否改善。</td>
+                <td>LeRobot wrapper 输出 prompt token、OpenPI state、right-view residual、contact/progress proxy label；loss 按动作组和窗口权重加权。</td>
+                <td>30ep state+prompt+weighted direct eval <span class="nowrap">2/54</span>；多 horizon/ablation 仍在 0-3/54 低位波动。</td>
+            </tr>
+            <tr>
+                <td>Human300 pretrain + target fine-tune</td>
+                <td>target data 太窄，是否需要先用 Human300 获得 RoboCasa 动作/视觉先验。</td>
+                <td>human300 pretrain 1ep/5ep，再 target_atomic_seen 30ep fine-tune。</td>
+                <td>loss 明显改善并稳定，但 online success 仍低：1ep 后最高小 sweep <span class="nowrap">3/54</span>；5ep 后多数 <span class="nowrap">0/54</span>。</td>
+            </tr>
+            <tr>
+                <td>actionheadfix Human300 3ep（运行中）</td>
+                <td>输出头与 x0/action 辅助项是否还需修正。</td>
+                <td>prompt-only residual、无 state/right-view，weighted action 与 x0 action loss。</td>
+                <td>截至 2026-07-01 12:52 +08，pretrain step 4500、epoch_float 2.56/3，尚无完成 checkpoint 的 finetune/eval。</td>
+            </tr>
+            </tbody>
+        </table>
+    </section>
+
+    <section id="concepts">
+        <h2>基础知识栈</h2>
+        <h3>世界模型（World Model）与策略（Policy）</h3>
+        <p>通俗地说，世界模型是在模型内部学习“动作会让世界怎样变化”的模块；策略则是“看到当前状态后下一步该做什么”的模块。UWM 的关键点是把二者放进同一个视频-动作扩散框架：当未来视频被要求生成时，它像动态模型；当未来动作被要求生成时，它像策略。</p>
+        <p>令 \(o_t\) 表示观测（observation），\(a_t\) 表示机器人动作（action），\(c\) 表示任务条件（condition，如 task id 或 prompt），\(H\) 表示动作 chunk 长度，\(K\) 表示未来观测跨度。UWM 可被理解为学习联合条件分布：</p>
+        \[
+        p_\theta(a_{t:t+H-1},\, o_{t+1:t+K}\mid o_{\le t}, c)
+        \]
+        <p>变量解释：\(\theta\) 是模型参数，\(a_{t:t+H-1}\) 是未来动作块，\(o_{t+1:t+K}\) 是未来视频或 latent 观测。实现映射：本地 <code>uwm_robocasa_train.py</code> 通过 <code>obs_encoder.encode_curr_and_next_obs</code> 得到当前观测条件与未来观测 latent，然后同时对动作噪声和 future-observation 噪声做 MSE 监督。</p>
+
+        <h3>扩散模型（Diffusion Model）</h3>
+        <p>扩散模型训练时先把干净目标 \(x_0\) 加噪成 \(x_t\)，再让网络预测噪声 \(\epsilon\)。对动作来说，\(x_0=a\)；对未来视频 latent 来说，\(x_0=z^{next}\)。UWM 的上游公开设计强调 action diffusion 与 video diffusion 共用 transformer，但各自拥有独立扩散时间步，这使模型能在策略、前向动力学、逆动力学和视频预测之间切换。</p>
+        \[
+        x_t = \sqrt{\bar{\alpha}_t}x_0 + \sqrt{1-\bar{\alpha}_t}\epsilon,\qquad
+        \mathcal{L}_{noise}=\mathbb{E}\lVert \epsilon_\theta(x_t,t,c)-\epsilon\rVert_2^2
+        \]
+        <p>变量解释：\(\bar{\alpha}_t\) 是 scheduler 的累计保留系数，\(\epsilon\) 是采样噪声，\(\epsilon_\theta\) 是模型预测噪声。代码映射：<code>compute_training_loss</code> 中 <code>base_model.noise_scheduler.add_noise</code> 分别给 action 与 next_obs_latent 加噪，<code>noise_pred_net</code> 同时预测 <code>action_noise_pred</code> 与 <code>next_obs_noise_pred</code>。</p>
+
+        <h3>闭环评估（Closed-loop Evaluation）</h3>
+        <p>离线 loss 只说明模型拟合了数据集标签；闭环 rollout 才检验模型输出是否能被环境解析为动作，并连续改变仿真状态直到完成任务。RoboCasa benchmark 文档使用二值 success signal 并报告平均成功率；本地评估也按每个 rollout 的 success 布尔值统计，但 scenario 数量更小。</p>
+        \[
+        SR=\frac{1}{N}\sum_{i=1}^{N}\mathbf{1}[\text{success}_i]
+        \]
+        <p>变量解释：\(N\) 是 rollout 数量，\(\mathbf{1}[\cdot]\) 是指示函数。实现映射：<code>uwm_robocasa_rollout.py</code> 的 <code>check_success</code> 优先读 <code>info["success"]</code>，否则调用环境 <code>_check_success</code>；最终输出 <code>success_rate</code>、<code>micro_success_rate</code> 与按任务均值的 <code>macro_success_rate</code>。</p>
+    </section>
+
+    <section id="uwm-io">
+        <h2>UWM 输入到输出全流程</h2>
+        <h3>旧 UWM/LIBERO 风格输入</h3>
+        <p>本地早期 wrapper <code>uwm_robocasa_dataset.py</code> 的目标是把 RoboCasa HDF5 数据伪装成 UWM/LIBERO 可消费格式。一个训练样本主要包含：</p>
+        <table>
+            <thead>
+            <tr>
+                <th>字段</th>
+                <th>形状 / 语义</th>
+                <th>作用</th>
+                <th>证据</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr>
+                <td><code>obs.agentview_rgb</code></td>
+                <td><code>(T,H,W,3)</code>，外部视角 RGB。</td>
+                <td>给 UWM observation encoder 提供主相机历史帧。</td>
+                <td><code>uwm_robocasa_dataset.py</code> 文件头与 <code>__getitem__</code>。</td>
+            </tr>
+            <tr>
+                <td><code>obs.eye_in_hand_rgb</code></td>
+                <td><code>(T,H,W,3)</code>，腕部相机 RGB。</td>
+                <td>补充末端执行器附近视觉。</td>
+                <td>同上。</td>
+            </tr>
+            <tr>
+                <td><code>action</code></td>
+                <td>早期默认 <code>action_dim=7</code>，窗口长度 <code>seq_len=19</code>。</td>
+                <td>训练 UWM action diffusion head；后续发现 raw7 语义不适配 RoboCasa env。</td>
+                <td><code>action_dim</code>、<code>seq_len</code> 与 <code>action_indices</code> 逻辑。</td>
+            </tr>
+            <tr>
+                <td><code>normalizer</code></td>
+                <td>scale/offset 与 metadata。</td>
+                <td>训练时归一化动作，eval 前反归一化，并用 metadata 防止数据版本错配。</td>
+                <td><code>expected_normalizer_metadata</code>、<code>validate_normalizer_metadata</code>。</td>
+            </tr>
+            </tbody>
+        </table>
+        <p>训练侧通常从 19 帧窗口中取当前 2 帧、动作 chunk 与未来观测 latent。直觉上，输入是“现在看到什么”，输出是“接下来一段动作”和“未来视觉 latent 的噪声”。这也是为什么 offline action/dynamics loss 下降并不等价于 RoboCasa 机器人能执行：动作坐标系、动作维度、归一化元数据和 env action spec 必须完全一致。</p>
+
+        <h3>UWM 输出到机器人动作</h3>
+        <p>在 rollout 中，模型先用 <code>model.sample</code> 采样一个 action chunk，经过 normalizer 反归一化，再由 <code>adapt_action_to_env</code> 映射到环境动作并 clip 到 <code>env.action_spec</code>。</p>
+        \[
+        \tilde{a}_{t:t+H-1}=\mathrm{Normalizer}^{-1}\left(\mathrm{Sample}_\theta(o_{\le t},c)\right),
+        \qquad
+        a^{env}_t=\mathrm{clip}\left(g(\tilde{a}_t), a_{low}, a_{high}\right)
+        \]
+        <p>变量解释：\(\tilde{a}\) 是反归一化后的模型动作，\(g(\cdot)\) 是 adapter，例如 <code>official12</code> 或诊断用 <code>raw7_to_full12_reordered</code>，\(a_{low},a_{high}\) 来自 RoboCasa 环境动作范围。代码映射：<code>uwm_robocasa_rollout.py</code> 在每次 replanning 后只执行前 <code>exec_horizon</code> 个动作，默认 4 步，然后重新根据新 observation 采样。</p>
+    </section>
+
+    <section id="robocasa-data">
+        <h2>RoboCasa 数据准备与数据适配</h2>
+        <h3>RoboCasa / RoboCasa365 数据模式</h3>
+        <p>公开资料显示，RoboCasa 是面向厨房日常任务的仿真框架；RoboCasa365 进一步提供 365 个任务、目标任务与预训练数据，并在文档中区分 pretraining human、pretraining MimicGen 和 target human 数据。本地项目最终采用 LeRobot 格式数据：parquet 行存动作、state、reward、done 等结构化字段，视频文件存多视角 RGB。</p>
+        <table>
+            <thead>
+            <tr>
+                <th>数据源</th>
+                <th>本地使用方式</th>
+                <th>关键字段</th>
+                <th>设计影响</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr>
+                <td>target_atomic_seen</td>
+                <td>目标 fine-tune 与 eval 的主要 split。</td>
+                <td>left/right/wrist camera、raw action、16D state、task_index、reward/done。</td>
+                <td>任务范围窄，适合目标动作拟合，但泛化和闭环接触阶段不足。</td>
+            </tr>
+            <tr>
+                <td>Human300 pretrain</td>
+                <td>pretrain 阶段合并 atomic 与 composite human data。</td>
+                <td>同 LeRobot 字段，任务数更大。</td>
+                <td>提供更宽的 RoboCasa 视觉、语言、动作分布，是后期 pretrain 的动机。</td>
+            </tr>
+            <tr>
+                <td>eval simulator</td>
+                <td>RoboCasa env 实时 reset/step。</td>
+                <td>当前 RGB obs、可选 state、<code>info["success"]</code>。</td>
+                <td>要求模型动作顺序与 env action spec 精确一致。</td>
+            </tr>
+            </tbody>
+        </table>
+
+        <h3>动作格式：从 raw action 到 official12</h3>
+        <p>关键修复是发现 raw action 的前 7 维不等于 UWM 旧设想的完整 EE7。后续使用 <code>action_indices=5,6,7,8,9,10,11,0,1,2,3,4</code>，把 raw action 重排为 official 12D 模型顺序：</p>
+        \[
+        a_t^{12D}
+        =
+        \left[
+        r_{t,5:12},\; r_{t,0:4},\; r_{t,4}
+        \right]
+        =
+        \left[
+        a^{EEF}_{1:7},\; a^{base}_{1:4},\; a^{control}
+        \right]
+        \]
+        <p>变量解释：\(r_t\) 是 LeRobot/parquet 中的 raw action；\(a^{EEF}\) 是末端执行器 7D 控制，包含位置/旋转/夹爪通道；\(a^{base}\) 是移动底盘 4D 控制；\(a^{control}\) 是控制模式。实现映射：<code>uwm_robocasa_lerobot_dataset.py</code> 通过 <code>action_indices</code> 读取训练标签；<code>uwm_robocasa_rollout.py</code> 的 <code>official12</code> adapter 直接把 12D 模型输出放入 env action。</p>
+
+        <h3>State、Prompt 与右视角适配</h3>
+        <p>LeRobot state 被本地函数 <code>openpi_state_from_raw_state</code> 从 raw 16D 顺序映射成 OpenPI 风格顺序。raw state 语义是 <code>[base position 3, base rotation 4, EEF relative position 3, EEF relative rotation 4, gripper qpos 2]</code>，输出为 <code>[EEF relative pose 7, base pose 7, gripper qpos 2]</code>。</p>
+        \[
+        s^{openpi}_t
+        =
+        \left[
+        s^{raw}_{t,7:14},\; s^{raw}_{t,0:7},\; s^{raw}_{t,14:16}
+        \right]
+        \in \mathbb{R}^{16}
+        \]
+        <p>变量解释：\(s_t\) 是 proprioceptive state（本体状态）；OpenPI 顺序把 EEF 信息放在最前，便于模型先对末端执行器相对姿态建模。代码映射：LeRobot dataset sample 返回 <code>state</code>、<code>prompt_text</code>、<code>prompt_token_ids</code>、<code>task_id</code>、<code>agentview_right_rgb</code>，训练模型可按配置把它们注入 observation encoder。</p>
+
+        <div class="warning">
+            <p><strong>代理标签边界。</strong><code>contact_label</code> 与 <code>progress_phase</code> 不是 RoboCasa 仿真真实接触对，而是由 reward/done、gripper close、state motion 等公开 LeRobot 字段推断出的诊断标签。报告中所有 contact/progress aux 结论都只能视作弱监督实验。</p>
+        </div>
+    </section>
+
+    <section id="architecture">
+        <h2>模型架构、输入头与输出头</h2>
+        <h3>整体结构图</h3>
+        <pre><code class="language-text">RoboCasa LeRobot / env observation
+  left RGB + wrist RGB + optional right RGB
+  task_id + optional prompt tokens + optional OpenPI 16D state
+            |
+            v
+Base UWM observation encoder
+  keeps original feature dimension for libero_90.pt compatibility
+            |
+            + task residual + prompt residual + state residual + right-view residual
+            |
+            v
+UWM multimodal diffusion transformer
+  predicts action noise and future-observation latent noise
+            |
+            v
+Hierarchical RoboCasa action decoder
+  EE7 head + base4 head + control1 head
+            |
+            v
+12D official action chunk
+  denormalize, clip to env action_spec, execute by online rollout</code></pre>
+
+        <h3>输入头：残差注入而不改变 UWM 条件宽度</h3>
+        <p>早期直接拼接 task features 会改变 UWM AdaLN 条件维度，导致 <code>libero_90.pt</code> 中 trunk/AdaLN 权重无法按原 shape 继承。最终采用 <code>TaskConditionedObservationEncoder</code>：保持 <code>feat_dim()</code> 与 base encoder 相同，把 task/prompt/state/right-view 投影到同一维度后相加。</p>
+        \[
+        h =
+        f_{obs}(I^{left}_{t-1:t}, I^{wrist}_{t-1:t})
+        + W_\tau e_{\tau}
+        + W_p\,\mathrm{Pool}(E_p\,p)
+        + W_s\,s
+        + W_r\,\mathrm{Pool}(I^{right}_{t-1:t})
+        \]
+        <p>变量解释：\(h\) 是 UWM diffusion trunk 的条件向量；\(f_{obs}\) 是原 UWM 视觉编码器；\(e_\tau\) 是 task id embedding；\(p\) 是 prompt token id；\(s\) 是 OpenPI state；\(I^{right}\) 是右视角 RGB。实现映射：<code>TaskConditionedObservationEncoder.encode_curr_obs</code> 与 <code>encode_curr_and_next_obs</code> 中相加 residual，并让 <code>feat_dim</code> 返回 <code>base_feat_dim</code>。</p>
+
+        <table>
+            <thead>
+            <tr>
+                <th>输入分支</th>
+                <th>消费字段</th>
+                <th>输出形状 / 语义</th>
+                <th>改进目的</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr>
+                <td>Base visual encoder</td>
+                <td><code>agentview_rgb</code>、<code>eye_in_hand_rgb</code></td>
+                <td>UWM 原始 observation feature。</td>
+                <td>继承 LIBERO UWM 的视觉和 trunk 先验。</td>
+            </tr>
+            <tr>
+                <td>Task residual</td>
+                <td><code>task_id</code></td>
+                <td>投影到 <code>base_feat_dim</code> 后相加。</td>
+                <td>让同一模型区分 RoboCasa 多任务。</td>
+            </tr>
+            <tr>
+                <td>Prompt residual</td>
+                <td><code>prompt_token_ids</code></td>
+                <td>hash embedding + mask mean pooling + projection。</td>
+                <td>使用任务文本描述；可加 dropout 做鲁棒性测试。</td>
+            </tr>
+            <tr>
+                <td>State residual</td>
+                <td><code>state</code>，16D OpenPI order。</td>
+                <td>LayerNorm + MLP projection。</td>
+                <td>补充仅 RGB 难以恢复的 EEF/base/gripper 状态。</td>
+            </tr>
+            <tr>
+                <td>Right-view residual</td>
+                <td><code>agentview_right_rgb</code></td>
+                <td>廉价均值池化 RGB + MLP projection。</td>
+                <td>在不改 UWM 两视角 trunk 的情况下利用第三视角。</td>
+            </tr>
+            </tbody>
+        </table>
+
+        <h3>输出头：从单一 continuous decoder 到分组 12D decoder</h3>
+        <p><code>RoboCasaHierarchicalActionDecoder</code> 只替换最终 continuous action decoder，不改变 diffusion transformer 主体。它先用 shared MLP 处理 action token，再分别输出 EEF7、base4 与 control1，最后拼成 12D official action。</p>
+        \[
+        \hat{a}_t =
+        \mathrm{concat}
+        \left(
+        g_{eef}(u_t),\; g_{base}(u_t),\; g_{ctrl}(u_t)
+        \right),
+        \quad
+        \hat{a}_t\in\mathbb{R}^{12}
+        \]
+        <p>变量解释：\(u_t\) 是 diffusion transformer 产生的动作 token hidden state；\(g_{eef},g_{base},g_{ctrl}\) 是三个线性 head。实现映射：代码中三个 head 初始化为零；在 reset action head 时可跳过旧 action decoder/normalizer 的 shape 不兼容权重，并可从 LIBERO decoder 做部分初始化。</p>
+    </section>
+
+    <section id="losses">
+        <h2>训练目标、Loss 与数学表达</h2>
+        <p>最终训练目标不再只是 UWM 原始 action+dynamics MSE，而是加入动作维度组权重、窗口权重、反推 \(x_0\) action loss，以及可选 gripper phase、control mode、contact、progress 辅助项。</p>
+        \[
+        \mathcal{L}
+        =
+        \lambda_a \mathcal{L}_{action}
+        + \lambda_d \mathcal{L}_{dyn}
+        + \lambda_{x0}\mathcal{L}_{x0}
+        + \lambda_g \mathcal{L}_{gripper}
+        + \lambda_c \mathcal{L}_{control}
+        + \lambda_{contact}\mathcal{L}_{contact}
+        + \lambda_p \mathcal{L}_{progress}
+        \]
+        <p>变量解释：\(\lambda_a,\lambda_d,\lambda_{x0}\) 等是命令行权重；\(\mathcal{L}_{action}\) 是动作噪声预测 MSE，\(\mathcal{L}_{dyn}\) 是未来观测 latent 噪声 MSE，\(\mathcal{L}_{x0}\) 是把预测噪声还原成动作后的 MSE，辅助项来自分类/二分类 head。实现映射：<code>compute_training_loss</code> 中若 <code>--use-weighted-action-loss</code> 打开，会显式计算上述分量并记录 <code>loss_eef_pos</code>、<code>loss_eef_rot</code>、<code>loss_gripper</code>、<code>loss_base</code>、<code>loss_mode</code>。</p>
+
+        <h3>分组动作权重</h3>
+        \[
+        \mathcal{L}_{action}
+        =
+        \frac{1}{BHT}
+        \sum_{b,t,j}
+        \omega_j\,q_b
+        \left(
+        \epsilon_{\theta,b,t,j}^{a}-\epsilon_{b,t,j}^{a}
+        \right)^2
+        \]
+        <p>变量解释：\(B\) 是 batch size，\(H\) 是 action chunk 长度，\(j\) 是动作维度，\(\omega_j\) 是按 EEF/base/gripper/control 分组的维度权重，\(q_b\) 是样本级 <code>loss_weight</code>，用于给 contact-rich 窗口加权。实现映射：<code>action_dim_weights(args, action)</code> 给 12D 每个维度权重；LeRobot dataset 由 proxy contact 判断把 <code>loss_weight</code> 设为 \(1+\text{contact_window_weight}\)。</p>
+
+        <h3>\(x_0\) 动作监督</h3>
+        \[
+        \hat{a}_0 =
+        \frac{a_t-\sqrt{1-\bar{\alpha}_t}\,\hat{\epsilon}_{\theta}}{\sqrt{\bar{\alpha}_t}},
+        \qquad
+        \mathcal{L}_{x0}=\left\lVert
+        \mathrm{denorm}(\hat{a}_0)-\mathrm{denorm}(a_0)
+        \right\rVert_2^2
+        \]
+        <p>变量解释：\(\hat{a}_0\) 是由噪声预测反推的干净动作，<code>denorm</code> 把归一化动作还原到环境尺度。直觉上，扩散噪声 MSE 可能变小但实际动作幅度仍偏，\(x_0\) 项直接惩罚反归一化后的动作误差。实现映射：<code>predict_original_action_from_noise</code> 和 <code>denorm_action_tensor</code> 在训练中生成 <code>x0_action_loss</code> 与各组 <code>x0_mse_*</code>。</p>
+    </section>
+
+    <section id="pipeline">
+        <h2>Pipeline 与伪代码</h2>
+        <h3>训练样本构造</h3>
+        <pre><code class="language-python">def build_training_sample(episode, start):
+    # 1. 从 LeRobot parquet 读取 action/state/reward/done 窗口。
+    raw_action = read_action_rows(episode.parquet, start, stop)
+    raw_state = read_state_rows(episode.parquet, start, stop)
+
+    # 2. 把 raw action 重排为 RoboCasa official12: [EE7, base4, control1]。
+    action12 = raw_action[:, [5, 6, 7, 8, 9, 10, 11, 0, 1, 2, 3, 4]]
+
+    # 3. 按训练 normalizer 归一化动作，保证 train/eval 使用同一 scale/offset。
+    action12_norm = action_normalizer(action12)
+
+    # 4. 读取左视角、右视角、腕部相机的两个当前帧和未来帧。
+    obs = {
+        "agentview_rgb": read_video_frames(left_video, frame_ids),
+        "eye_in_hand_rgb": read_video_frames(wrist_video, frame_ids),
+        "agentview_right_rgb": read_video_frames(right_video, frame_ids),
+    }
+
+    # 5. 构造任务条件和本体状态；contact/progress 只是弱代理诊断标签。
+    obs["task_id"] = task_name_to_id[episode.task_name]
+    obs["prompt_token_ids"] = encode_prompt(task_description)
+    state = openpi_state_from_raw_state(raw_state[reference_index])
+    loss_weight, contact_label, progress_phase = proxy_labels(raw_action, raw_state, reward, done)
+    return obs, state, action12_norm, loss_weight, contact_label, progress_phase</code></pre>
+
+        <h3>训练一步</h3>
+        <pre><code class="language-python">def training_step(batch, model, optimizer):
+    # 1. 当前观测进入 residual-conditioned observation encoder。
+    curr_obs, next_obs, action = process_batch(batch)
+    obs_feature, next_latent = model.obs_encoder.encode_curr_and_next_obs(curr_obs, next_obs)
+
+    # 2. 分别给动作和未来观测 latent 加噪。
+    noisy_action, action_noise, action_t = diffuse(action)
+    noisy_next, next_noise, next_t = diffuse(next_latent)
+
+    # 3. UWM diffusion trunk 同时预测动作噪声和未来观测噪声。
+    pred_action_noise, pred_next_noise = model.noise_pred_net(
+        obs_feature, noisy_action, action_t, noisy_next, next_t
+    )
+
+    # 4. 组合 action/dynamics/x0/aux losses；权重来自 run 配置。
+    loss = weighted_action_mse(pred_action_noise, action_noise)
+    loss += dynamics_mse(pred_next_noise, next_noise)
+    loss += denormalized_x0_action_mse(pred_action_noise, noisy_action, action)
+    loss += optional_auxiliary_losses(obs_feature, batch)
+
+    # 5. 标准反向传播；DeepSpeed run 中 optimizer step 由引擎管理。
+    loss.backward()
+    optimizer.step()
+    optimizer.zero_grad()
+    return loss</code></pre>
+
+        <h3>Online rollout</h3>
+        <pre><code class="language-python">def online_rollout(env, model, normalizer, task):
+    # 1. reset RoboCasa env，收集最近两个观测帧作为 UWM 当前上下文。
+    obs = env.reset()
+    obs_history = [obs]
+    success = False
+
+    while not success and not timeout():
+        # 2. 把 env observation 映射到 UWM 键名，并附加 task/prompt/state。
+        uwm_obs = obs_to_uwm(obs_history, task_id=task.id, prompt=task.prompt, state=current_state(obs))
+
+        # 3. 采样动作 chunk，反归一化到 RoboCasa 环境尺度。
+        action_chunk_norm = model.sample(uwm_obs)
+        action_chunk = normalizer.reconstruct(action_chunk_norm)
+
+        # 4. 只执行前 exec_horizon 步，然后重新感知和规划。
+        for action_vec in action_chunk[:exec_horizon]:
+            preclip, clipped, clip_stats = adapt_action_to_env(action_vec, env.low, env.high, "official12")
+            obs, info = env.step(clipped)
+            obs_history.append(obs)
+            success = bool(info.get("success", False)) or env_check_success(env)
+            if success:
+                break
+    return success</code></pre>
+    </section>
+
+    <section id="run-ledger">
+        <h2>Run 总账</h2>
+        <table>
+            <thead>
+            <tr>
+                <th>Run ID</th>
+                <th>阶段</th>
+                <th>数据版本</th>
+                <th>模型 / Head</th>
+                <th>关键配置</th>
+                <th>评估结果</th>
+                <th>结论</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr>
+                <td>pilot7d_10k</td>
+                <td>朴素 target fine-tune</td>
+                <td>target_atomic_seen，旧 HDF5/UWM wrapper。</td>
+                <td>UWM <code>libero_90.pt</code>，7D action head。</td>
+                <td>10k steps，batch 8，双视角 RGB，action_dim=7。</td>
+                <td>offline 32-batch loss 0.11262；online 3x300：CoffeePressButton 0/3、OpenDrawer 0/3、TurnOnSinkFaucet 1/3。</td>
+                <td>能训练但闭环弱；动作语义需要审计。</td>
+            </tr>
+            <tr>
+                <td>wrong7_epoch1</td>
+                <td>7D alignment debug</td>
+                <td>target_atomic_seen，9126 episodes，133457 windows。</td>
+                <td>7D raw action。</td>
+                <td>16683 steps，raw_action[:7]。</td>
+                <td>closed-loop 0/50。</td>
+                <td>确认 raw7 不是完整 EE7；7D 路线不可靠。</td>
+            </tr>
+            <tr>
+                <td>official12_task_30ep</td>
+                <td>12D + task conditioning</td>
+                <td>target_atomic_seen official12。</td>
+                <td>Task residual + hierarchical 12D decoder。</td>
+                <td>30 epochs，3930 steps，<code>[5:12,0:4,4]</code> reorder。</td>
+                <td>round-robin eval 1/54 = 1.85%。</td>
+                <td>动作维度修正后仍低成功；需要更多条件或数据。</td>
+            </tr>
+            <tr>
+                <td>official12_task_100ep</td>
+                <td>延长训练</td>
+                <td>同 target_atomic_seen official12。</td>
+                <td>同上。</td>
+                <td>100 epochs，13100 steps。</td>
+                <td>round-robin eval 0/54。</td>
+                <td>更多 epoch 不自动改善闭环；可能过拟合或输出执行分布仍错。</td>
+            </tr>
+            <tr>
+                <td>state_prompt_weighted_30ep</td>
+                <td>加入条件与加权 loss</td>
+                <td>LeRobot target_atomic_seen。</td>
+                <td>task + prompt + state + right-view residual，可选 auxiliary heads。</td>
+                <td>30 epochs，weighted action loss，contact/progress proxy。</td>
+                <td>direct eval 2/54；convert_action eval 2/54。</td>
+                <td>有小幅改善，但仍在低样本噪声范围。</td>
+            </tr>
+            <tr>
+                <td>human300_1ep_to_target</td>
+                <td>Human300 1ep pretrain + target FT</td>
+                <td>Human300 atomic+composite pretrain，再 target_atomic_seen。</td>
+                <td>official12 + state/prompt/right/weighted 体系。</td>
+                <td>pretrain 1 epoch，target finetune 30 epochs。</td>
+                <td>sweep：full_h4 2/54，no_prompt_h5 3/54，其他 0-2/54。</td>
+                <td>loss 改善明显，闭环成功仍不稳定。</td>
+            </tr>
+            <tr>
+                <td>human300_5ep_to_target</td>
+                <td>Human300 5ep pretrain + target FT</td>
+                <td>同 Human300 + target。</td>
+                <td>同上。</td>
+                <td>resume pretrain 到 5 epochs，target finetune 30 epochs。</td>
+                <td>full_h8/5/4/2 为 0/54，full_h1 为 1/54；AB direct/convert 0/6。</td>
+                <td>更长 pretrain 降低 loss，但未转化为闭环成功。</td>
+            </tr>
+            <tr>
+                <td>actionheadfix_human3003ep</td>
+                <td>运行中边界实验</td>
+                <td>Human300 pretrain atomic+composite。</td>
+                <td>prompt residual，no state/right-view，hierarchical action decoder。</td>
+                <td>3 epochs，batch 128，8 C500，x0_action_loss_weight=1.0。</td>
+                <td>截至 step 4500、epoch_float 2.56/3；无完成 eval。</td>
+                <td>不能写作成功或失败，只能记录为待完成。</td>
+            </tr>
+            </tbody>
+        </table>
+    </section>
+
+    <section id="runs">
+        <h2>逐 Run 详细记录</h2>
+        <h3>Run A：朴素 7D fine-tune + eval</h3>
+        <p><strong>目标。</strong>验证最小迁移路径：直接把 RoboCasa target_atomic_seen 包成 UWM/LIBERO 风格样本，加载 <code>libero_90.pt</code> 后 fine-tune，再跑 online rollout。</p>
+        <p><strong>训练。</strong>旧 wrapper 产生 <code>agentview_rgb</code>、<code>eye_in_hand_rgb</code> 与 7D action；pilot10k 的训练最终 eval loss 约 0.11169，action loss 0.01990，dynamics loss 0.09179；离线 32-batch eval loss 0.11262，action loss 0.03183，dynamics loss 0.08080。</p>
+        <p><strong>评估。</strong>online pilot 每个任务 3 次、horizon 300：CoffeePressButton 0/3，OpenDrawer 0/3，TurnOnSinkFaucet 1/3；更早 smoke horizon 50 为 0。结论是 loss 可以下降，但闭环执行极弱。</p>
+        <p><strong>原因分析。</strong>这一阶段的主要价值不是成功率，而是暴露出“动作格式比模型 loss 更关键”。如果 action 维度或维度语义错，模型可以学会预测数据分布，却在 env.step 中产生错误的运动模式。</p>
+
+        <h3>Run B：wrong7/action alignment debug</h3>
+        <p><strong>目标。</strong>定位 0 success 是否来自 eval 环境、normalizer、action adapter 或数据动作语义。</p>
+        <p><strong>证据。</strong><code>train_atomic_wrong7_epoch1</code> 使用 target_atomic_seen，9126 episodes、133457 windows、<code>action_dim=7</code>、<code>raw_action[:7]</code>，checkpoint 位于 <code>runs\target_atomic_seen_epoch1\checkpoints\models.pt</code>，16683 steps 后 eval 0/50。composite_seen wrong7 为 8077 episodes、369798 windows、46225 steps；composite_unseen wrong7 为 8104 episodes、414980 windows、51873 steps。</p>
+        <p><strong>结论。</strong>raw 前 7 维不是完整 EEF 7D。诊断 adapter <code>raw7_to_full12_reordered</code> 的注释显示 raw7 被解释成 <code>base4 + control1 + EE_xy2</code>，所以最多只能给 env 的 EE xy、base、control 填部分值。这解释了为什么 7D 路线即使 loss 正常也难以完成需要完整 EE pose 和 gripper 的 RoboCasa 任务。</p>
+
+        <h3>Run C：official12 + task-conditioned architecture</h3>
+        <p><strong>目标。</strong>把模型输出改成 RoboCasa official 12D action，同时保留 UWM trunk 与 <code>libero_90.pt</code> 可继承权重。</p>
+        <p><strong>改进。</strong>动作标签重排为 <code>[EE7,base4,control1]</code>；输入侧引入 task residual，但不改变 <code>feat_dim</code>；输出侧换成 hierarchical decoder。这个改动解决了两个结构性问题：一是 env action spec 需要 12D，二是直接 concat task feature 会让 AdaLN 条件宽度从旧值变成新值，从而破坏 checkpoint loading。</p>
+        <p><strong>结果。</strong><code>target_atomic_seen_official12_task_30epoch_muxi_20260626_183000_taskcondfix</code> 训练 30 epochs、3930 steps，最终 loss 约 0.13670；54 round-robin eval 为 1/54 = 1.85%，env errors 为 0。100epoch resume 训练到 13100 steps 后 eval 为 0/54。行动执行 A/B 中 direct 0/6，早期 convert_action 0/6 且 6 个 env errors，原因是 wrapper 期望维度与 12D direct action 接口不一致。</p>
+        <p><strong>分析。</strong>official12 解决了“动作维度能进 env”的必要条件，但还没有解决闭环控制质量。100ep 没改善说明主要瓶颈不只是训练步数；更可能是数据覆盖、任务条件、状态观测、gripper/contact 时序与扩散采样动作幅度。</p>
+
+        <h3>Run D：state / prompt / right-view / weighted loss</h3>
+        <p><strong>目标。</strong>让模型看到更接近 RoboCasa policy 所需的条件：任务文本、OpenPI state、第三相机，以及对接触关键窗口和动作组进行加权。</p>
+        <p><strong>改进。</strong>LeRobot wrapper 返回 <code>prompt_token_ids</code>、<code>state</code>、<code>agentview_right_rgb</code>、<code>loss_weight</code>、<code>contact_label</code>、<code>progress_phase</code>、<code>control_mode_class</code>、<code>gripper_phase/class</code>。训练 objective 使用 action group weight、contact window weight 与 aux heads。</p>
+        <p><strong>结果。</strong><code>target_atomic_seen_official12_task_30epoch_muxi_20260628_1310_state_prompt_weighted</code> 训练 30 epochs、3930 steps，direct eval 2/54 = 3.70%，convert_action eval 2/54。OpenPI state 3-view phase 的 horizon sweep：full_h1 2/54，full_h2 1/54，full_h4 0/54，full_h5 1/54，full_h8 1/54；ablation no_right/no_prompt 为 2/54，no_state 为 1/54。</p>
+        <p><strong>分析。</strong>这些结果支持“条件增强可能略有帮助”，但不支持“state/prompt/right-view 已经稳定解决”。no_prompt 在后续小 sweep 中甚至有时更高，说明当前样本数下方差很大；prompt dropout、state order、right-view pooling 也可能还没有和原 UWM trunk 形成强耦合。</p>
+
+        <h3>Run E：Human300 1ep pretrain + target fine-tune</h3>
+        <p><strong>目标。</strong>用更大、更宽的 RoboCasa human pretraining 数据先对齐动作和视觉分布，再在 target_atomic_seen 上 fine-tune。</p>
+        <p><strong>训练与 loss。</strong>Human300 1 epoch 从 step 0 到 1756，loss 从 3.6253 降到 0.3702，last100 mean 为 0.3050；action loss last100 mean 0.0779，raw_action_loss last100 mean 0.0297。随后 target finetune 30 epochs 从 loss 0.3100 到 0.2406，last100 mean 0.2179。</p>
+        <p><strong>评估。</strong><code>human300_to_target_atomic_seen_native_20260629_104957_human300_native</code> sweep p8：full_h8 0/54，full_h5 1/54，full_h4 2/54，full_h2 0/54，full_h1 1/54；abfast：no_state_h5 2/54，no_prompt_h5 3/54，no_right_h5 1/54；action execution AB 6 scenarios direct/convert 均 0/6。</p>
+        <p><strong>分析。</strong>pretrain 显著降低 loss，说明模型确实吸收了 RoboCasa 分布；但闭环成功未同步提高，提示剩余瓶颈在动作可执行性、时序采样、gripper/contact phase、环境接口或任务完成判定附近。</p>
+
+        <h3>Run F：Human300 5ep pretrain + target fine-tune</h3>
+        <p><strong>目标。</strong>检验更久 pretrain 是否让 target eval 稳定提高。</p>
+        <p><strong>训练与 loss。</strong>Human300 resume 1 到 5 epochs 覆盖 step 1757 到 8784，loss last100 mean 0.2544，action loss last100 mean 0.0598，raw_action_loss last100 mean 0.0226。loss 比 1ep 更低，动作拟合更稳。</p>
+        <p><strong>评估。</strong><code>20260629_222000_human3001p4_native</code>：pretrain 5 epochs、8785 steps，finetune 30 epochs、3930 steps；full_h8/full_h5/full_h4/full_h2 均 0/54，full_h1 为 1/54；action execution AB direct/convert 均 0/6。</p>
+        <p><strong>分析。</strong>这说明“pretrain 更久”本身不是充分条件。它可能让离线动作 MSE 更低，但如果动作 chunk 的短期执行、夹爪相位、采样温度或 env control mode 没对齐，闭环成功仍会崩。</p>
+
+        <h3>Run G：actionheadfix Human300 3ep（运行中）</h3>
+        <p><strong>目标。</strong>在前述失败基础上进一步收敛输出头与 \(x_0\) action 辅助项，减少 state/right-view 分支干扰，保留 prompt conditioning。</p>
+        <p><strong>当前配置。</strong>远端命令显示：<code>--dataset-format lerobot</code>、<code>--action-dim 12</code>、<code>--action-indices 5,6,7,8,9,10,11,0,1,2,3,4</code>、<code>--use-task-conditioning</code>、<code>--use-prompt-conditioning</code>、<code>--no-use-state-conditioning</code>、<code>--no-use-right-view</code>、<code>--use-weighted-action-loss</code>、<code>--x0-action-loss-weight 1.0</code>、<code>--use-hierarchical-action-decoder</code>、batch 128、8 GPU、Human300 3 epochs。</p>
+        <p><strong>当前状态。</strong>截至 2026-07-01 12:52 +08，远端仍有 8 个 rank 进程运行；日志 tail 到 step 4500、epoch_float 2.5618/3，action_loss 约 0.0522、raw_action_loss 约 0.0200，但总 loss 受 \(x_0\) 与 aux 项波动影响。尚未完成 pretrain，也没有 target fine-tune 或 online eval 结果。</p>
+    </section>
+
+    <section id="curves">
+        <h2>训练 Loss 曲线</h2>
+        <p>本节基于本地 <code>analysis\robocasa_human300_loss_curves\summary.json</code>。图是按 run 首尾与 last100 mean 绘制的摘要曲线，不是逐 step 原始曲线；项目目录中同时存在更细的 PNG：<code>human300_overall_losses.png</code>、<code>human300_action_group_losses.png</code>、<code>human300_aux_losses.png</code>。</p>
+        <div class="svg-wrap">
+            <svg width="860" height="360" viewBox="0 0 860 360" role="img" aria-label="Human300 pretrain and target fine-tune loss summary">
+                <rect x="0" y="0" width="860" height="360" fill="#ffffff"></rect>
+                <text x="24" y="30" font-size="18" font-family="Segoe UI, sans-serif" fill="#0f172a">Human300 / Target Fine-tune Loss 摘要</text>
+                <line x1="70" y1="300" x2="830" y2="300" stroke="#94a3b8" stroke-width="1"></line>
+                <line x1="70" y1="55" x2="70" y2="300" stroke="#94a3b8" stroke-width="1"></line>
+                <text x="24" y="302" font-size="12" fill="#475569">0.0</text>
+                <text x="24" y="246" font-size="12" fill="#475569">0.5</text>
+                <text x="24" y="190" font-size="12" fill="#475569">1.0</text>
+                <text x="24" y="134" font-size="12" fill="#475569">1.5</text>
+                <text x="24" y="78" font-size="12" fill="#475569">2.0+</text>
+                <line x1="70" y1="244" x2="830" y2="244" stroke="#e2e8f0"></line>
+                <line x1="70" y1="188" x2="830" y2="188" stroke="#e2e8f0"></line>
+                <line x1="70" y1="132" x2="830" y2="132" stroke="#e2e8f0"></line>
+                <line x1="70" y1="76" x2="830" y2="76" stroke="#e2e8f0"></line>
+
+                <polyline points="95,75 190,259 285,266" fill="none" stroke="#2563eb" stroke-width="3"></polyline>
+                <circle cx="95" cy="75" r="4" fill="#2563eb"></circle>
+                <circle cx="190" cy="259" r="4" fill="#2563eb"></circle>
+                <circle cx="285" cy="266" r="4" fill="#2563eb"></circle>
+                <text x="92" y="326" font-size="12" fill="#334155">H300 1ep first</text>
+                <text x="174" y="326" font-size="12" fill="#334155">last</text>
+                <text x="260" y="326" font-size="12" fill="#334155">last100</text>
+
+                <polyline points="355,265 450,272 545,272" fill="none" stroke="#16a34a" stroke-width="3"></polyline>
+                <circle cx="355" cy="265" r="4" fill="#16a34a"></circle>
+                <circle cx="450" cy="272" r="4" fill="#16a34a"></circle>
+                <circle cx="545" cy="272" r="4" fill="#16a34a"></circle>
+                <text x="345" y="326" font-size="12" fill="#334155">H300 1-5 first</text>
+                <text x="436" y="326" font-size="12" fill="#334155">last</text>
+                <text x="516" y="326" font-size="12" fill="#334155">last100</text>
+
+                <polyline points="615,266 710,273 805,276" fill="none" stroke="#dc2626" stroke-width="3"></polyline>
+                <circle cx="615" cy="266" r="4" fill="#dc2626"></circle>
+                <circle cx="710" cy="273" r="4" fill="#dc2626"></circle>
+                <circle cx="805" cy="276" r="4" fill="#dc2626"></circle>
+                <text x="590" y="326" font-size="12" fill="#334155">Target FT first</text>
+                <text x="697" y="326" font-size="12" fill="#334155">last</text>
+                <text x="776" y="326" font-size="12" fill="#334155">last100</text>
+
+                <rect x="600" y="58" width="210" height="75" fill="#f8fafc" stroke="#d9e1ea" rx="6"></rect>
+                <circle cx="618" cy="78" r="5" fill="#2563eb"></circle>
+                <text x="632" y="82" font-size="12" fill="#334155">Human300 0-1: 3.625 → 0.370</text>
+                <circle cx="618" cy="100" r="5" fill="#16a34a"></circle>
+                <text x="632" y="104" font-size="12" fill="#334155">Human300 1-5: 0.315 → 0.252</text>
+                <circle cx="618" cy="122" r="5" fill="#dc2626"></circle>
+                <text x="632" y="126" font-size="12" fill="#334155">Target FT: 0.310 → 0.241</text>
+            </svg>
+        </div>
+
+        <table>
+            <thead>
+            <tr>
+                <th>Run</th>
+                <th>Total loss</th>
+                <th>Action loss</th>
+                <th>Raw action loss</th>
+                <th>Aux / group 观察</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr>
+                <td>Human300 pretrain 0-1 epoch</td>
+                <td>first 3.6253，last 0.3702，last100 mean 0.3050。</td>
+                <td>first 2.4112，last 0.1184，last100 mean 0.0779。</td>
+                <td>first 0.9986，last 0.0495，last100 mean 0.0297。</td>
+                <td>contact aux last100 0.2235，progress aux last100 0.7459。</td>
+            </tr>
+            <tr>
+                <td>Human300 resume 1-5 epochs</td>
+                <td>first 0.3153，last 0.2520，last100 mean 0.2544。</td>
+                <td>first 0.0886，last 0.1084，last100 mean 0.0598。</td>
+                <td>first 0.0364，last 0.0385，last100 mean 0.0226。</td>
+                <td>EEF/base/control group MSE 普遍降低，但闭环未同步改善。</td>
+            </tr>
+            <tr>
+                <td>Target atomic fine-tune after Human300</td>
+                <td>first 0.3100，last 0.2406，last100 mean 0.2179。</td>
+                <td>first 0.0892，last 0.0697，last100 mean 0.0670。</td>
+                <td>first 0.0345，last 0.0271，last100 mean 0.0250。</td>
+                <td>contact aux last100 0.1028，progress aux last100 0.2865。</td>
+            </tr>
+            </tbody>
+        </table>
+        <p><strong>读图结论。</strong>pretrain 与 fine-tune 的离线优化是成功的：total/action/raw_action loss 都比初始低很多。但这些曲线没有证明闭环任务成功。机器人闭环还要求采样动作在 contact/gripper/base/control 时序上连续正确，且每一步都被环境解析为正确物理控制。</p>
+    </section>
+
+    <section id="eval">
+        <h2>评估结果与 Online Rollout</h2>
+        <h3>Eval 环境如何搭建</h3>
+        <p>本地 eval 通过 <code>uwm_robocasa_rollout.py</code> 调用 RoboCasa 环境。脚本读取 checkpoint、normalizer metadata、任务 split/task_set、adapter mode、exec horizon、trace/video 保存配置，然后对每个 scenario 做 reset、反复采样 action chunk、env.step、success check。</p>
+        <table>
+            <thead>
+            <tr>
+                <th>组件</th>
+                <th>作用</th>
+                <th>关键风险</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr>
+                <td>Normalizer metadata validation</td>
+                <td>检查 dataset_soup、action_dim、action_indices、state_order、camera_keys、action_order。</td>
+                <td>可以防止拿 7D normalizer 跑 12D checkpoint，或 state/right-view 配置错配。</td>
+            </tr>
+            <tr>
+                <td><code>obs_to_uwm</code></td>
+                <td>把 env obs 键名映射到 <code>agentview_rgb</code>、<code>eye_in_hand_rgb</code>、可选 right-view/state/prompt。</td>
+                <td>相机键名、resize 和 state 抽取错误会导致 train/eval observation 分布偏移。</td>
+            </tr>
+            <tr>
+                <td><code>adapt_action_to_env</code></td>
+                <td>支持 <code>current</code>、<code>raw7_to_full12_reordered</code>、<code>ee_xy_only</code>、<code>official12</code>。</td>
+                <td>非 official12 只能诊断；convert_action wrapper 曾出现维度错误。</td>
+            </tr>
+            <tr>
+                <td><code>exec_horizon</code></td>
+                <td>每次 sample 一个 chunk，只执行前若干步再 replanning。</td>
+                <td>太长可能累积错误，太短可能打断平滑动作；sweep 中 h1-h8 均未稳定成功。</td>
+            </tr>
+            <tr>
+                <td>success check</td>
+                <td>优先 <code>info["success"]</code>，否则 <code>env._check_success()</code>。</td>
+                <td>只能验证二值完成，不直接告诉失败原因。</td>
+            </tr>
+            </tbody>
+        </table>
+
+        <h3>阶段性评估结果汇总</h3>
+        <table>
+            <thead>
+            <tr>
+                <th>阶段</th>
+                <th>Eval 设置</th>
+                <th>结果</th>
+                <th>解释</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr>
+                <td>7D pilot</td>
+                <td>3 tasks × 3 trials，horizon 300。</td>
+                <td>1/9，唯一成功来自 TurnOnSinkFaucet。</td>
+                <td>小样本诊断，不能证明泛化；也暴露动作错配。</td>
+            </tr>
+            <tr>
+                <td>wrong7 epoch1</td>
+                <td>50 rollout。</td>
+                <td>0/50。</td>
+                <td>支持 raw7 动作语义错配假设。</td>
+            </tr>
+            <tr>
+                <td>official12 taskcond 30ep</td>
+                <td>54 round-robin。</td>
+                <td>1/54，env errors 0。</td>
+                <td>接口能跑，但策略质量不足。</td>
+            </tr>
+            <tr>
+                <td>official12 taskcond 100ep</td>
+                <td>54 round-robin。</td>
+                <td>0/54，env errors 0。</td>
+                <td>训练更久不是核心解法。</td>
+            </tr>
+            <tr>
+                <td>state+prompt+weighted 30ep</td>
+                <td>direct 与 convert_action。</td>
+                <td>2/54 与 2/54。</td>
+                <td>有轻微改善，但仍不稳定。</td>
+            </tr>
+            <tr>
+                <td>Human300 1ep + target FT</td>
+                <td>horizon sweep 与 ablation。</td>
+                <td>full 最高 2/54；no_prompt_h5 3/54。</td>
+                <td>pretrain 让 loss 变好，但闭环仍由动作执行细节主导。</td>
+            </tr>
+            <tr>
+                <td>Human300 5ep + target FT</td>
+                <td>horizon sweep。</td>
+                <td>多数 0/54，full_h1 1/54。</td>
+                <td>离线 loss 与闭环 success 出现脱钩。</td>
+            </tr>
+            </tbody>
+        </table>
+    </section>
+
+    <section id="debug">
+        <h2>0 Success 原因分析、修复与再分析</h2>
+        <table>
+            <thead>
+            <tr>
+                <th>假设</th>
+                <th>证据</th>
+                <th>修复动作</th>
+                <th>再评估结果</th>
+                <th>状态</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr>
+                <td>7D action 语义错配</td>
+                <td>raw7 adapter 注释与 0/50 wrong7；raw 前 7 维不含完整 EE pose。</td>
+                <td>改为 official12 reorder <code>[5:12,0:4,4]</code>。</td>
+                <td>30ep official12 可跑到 1/54，env errors 0。</td>
+                <td>基本确认。</td>
+            </tr>
+            <tr>
+                <td>直接 concat task feature 破坏 checkpoint</td>
+                <td>AdaLN condition width 改变导致 shape 不兼容。</td>
+                <td>改为 residual encoder，<code>feat_dim()</code> 保持 base width。</td>
+                <td>checkpoint smoke 可 shape-compatible load；训练恢复。</td>
+                <td>确认。</td>
+            </tr>
+            <tr>
+                <td>12D 输出头未分组，动作子空间学习互相干扰</td>
+                <td>RoboCasa action 自然分为 EE/base/control；单 head 不显式区分。</td>
+                <td>加入 hierarchical decoder 与分组 loss weight。</td>
+                <td>loss 分组可监控，但 success 仍低。</td>
+                <td>部分支持，未充分解决。</td>
+            </tr>
+            <tr>
+                <td>缺少 state/prompt/right-view 条件</td>
+                <td>RoboCasa 多任务、移动操作和第三视角可能需要更多条件。</td>
+                <td>加入 prompt token、OpenPI state、right-view residual。</td>
+                <td>30ep 到 2/54，小 sweep ablation 差异很小。</td>
+                <td>开放。</td>
+            </tr>
+            <tr>
+                <td>target 数据太窄，需要 pretrain</td>
+                <td>RoboCasa365 公开设计强调 pretraining 与 target splits；本地 target-only 成功率低。</td>
+                <td>Human300 pretrain 1ep/5ep 后 target fine-tune。</td>
+                <td>loss 明显改善，online 最高小 sweep 3/54。</td>
+                <td>离线确认，闭环未确认。</td>
+            </tr>
+            <tr>
+                <td>eval wrapper / convert_action 维度问题</td>
+                <td>100ep A/B convert_action 6 个 env errors，报 expected 12 got 5。</td>
+                <td>official12 direct env.step；normalizer metadata 校验。</td>
+                <td>后续 direct/convert 2/54，env errors 0。</td>
+                <td>接口问题已缓解。</td>
+            </tr>
+            </tbody>
+        </table>
+        <p><strong>残余核心问题。</strong>当前最强证据指向“离线动作拟合已经不是唯一瓶颈”。后续应优先检查 rollout trace 中动作幅度、clip ratio、gripper channel、control mode、EEF-base 协同，以及 action chunk 采样的 temporal smoothness，而不只是继续堆 epoch。</p>
+    </section>
+
+    <section id="comparison">
+        <h2>Run 对比与结论</h2>
+        <div class="metric-grid">
+            <div class="metric">
+                <strong>0/50 → 1-3/54</strong>
+                <span>接口修正后从完全错配进入可执行但极低成功状态。</span>
+            </div>
+            <div class="metric">
+                <strong>3.625 → 0.218</strong>
+                <span>Human300 + target FT 的离线 total loss 大幅下降。</span>
+            </div>
+            <div class="metric">
+                <strong>未达稳定闭环</strong>
+                <span>所有完成 eval 的阶段都未形成可靠 RoboCasa success。</span>
+            </div>
+        </div>
+        <ol>
+            <li><strong>必须保留的修复：</strong>official12 action reorder、normalizer metadata validation、residual task/prompt/state/right-view 注入、hierarchical 12D decoder。这些是让 UWM 与 RoboCasa 接口语义一致的基础。</li>
+            <li><strong>pretrain 的真实效果：</strong>Human300 pretrain 明显改善 action/raw_action/dynamics loss，说明模型吸收了 RoboCasa 视觉动作分布；但闭环没有同步提升，说明 pretrain 不是最终瓶颈的完整解。</li>
+            <li><strong>最可能的下一瓶颈：</strong>gripper/contact phase、control mode、采样 chunk 执行策略、动作反归一化尺度、动作 clip、以及 task-specific success 所需的长时序纠错。</li>
+            <li><strong>不能得出的结论：</strong>不能说 UWM 在 RoboCasa 上已经成功迁移；也不能说 pretrain 无效。更准确的表述是：pretrain 有离线收益，但闭环接口与控制质量仍未打通。</li>
+        </ol>
+    </section>
+
+    <section id="recovery">
+        <h2>恢复工作所需清单</h2>
+        <h3>代码与配置入口</h3>
+        <ul>
+            <li>训练主入口：<code>C:\Users\mousongzhe\project\wm\uwm_robocasa_transfer\uwm_robocasa_train.py</code></li>
+            <li>LeRobot 数据集：<code>C:\Users\mousongzhe\project\wm\uwm_robocasa_transfer\uwm_robocasa_lerobot_dataset.py</code></li>
+            <li>旧 HDF5 wrapper：<code>C:\Users\mousongzhe\project\wm\uwm_robocasa_transfer\uwm_robocasa_dataset.py</code></li>
+            <li>online rollout：<code>C:\Users\mousongzhe\project\wm\uwm_robocasa_transfer\uwm_robocasa_rollout.py</code></li>
+            <li>Human300 loss summary：<code>C:\Users\mousongzhe\project\wm\uwm_robocasa_transfer\analysis\robocasa_human300_loss_curves\summary.json</code></li>
+            <li>远端项目：<code>/data/msz/uwm_robocasa_transfer_muxi</code></li>
+        </ul>
+        <h3>建议下一步</h3>
+        <ol>
+            <li>等待 actionheadfix Human300 3ep 完成后，只先跑小规模 deterministic eval，并记录每步 <code>preclip/clipped/clip_frac/gripper/control_mode</code>。</li>
+            <li>对成功/失败任务各抽 3 条 trace，画 EEF xyz、gripper、base、control 的时间序列，确认是否存在夹爪不闭合、动作被 clip、base 抖动或 control mode 错误。</li>
+            <li>固定同一 checkpoint，做 <code>exec_horizon</code>、采样步数、采样温度、aux action override 的单因素 sweep，避免同时改多个变量。</li>
+            <li>若 action trace 显示 gripper/contact 错位，优先把 gripper phase 从弱 proxy 升级为更可靠的 simulator-derived label 或任务阶段标签。</li>
+            <li>把官方 RoboCasa eval 的 50 rollout/task 与当前 54 round-robin 区分开，先用小 eval 调通，再扩到官方协议。</li>
+        </ol>
+    </section>
+
+    <section id="references">
+        <h2>参考文献（References）</h2>
+        <ol>
+            <li>[1] Chuning Zhu, Raymond Yu, Siyuan Feng, Benjamin Burchfiel, Paarth Shah, Abhishek Gupta, "Unified World Models: Coupling Video and Action Diffusion for Pretraining on Large Robotic Datasets", 2025. <a href="https://arxiv.org/abs/2504.02792">arXiv</a>, <a href="https://weirdlabuw.github.io/uwm/">项目页</a></li>
+            <li>[2] WEIRDLabUW, "unified-world-model", official GitHub repository. <a href="https://github.com/WEIRDLabUW/unified-world-model">链接</a></li>
+            <li>[3] Soroush Nasiriany, Abhiram Maddukuri, Lance Zhang, Adeet Parikh, Aaron Lo, Abhishek Joshi, Ajay Mandlekar, Yuke Zhu, "RoboCasa: Large-Scale Simulation of Everyday Tasks for Generalist Robots", 2024. <a href="https://arxiv.org/abs/2406.02523">arXiv</a></li>
+            <li>[4] Soroush Nasiriany, Sepehr Nasiriany, Abhiram Maddukuri, Yuke Zhu, "RoboCasa365: A Large-Scale Simulation Framework for Training and Benchmarking Generalist Robots", 2026. <a href="https://arxiv.org/abs/2603.04356">arXiv</a></li>
+            <li>[5] RoboCasa official documentation, "Overview", "Overview of Datasets", "Using Datasets", "Overview of Benchmarking". <a href="https://robocasa.ai/docs/build/html/introduction/overview.html">Overview</a>, <a href="https://robocasa.ai/docs/build/html/datasets/datasets_overview.html">Datasets</a>, <a href="https://robocasa.ai/docs/build/html/datasets/using_datasets.html">Using Datasets</a>, <a href="https://robocasa.ai/docs/build/html/benchmarking/benchmarking_overview.html">Benchmarking</a></li>
+            <li>[6] robocasa/robocasa, official GitHub repository. <a href="https://github.com/robocasa/robocasa">链接</a></li>
+            <li>[7] 本地源码证据：<code>C:\Users\mousongzhe\project\wm\uwm_robocasa_transfer\uwm_robocasa_train.py</code>，包含 <code>TaskConditionedObservationEncoder</code>、<code>RoboCasaHierarchicalActionDecoder</code>、<code>compute_training_loss</code>。</li>
+            <li>[8] 本地源码证据：<code>C:\Users\mousongzhe\project\wm\uwm_robocasa_transfer\uwm_robocasa_lerobot_dataset.py</code>，包含 <code>openpi_state_from_raw_state</code>、<code>action_indices</code>、prompt/state/right-view 字段与 proxy label 逻辑。</li>
+            <li>[9] 本地源码证据：<code>C:\Users\mousongzhe\project\wm\uwm_robocasa_transfer\uwm_robocasa_rollout.py</code>，包含 <code>adapt_action_to_env</code>、<code>obs_to_uwm</code>、<code>run_rollout</code> 与 success 统计。</li>
+            <li>[10] 本地 run 证据：<code>C:\Users\mousongzhe\project\wm\uwm_robocasa_transfer\README.md</code>、<code>MUXI_ATOMIC_SEEN_30EPOCH_README.md</code>、既有 action alignment debug report 与 transfer report。</li>
+            <li>[11] 本地 loss 证据：<code>C:\Users\mousongzhe\project\wm\uwm_robocasa_transfer\analysis\robocasa_human300_loss_curves\summary.json</code> 与同目录 PNG 曲线。</li>
+            <li>[12] 远端运行中证据：<code>root@100.77.83.126:/data/msz/uwm_robocasa_transfer_muxi/logs/human300_to_atomic_native_20260630_2228_actionheadfix_human3003ep_prompt_aux/pretrain_human300.out</code>，于 2026-07-01 12:52 +08 检查。</li>
+        </ol>
+    </section>
+</article>
+</body>
+</html>

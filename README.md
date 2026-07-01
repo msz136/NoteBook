@@ -19,3 +19,5 @@
 - [LLM Agent 轨迹评估奖励模型：PRM / ORM / 轨迹级 / 可微分方法全景调研](https://msz136.github.io/NoteBook/reward_model_agent_report.html)
 - [Agent 轨迹奖励模型设计：从 Sandbox 评估到可微分 RL 损失的完整方案](https://msz136.github.io/NoteBook/agent_reward_report.html)
 - [机器人与机器狗仿真平台：ROS2、Sandbox、Isaac 与生产力流程](https://msz136.github.io/NoteBook/robotics_simulation_workflow_report.html)
+- [AceAgent SFT + GRPO 训练与评测全流程报告](aceagent_sft_grpo_training_report.html)
+- [RoboCasa-UWM 迁移复现与工程恢复报告](robocasa_uwm_transfer_reproduction_report.html)

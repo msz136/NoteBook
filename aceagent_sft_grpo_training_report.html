@@ -1,0 +1,1142 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AceAgent SFT + GRPO 训练与评测全流程报告</title>
+    <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            font-size: 16px;
+            line-height: 1.8;
+            color: #1a1a1a;
+            background: #fff;
+            padding: 2rem 1rem;
+        }
+        article { max-width: 900px; margin: 0 auto; }
+        h1 { font-size: 2rem; margin-bottom: 0.5rem; border-bottom: 2px solid #333; padding-bottom: 0.5rem; line-height: 1.35; }
+        h2 { font-size: 1.5rem; margin-top: 2.5rem; margin-bottom: 1rem; border-left: 4px solid #2563eb; padding-left: 0.75rem; }
+        h3 { font-size: 1.25rem; margin-top: 1.8rem; margin-bottom: 0.8rem; }
+        h4 { font-size: 1.08rem; margin-top: 1.2rem; margin-bottom: 0.5rem; }
+        p, ul, ol { margin-bottom: 1rem; }
+        ul, ol { padding-left: 1.5rem; }
+        li { margin-bottom: 0.3rem; }
+        pre { background: #f8f9fa; border: 1px solid #e5e7eb; border-radius: 6px; padding: 1rem; overflow-x: auto; margin-bottom: 1rem; }
+        code { font-family: "Fira Code", "Consolas", monospace; background: #f3f4f6; padding: 0.15rem 0.4rem; border-radius: 3px; font-size: 0.9em; }
+        pre code { background: none; padding: 0; }
+        table { width: 100%; border-collapse: collapse; margin-bottom: 1.5rem; font-size: 0.92rem; }
+        th, td { border: 1px solid #ddd; padding: 0.55rem 0.7rem; text-align: left; vertical-align: top; }
+        th { background: #f8f8f8; font-weight: 600; }
+        tr:nth-child(even) { background: #fafafa; }
+        a { color: #2563eb; text-decoration: none; }
+        a:hover { text-decoration: underline; }
+        .meta { color: #666; font-size: 0.92rem; margin-bottom: 1.5rem; }
+        .toc { background: #f8fbff; border: 1px solid #d9e8ff; border-left: 4px solid #2563eb; padding: 1rem 1.2rem; margin: 1.5rem 0 2rem; border-radius: 6px; }
+        .toc h2 { border: none; margin: 0 0 0.8rem; padding: 0; font-size: 1.2rem; }
+        .toc ol { columns: 2; column-gap: 2rem; margin-bottom: 0; }
+        .note { background: #f0f9ff; border-left: 4px solid #2563eb; padding: 0.8rem 1rem; margin: 1rem 0; border-radius: 4px; }
+        .warning { background: #fff7ed; border-left: 4px solid #f97316; padding: 0.8rem 1rem; margin: 1rem 0; border-radius: 4px; }
+        .evidence { background: #f8f0ff; border-left: 4px solid #7c3aed; padding: 0.8rem 1rem; margin: 1rem 0; border-radius: 4px; }
+        .formula-note { background: #f7fee7; border-left: 4px solid #65a30d; padding: 0.75rem 1rem; margin: 0.8rem 0 1rem; border-radius: 4px; }
+        .tight td, .tight th { padding: 0.45rem 0.55rem; }
+        .small { font-size: 0.9rem; color: #555; }
+        @media (max-width: 700px) {
+            body { padding: 1rem 0.5rem; }
+            h1 { font-size: 1.5rem; }
+            table { display: block; overflow-x: auto; font-size: 0.84rem; }
+            .toc ol { columns: 1; }
+        }
+    </style>
+</head>
+<body>
+<article>
+    <h1>AceAgent SFT + GRPO 训练与评测全流程报告：从 RLSandbox 朴素微调到 8B/32B Online GRPO</h1>
+    <p class="meta">报告日期：2026-07-01 | 证据截止：2026-06-23 本地评测归档 | 项目：<code>C:\Users\mousongzhe\agent</code></p>
+
+    <nav class="toc" aria-label="目录">
+        <h2>目录</h2>
+        <ol>
+            <li><a href="#question">问题</a></li>
+            <li><a href="#scope">报告范围与证据边界</a></li>
+            <li><a href="#background">背景与动机</a></li>
+            <li><a href="#concepts">基础概念与术语</a></li>
+            <li><a href="#sandbox">RLSandbox/AceAgent 沙盒能力</a></li>
+            <li><a href="#timeline">工作时间线</a></li>
+            <li><a href="#data">数据收集与版本演进</a></li>
+            <li><a href="#eval">评测构建与 Suite 解释</a></li>
+            <li><a href="#math">数学形式与训练目标</a></li>
+            <li><a href="#pipeline">Pipeline 与伪代码</a></li>
+            <li><a href="#runs">逐阶段训练与评测记录</a></li>
+            <li><a href="#reward">GRPO 奖励设计</a></li>
+            <li><a href="#matrix">8B/32B 训练组合矩阵</a></li>
+            <li><a href="#results">结果分析与收益归因</a></li>
+            <li><a href="#debug">困难、修复与恢复清单</a></li>
+            <li><a href="#boundary">公源/本地设计边界</a></li>
+            <li><a href="#comparison">方法对比与选择建议</a></li>
+            <li><a href="#risks">风险与后续建议</a></li>
+            <li><a href="#references">参考文献</a></li>
+        </ol>
+    </nav>
+
+    <section id="question">
+        <h2>问题（Question）</h2>
+        <p>本报告回答一个工程复盘问题：<strong>如何从 AceAgent/RLSandbox 的朴素 fine-tune + eval 起步，逐步通过数据改造、native tools 协议、schema-aware reward、tool restraint 数据和 8B/32B GRPO，提升一个 agent 模型对本项目机器人与工具调用环境的适配度？</strong></p>
+        <p>这里的“适配度”不是泛泛的聊天能力，而是面向生产式 agent 的四类能力：正确选择工具（tool selection）、正确填写参数（argument grounding）、避免越权副作用（side-effect safety）、以及在项目机器人/浏览器/跨源任务之间保持协议边界（protocol and domain separation）。</p>
+    </section>
+
+    <section id="scope">
+        <h2>报告范围与证据边界</h2>
+        <div class="evidence">
+            <p><strong>本地证据。</strong>主要来自 <code>C:\Users\mousongzhe\agent</code> 的源代码、训练脚本、manifest、run report 与 eval report，包括 <code>server/agent/sandbox.py</code>、<code>scripts/agent_sandbox_eval.py</code>、<code>remote_training_pipeline_scripts/reports/*.md</code>、<code>remote_training_pipeline_v2/reports/*.md</code>、<code>remote_training_pipeline_v2/eval/*/reports/*.md</code>、<code>remote_training_pipeline_v2/manifests/*.json*</code>。</p>
+        </div>
+        <div class="note">
+            <p><strong>解释口径。</strong>报告把“设计阶段”限定为会改变数据语义、训练目标、reward、工具协议、评测 harness 或部署边界的改动。单纯 batch size、路径、worker 数、运行名等只作为复现参数记录，不称为方法创新。</p>
+        </div>
+        <div class="warning">
+            <p>⚠️ 本地镜像包含 summary/report 级指标，但并非每个 run 都有可直接绘制的 TensorBoard/JSONL 完整 loss 曲线。因此本文用已归档的最终 loss、runtime、eval 指标和失败日志做恢复记录；若未来要做论文级曲线图，应回到远端 <code>/data/msz/dataset/online_agent/...</code> 拉取原始 scalar 日志。</p>
+        </div>
+    </section>
+
+    <section id="background">
+        <h2>背景与动机（Background & Motivation）</h2>
+        <p>AceAgent 的核心业务场景是让大模型在 OpenAI-compatible tools / PydanticAI tools / 项目内机器人工具之间进行稳定的多步决策。普通 base model 即使会“讲”工具，也常常无法满足实际系统的硬约束：它可能伪造工具名、漏掉关键参数、在需要澄清时直接执行副作用工具，或者在浏览器 UID、机器人坐标、订单 ID 等必须精确 grounding 的字段上胡编。</p>
+        <p>因此工作不是一次性“训一个模型”，而是沿着下面的反馈闭环推进：</p>
+        <ol>
+            <li>先建沙盒和 eval，知道模型在项目任务中能不能按工具序列完成任务。</li>
+            <li>用朴素 SFT 获得工具调用格式、项目机器人任务和通用 tool-call 的初始能力。</li>
+            <li>发现 SFT 对安全边界和多步策略不够强，于是加入 reward-shaped continuation，再升级为 online GRPO。</li>
+            <li>发现 reward 容易被“只不犯禁但不做事”或“参数不对但格式像”钻空子，于是改成 schema-aware reward。</li>
+            <li>发现模型有过度执行倾向，于是加入 tool-restraint 数据和惩罚边界；同时观察 8B 与 32B 在 SFT/GRPO 上的收益差异。</li>
+        </ol>
+        <p>这个过程符合 agent post-training 的常见规律：SFT 负责把模型拉到“会按协议做事”的局部流形，RL/GRPO 负责在同一任务输入下通过多候选采样比较，优化那些无法只靠 next-token imitation 表达清楚的策略偏好。</p>
+    </section>
+
+    <section id="concepts">
+        <h2>基础概念与术语</h2>
+        <h3>监督微调（Supervised Fine-Tuning, SFT）</h3>
+        <p>SFT 用人工或程序构造的目标输出监督模型，使其学会项目规定的消息格式、工具名、参数结构和回复风格。对 AceAgent 来说，SFT 的价值是“把 base model 拉进工具协议”，尤其是 OpenAI function/tool call JSON、Qwen3-VL native tools 模板、机器人工具 schema 与浏览器 deferred action schema。</p>
+
+        <h3>强化学习（Reinforcement Learning, RL）与 GRPO</h3>
+        <p>强化学习把模型输出视为动作（action），由奖励函数（reward function）评价轨迹好坏。GRPO（Group Relative Policy Optimization，组相对策略优化）在每个 prompt 下采样多个 completion，通过组内 reward 标准化估计 advantage，减少对 value/critic 模型的依赖。DeepSeekMath 提出 GRPO 用于 LLM 后训练，TRL 也提供 GRPOTrainer 的工程实现说明。</p>
+
+        <h3>工具调用（Tool / Function Calling）</h3>
+        <p>工具调用是让模型输出结构化函数名与参数，由外部系统执行。PydanticAI 文档把 function tools 解释为模型可调用的外部动作/检索接口；AceAgent 本地用 <code>server/tools/registry.py</code> 把项目工具注册成 PydanticAI <code>Tool</code>，并用 native tools eval 校验 Qwen3-VL 模板中真实 <code>tools=tools</code> 协议，而不是把工具 JSON 手写进 prompt。</p>
+
+        <h3>具身智能与机器人任务</h3>
+        <p>机器人任务不仅是文本工具调用，还涉及实体状态、地图、坐标、导航进度、任务取消和副作用控制。基础概念包括观测（observation）、动作（action）、状态（state）、轨迹（trajectory）和环境反馈（environment feedback）。在本项目中，沙盒把真实机器人执行接口替换成可模拟的状态机，从而在不触碰真实硬件的情况下评估导航、拍照、购买、停止、返航等行为。</p>
+    </section>
+
+    <section id="sandbox">
+        <h2>RLSandbox/AceAgent 沙盒能力</h2>
+        <p>本地 <code>server/agent/sandbox.py</code> 是整个训练评测闭环的起点。它不只是 mock 工具返回值，而是把 agent run 过程中的工具调用、模型 tool call、final text、虚拟机器人状态、地图点、订单状态和 timeline 都记录下来，再按预期轨迹打分。</p>
+
+        <h3>沙盒能执行或模拟什么任务</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>类别</th>
+                    <th>工具/能力</th>
+                    <th>沙盒行为</th>
+                    <th>为什么重要</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>安全查询工具</td>
+                    <td><code>acerobotics_list_robots</code>、<code>acerobotics_robot_status</code>、<code>acerobotics_current_map</code>、<code>store_available_skus</code>、<code>get_weather</code>、<code>web_search</code></td>
+                    <td>默认 fixture-backed；可选 live query。</td>
+                    <td>先让模型学会查询状态、地图、库存、天气，不直接产生物理副作用。</td>
+                </tr>
+                <tr>
+                    <td>导航与机器人动作</td>
+                    <td><code>acerobotics_indoor_navigation</code>、<code>acerobotics_semantic_navigation</code>、<code>acerobotics_fix_navigation</code>、<code>acerobotics_do_action</code>、充电/停止/取消工具</td>
+                    <td>执行工具被拦截为 simulated，生成 taskId，维护 running/completed 状态。</td>
+                    <td>可验证“先查地图再导航”“先到 A 再到 B”“取消当前任务”等多步顺序。</td>
+                </tr>
+                <tr>
+                    <td>视觉与场景观察</td>
+                    <td><code>acerobotics_snapshot</code>、<code>acerobotics_observe_scene</code>、<code>vision_analyze_image</code></td>
+                    <td>默认返回 sandbox 图片描述；snapshot 可显式允许真实调用。</td>
+                    <td>用于前台拍照返回、观察场景后回答等具身感知流程。</td>
+                </tr>
+                <tr>
+                    <td>商店流程</td>
+                    <td><code>store_available_skus</code>、<code>store_submit_order</code>、<code>store_check_status</code>、<code>store_cancel_order</code></td>
+                    <td>模拟 SKU、订单 ID 和订单完成。</td>
+                    <td>覆盖“去小卖部买可乐再送到前台”这类跨域长流程。</td>
+                </tr>
+                <tr>
+                    <td>高德地图/周边查询</td>
+                    <td><code>amap_search_nearby</code>、<code>amap_walk_navigation</code>、<code>amap_search_and_walk_navigation</code></td>
+                    <td>fixture 或默认 POI，返回最近篮球场、卫生间、小卖部等。</td>
+                    <td>评估机器人外部位置理解与路线说明，而不依赖真实地图服务。</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <h3>沙盒评分信号</h3>
+        <p>沙盒结果不是单一 pass/fail，而是由序列、参数、禁用工具、最终文本、状态检查和行为检查组成。抽象地说，单个 case 的 loss 可写为：</p>
+        \[
+        \mathcal{L}_{case}
+        = w_s L_{seq}
+        + w_a L_{args}
+        + w_f L_{forbidden}
+        + w_t L_{text}
+        + w_x L_{state}
+        + w_b L_{behavior}
+        \]
+        <div class="formula-note">
+            <p>变量解释：\(L_{seq}\) 表示工具顺序错误，\(L_{args}\) 表示参数错误，\(L_{forbidden}\) 表示调用了 forbidden tools，\(L_{text}\) 表示 final answer 没有覆盖必要语义，\(L_{state}\) 和 \(L_{behavior}\) 来自虚拟状态与行为检查。实现映射：这些信号对应 <code>sandbox.py</code> 中的 trace、state timeline、behavior checks 与 summary loss；本地早期 eval 以 <code>max_loss</code> 和 pass rate 汇总。</p>
+        </div>
+
+        <h3>早期沙盒案例与结果</h3>
+        <table class="tight">
+            <thead>
+                <tr>
+                    <th>案例文件</th>
+                    <th>覆盖任务</th>
+                    <th>典型能力</th>
+                    <th>本地结果摘要</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><code>examples/agent_sandbox_cases.jsonl</code></td>
+                    <td>9 个基础任务</td>
+                    <td>买可乐送前台、前台拍照返回、天气、办公室导航、附近篮球场/卫生间、打断去会议室/天气/跳舞。</td>
+                    <td><code>qwen35b_summary.json</code>：9/9 pass，max_loss 0.175，平均延迟 3131.82ms。</td>
+                </tr>
+                <tr>
+                    <td><code>examples/agent_sandbox_cases_qwen122b.jsonl</code></td>
+                    <td>精炼 Qwen-122B 用例</td>
+                    <td>加入 point/state/behavior checks 与 deferred navigation。</td>
+                    <td>8/9 pass，失败集中在 front_desk_photo_return，max_loss 0.369167。</td>
+                </tr>
+                <tr>
+                    <td><code>examples/agent_sandbox_cases_xian10th_real.jsonl</code></td>
+                    <td>10 个西安十楼真实 fixture 任务</td>
+                    <td>更贴近真实机器人地图、点位、任务状态。</td>
+                    <td>10/10 pass，max_loss 0.175，平均延迟 1843.595ms。</td>
+                </tr>
+            </tbody>
+        </table>
+    </section>
+
+    <section id="timeline">
+        <h2>工作时间线（Timeline）</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>阶段</th>
+                    <th>核心问题</th>
+                    <th>动作</th>
+                    <th>为什么要进入下一阶段</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>0. 沙盒与朴素 eval</td>
+                    <td>先确认 agent 在项目工具环境里能否完成可控任务。</td>
+                    <td>构造 RLSandbox、fixture、早期 case suite；记录 trace/loss。</td>
+                    <td>eval 证明能测，但 base/大模型能力不等于可训练可部署，需要数据化。</td>
+                </tr>
+                <tr>
+                    <td>1. v1 LoRA SFT</td>
+                    <td>让 8B base model 学会 tool-call 格式、项目机器人任务和通用工具调用。</td>
+                    <td>收集 57,223 条 SFT，LoRA r=16，冻结 vision tower，300 steps。</td>
+                    <td>SFT 能提升格式与基础调用，但安全侧 effect、多步决策和 route 偏好仍弱。</td>
+                </tr>
+                <tr>
+                    <td>2. v1 GRPO-style continuation</td>
+                    <td>在没有稳定 online GRPO 栈时，先用 reward-shaped RL 数据继续训练。</td>
+                    <td>8,916 条 RL/GRPO 数据转成轨迹材料，merge SFT LoRA 后 fresh LoRA。</td>
+                    <td>项目/安全改善明显，但 browser 与 cross-source 退化，说明数据/奖励偏置太强。</td>
+                </tr>
+                <tr>
+                    <td>3. v2 language-only full-parameter + native tools</td>
+                    <td>修复协议不一致：prompt 手写工具 JSON 不等于真实 native tools。</td>
+                    <td>语言-only 数据、full language params、Qwen3-VL native <code>tools=tools</code>、online GRPO gen=8。</td>
+                    <td>v2 能稳定训练，但 reward 仍会奖励“格式像但参数错”的输出。</td>
+                </tr>
+                <tr>
+                    <td>4. Schema-aware reward</td>
+                    <td>让 reward 真正看 schema、关键字段、语义字段和域边界。</td>
+                    <td>按 tool schema 区分 critical/exact/semantic fields；引入 hard penalties。</td>
+                    <td>v3 大幅改善 browser/cross/project，但 OOD quarantine 暴露过度执行。</td>
+                </tr>
+                <tr>
+                    <td>5. Tool-restraint mix</td>
+                    <td>模型看到工具时过于想调用，需要学会“不该动手时不动手”。</td>
+                    <td>生成 1,200 条工具可见但 reference trajectory 为空的 restraint rows，并修 reward 边界。</td>
+                    <td>8B restraint 过度抑制安全 suite，说明“少调用”与“该调用时调用”要平衡。</td>
+                </tr>
+                <tr>
+                    <td>6. 32B SFT/GRPO</td>
+                    <td>验证更大模型是否能在同样数据下获得更好工具泛化和安全性。</td>
+                    <td>32B SFT 成功；32B GRPO 遇 parser/ZeRO-3/MACA 问题，最终比较 ckpt100/200。</td>
+                    <td>32B SFT 已很强；GRPO 收益小且稳定性成本高，最终偏向 ckpt100 或 SFT32B 做 shadow。</td>
+                </tr>
+            </tbody>
+        </table>
+    </section>
+
+    <section id="data">
+        <h2>数据收集与版本演进</h2>
+        <h3>数据设计原则</h3>
+        <p>训练数据不是简单拼接公开数据集，而是围绕项目目标做了任务族重加权与边界约束。设计目标可以写成混合分布：</p>
+        \[
+        p_{\text{train}}(x,y)
+        = \sum_{k=1}^{K} \alpha_k p_k(x,y),
+        \quad
+        \sum_{k=1}^{K}\alpha_k=1,\ \alpha_k \ge 0
+        \]
+        <div class="formula-note">
+            <p>变量解释：\(p_k\) 是第 \(k\) 个数据源或任务族，例如 project_robot、workflow_safety、core_tool_call、browser_deferred；\(\alpha_k\) 是采样/保留后的混合权重。实现映射：v1 报告记录了 project-aligned weights；v2 manifest 记录了按 source 和 tool_family 汇总的实际行数。</p>
+        </div>
+
+        <h3>v1 SFT 数据</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>来源</th>
+                    <th>总量</th>
+                    <th>用途</th>
+                    <th>为什么保留</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr><td>API-Bank</td><td>6,816</td><td>API/tool 对话</td><td>训练工具检索、调用和多步 API 对话。</td></tr>
+                <tr><td>APIBench</td><td>16,993</td><td>API 推荐/调用</td><td>补充大量 tool name 与参数模式。</td></tr>
+                <tr><td>ARL-SCOUT</td><td>4,726</td><td>机器人导航/人机对话</td><td>项目机器人任务的近域来源。</td></tr>
+                <tr><td>Agent-FLAN</td><td>232</td><td>通用 agent SFT</td><td>少量保留通用 agent 格式与负样例意识。</td></tr>
+                <tr><td>BFCL</td><td>2,305</td><td>function calling</td><td>补充标准函数调用评估分布。</td></tr>
+                <tr><td>Mind2Web</td><td>1,009</td><td>web agent</td><td>浏览器 deferred action 的来源之一。</td></tr>
+                <tr><td>Robo2VLM</td><td>5,000</td><td>通用视觉/机器人语言能力</td><td>v1 作为 general capability；低层 point/box/action-token 行被过滤。</td></tr>
+                <tr><td>ShortcutsBench</td><td>2,905</td><td>真实 API workflow</td><td>提供 workflow safety 与真实 API 序列。</td></tr>
+                <tr><td>ToolSandbox</td><td>25</td><td>stateful tool use</td><td>少量高质量安全/状态样例。</td></tr>
+                <tr><td>WebLINX</td><td>17,212</td><td>web navigation</td><td>browser_deferred 主体来源。</td></tr>
+            </tbody>
+        </table>
+        <p>v1 总量 57,223，train/dev/test = 51,467/2,902/2,854。任务族实际分布为 browser_deferred 18,221、core_tool_call 26,114、general_agent_sft 232、general_capability 5,000、project_robot 4,726、workflow_safety 2,930。v1 的关键取舍是 project_aligned 权重把 project_robot 与 workflow_safety 提高到 0.34 与 0.22，同时不把 browser deferred 混进 project robot sandbox。</p>
+
+        <h3>v1 GRPO/RL 数据</h3>
+        <p>v1 RL 数据总量 8,916，train/dev/test = 8,052/439/425。任务族如下：</p>
+        <table class="tight">
+            <thead><tr><th>任务族</th><th>行数</th><th>设计目的</th></tr></thead>
+            <tbody>
+                <tr><td>no_forbidden_side_effect</td><td>3,735</td><td>惩罚不该执行的副作用工具。</td></tr>
+                <tr><td>project_robot_task</td><td>2,748</td><td>强化机器人导航、状态、取消、语义导航等项目路径。</td></tr>
+                <tr><td>clarification_before_action</td><td>2,300</td><td>信息不足、风险较高时先澄清，而不是直接执行。</td></tr>
+                <tr><td>cancellation_compensation</td><td>120</td><td>取消/补偿行为。</td></tr>
+                <tr><td>bound_scope_respected</td><td>13</td><td>机器人/用户/作用域边界。</td></tr>
+            </tbody>
+        </table>
+
+        <h3>v2 language-only 数据改造</h3>
+        <p>v2 的核心改造不是“更多数据”而是“协议和模态边界更清楚”。本地 <code>language_only_data_report.md</code> 明确：移除或替换视觉输入，不使用 image/video tensors；LoRA 禁用；更新 full language parameters 并冻结 vision modules。这样做的原因是当前训练目标主要是工具协议与 agent 行为，而不是视觉感知本身。</p>
+        <table>
+            <thead>
+                <tr>
+                    <th>数据版本</th>
+                    <th>SFT 总量</th>
+                    <th>SFT train/dev/test</th>
+                    <th>GRPO 总量</th>
+                    <th>GRPO train/dev/test</th>
+                    <th>关键变化</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>v1</td>
+                    <td>57,223</td>
+                    <td>51,467 / 2,902 / 2,854</td>
+                    <td>8,916</td>
+                    <td>8,052 / 439 / 425</td>
+                    <td>LoRA SFT；Robo2VLM 5,000；工具协议较早期。</td>
+                </tr>
+                <tr>
+                    <td>v2 language-only full</td>
+                    <td>62,223</td>
+                    <td>55,967 / 3,164 / 3,092</td>
+                    <td>8,916</td>
+                    <td>8,052 / 439 / 425</td>
+                    <td>Robo2VLM 扩到 10,000，其中 5,000 为 language-only auxiliary；移除 5,000 个 SFT vision parts 和 180 个 eval vision parts。</td>
+                </tr>
+                <tr>
+                    <td>tool-restraint mix</td>
+                    <td>沿用 v2 SFT</td>
+                    <td>沿用 v2</td>
+                    <td>10,116 级别总池；train mix 9,252</td>
+                    <td>base train 8,052 + generated 1,200</td>
+                    <td>生成工具可见但 reference trajectory 为空的 rows，迫使模型学会澄清/拒绝/不调用。</td>
+                </tr>
+            </tbody>
+        </table>
+        <div class="note">
+            <p><strong>数据隔离。</strong>ToolACE 被排除在 SFT train 外，xLAM 未使用；AppWorld 只极小量进入 no-action/no-side-effect policy 行；WebLINX/Mind2Web 只作为 browser deferred，不混入项目机器人 sandbox。这个隔离是为了避免“看似提升泛化，实际污染项目工具协议”。</p>
+        </div>
+    </section>
+
+    <section id="eval">
+        <h2>评测构建与 Suite 解释</h2>
+        <p>评测的第一原则是“每个 suite 测一个行为边界”。如果把所有任务混在一起，一个总分无法解释浏览器退化、机器人提升、安全变差分别来自哪里。因此本项目把 eval 拆为 deterministic native tools suite 与 OOD probe suite。</p>
+
+        <h3>Deterministic / in-distribution suites</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>Suite</th>
+                    <th>样本数</th>
+                    <th>测什么</th>
+                    <th>为何存在</th>
+                    <th>主要指标</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><code>sft_tool_call_holdout</code></td>
+                    <td>1,333</td>
+                    <td>SFT 分布内 tool calling holdout。</td>
+                    <td>防止 RL 后训练把基本函数调用能力冲坏。</td>
+                    <td>valid、tool_acc、arg_exact、critical、semantic、coverage、forbidden。</td>
+                </tr>
+                <tr>
+                    <td><code>project_robot_sandbox_eval</code></td>
+                    <td>130</td>
+                    <td>AceAgent 机器人/沙盒近域任务。</td>
+                    <td>这是项目主目标：机器人任务要稳定且 scope 正确。</td>
+                    <td>tool_acc、critical_exact、semantic_match、scope、forbidden。</td>
+                </tr>
+                <tr>
+                    <td><code>safety_side_effect_eval</code></td>
+                    <td>289</td>
+                    <td>需要避免或谨慎执行副作用工具的任务。</td>
+                    <td>真实 agent 最大风险不是“不会做”，而是“做错了还执行”。</td>
+                    <td>forbidden、coverage、tool_acc、clarification/critical。</td>
+                </tr>
+                <tr>
+                    <td><code>browser_deferred_eval</code></td>
+                    <td>930</td>
+                    <td>WebLINX/Mind2Web 风格浏览器 deferred action。</td>
+                    <td>浏览器 UID/target 需要严格 grounding，不可语义放宽。</td>
+                    <td>tool_acc、coverage、hallucinated_tool_rate，browser uid/target strict。</td>
+                </tr>
+                <tr>
+                    <td><code>cross_source_generalization_eval</code></td>
+                    <td>1,820</td>
+                    <td>跨来源工具泛化。</td>
+                    <td>衡量是否只对项目机器人过拟合。</td>
+                    <td>valid、tool_acc、coverage、critical、semantic、mix。</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <h3>OOD probe suites</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>Suite</th>
+                    <th>测量边界</th>
+                    <th>解释</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><code>appworld_ood_api_policy_probe</code></td>
+                    <td>静态 API/policy probe</td>
+                    <td>不跑 AppWorld runner，只测模型在新 API/policy 下是否会调用 plausible tools 或产生 forbidden side effects。</td>
+                </tr>
+                <tr>
+                    <td><code>toolace_schema_given_probe</code></td>
+                    <td>给定新 schema 的工具泛化</td>
+                    <td>ToolACE 未进训练，用来测模型看到陌生 schema 时的 function calling 能力。</td>
+                </tr>
+                <tr>
+                    <td><code>toolace_schema_absent_probe</code></td>
+                    <td>没有 ToolACE schema 时是否乱猜工具</td>
+                    <td>正确行为应是澄清/拒绝，不应凭空调用未知工具。</td>
+                </tr>
+                <tr>
+                    <td><code>quarantine_safety_probe</code></td>
+                    <td>隔离安全负样例</td>
+                    <td>测 no-action、empty trajectory、policy violation、clarification 任务是否诱发过度执行。</td>
+                </tr>
+                <tr>
+                    <td><code>robovlm_point_general_probe</code></td>
+                    <td>language-only 机器人/VLM 辅助能力</td>
+                    <td>只测文本化 heldout，不代表真实视觉能力。</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <h3>评测指标数学定义</h3>
+        <p>对一个 suite \(D=\{(x_i, y_i)\}_{i=1}^{N}\)，工具名准确率可写为：</p>
+        \[
+        \mathrm{ToolAcc}
+        =
+        \frac{1}{N}\sum_{i=1}^{N}
+        \mathbf{1}\left[
+        \mathrm{name}(\hat{c}_i)=\mathrm{name}(c_i^\star)
+        \right]
+        \]
+        <div class="formula-note">
+            <p>变量解释：\(x_i\) 是第 \(i\) 个 prompt，\(y_i\) 是 gold trajectory，\(\hat{c}_i\) 是模型预测的工具调用，\(c_i^\star\) 是参考工具调用。实现映射：native tools eval 报告中的 <code>tool_acc</code> 对应该类工具名匹配，multi-step 时结合 required coverage 评价。</p>
+        </div>
+        <p>关键字段准确率只看影响执行安全和 grounding 的字段：</p>
+        \[
+        \mathrm{CriticalExact}
+        =
+        \frac{
+        \sum_i \sum_{f\in \mathcal{C}(t_i)}
+        \mathbf{1}\left[\hat{a}_{i,f}=a^\star_{i,f}\right]
+        }{
+        \sum_i |\mathcal{C}(t_i)| + \epsilon
+        }
+        \]
+        <div class="formula-note">
+            <p>变量解释：\(\mathcal{C}(t_i)\) 是工具 \(t_i\) 的 critical fields，例如 <code>robotId</code>、<code>taskId</code>、订单 ID、SKU、browser <code>uid/target</code>、坐标和枚举字段；\(\epsilon\) 防止空分母。实现映射：<code>schema_aware_reward.py</code> 与 schema-aware eval 对这些字段执行严格或受控容忍匹配。</p>
+        </div>
+    </section>
+
+    <section id="math">
+        <h2>数学形式与训练目标</h2>
+        <h3>SFT 目标</h3>
+        <p>令 \(x\) 表示用户消息、系统提示、历史和工具 schema 组成的输入上下文，\(y=(y_1,\ldots,y_T)\) 表示目标输出 token 序列。SFT 最小化 next-token 负对数似然：</p>
+        \[
+        \mathcal{L}_{\mathrm{SFT}}(\theta)
+        =
+        -\mathbb{E}_{(x,y)\sim D_{\mathrm{SFT}}}
+        \left[
+        \sum_{t=1}^{T}
+        m_t \log \pi_\theta(y_t\mid x,y_{1:t-1})
+        \right]
+        \]
+        <div class="formula-note">
+            <p>变量解释：\(\theta\) 是模型参数，\(\pi_\theta\) 是策略模型，\(m_t\) 是 loss mask。实现映射：对工具调用训练，assistant/tool-call token 计入 loss，用户/system/tool schema 本身通常作为条件上下文；v1 用 LoRA 更新部分参数，v2/32B 阶段更新 full language parameters 并冻结 vision modules。</p>
+        </div>
+
+        <h3>GRPO 组相对优势</h3>
+        <p>对同一 prompt \(x\)，采样 \(G\) 个候选输出 \(y^{(1)},\ldots,y^{(G)}\)，用奖励函数 \(r_i=R(x,y^{(i)})\) 打分。组内标准化 advantage 为：</p>
+        \[
+        A_i
+        =
+        \frac{r_i-\mu_r}{\sigma_r+\epsilon},
+        \quad
+        \mu_r=\frac{1}{G}\sum_{j=1}^{G}r_j,\quad
+        \sigma_r=\sqrt{\frac{1}{G}\sum_{j=1}^{G}(r_j-\mu_r)^2}
+        \]
+        <div class="formula-note">
+            <p>变量解释：\(G\) 是每个 prompt 的生成数，本项目 8B online GRPO 使用 <code>num_generations=8</code>；\(\mu_r\)、\(\sigma_r\) 是组内均值和标准差；\(\epsilon\) 防止除零。直觉：同一个任务下，不看绝对分，而看哪个候选比同组候选更好。实现映射：训练脚本按 group reward 生成 advantage，再做 PPO/GRPO 风格策略更新。</p>
+        </div>
+
+        <h3>带 KL 约束的 GRPO surrogate</h3>
+        <p>本项目 v2 GRPO 从 SFT checkpoint 初始化，并使用低权重 reference KL。一个简化的 token-level 目标可写为：</p>
+        \[
+        \mathcal{L}_{\mathrm{GRPO}}(\theta)
+        =
+        -\mathbb{E}
+        \left[
+        \sum_{i=1}^{G}\sum_{t}
+        \min\left(
+        \rho_{i,t} A_i,
+        \mathrm{clip}(\rho_{i,t},1-\epsilon_c,1+\epsilon_c)A_i
+        \right)
+        -
+        \beta D_{\mathrm{KL}}\left(
+        \pi_\theta(\cdot\mid s_{i,t})
+        \,\|\, \pi_{\mathrm{ref}}(\cdot\mid s_{i,t})
+        \right)
+        \right]
+        \]
+        <div class="formula-note">
+            <p>变量解释：\(\rho_{i,t}=\frac{\pi_\theta(y^{(i)}_t\mid s_{i,t})}{\pi_{\mathrm{old}}(y^{(i)}_t\mid s_{i,t})}\) 是重要性比率，\(\epsilon_c\) 是 clip 范围，\(\beta\) 是 KL 权重，\(\pi_{\mathrm{ref}}\) 是 SFT reference policy。实现映射：v2 报告记录 KL beta = 0.003、reward scale = 0.5，目的是在提升 reward 的同时不要偏离 SFT 工具协议太远。</p>
+        </div>
+
+        <h3>Schema-aware 奖励</h3>
+        <p>最终 reward 不是单一匹配，而是多个组件加权加 hard penalties：</p>
+        \[
+        R(x,y)
+        =
+        \sum_{k=1}^{K} w_k\,c_k(x,y)
+        -
+        \sum_{\ell=1}^{L}\lambda_\ell\,p_\ell(x,y)
+        \]
+        <div class="formula-note">
+            <p>变量解释：\(c_k\) 包括工具名、顺序、coverage、critical argument、semantic argument、final contains、state success、scope 等正向组件；\(p_\ell\) 包括 forbidden tool、执行工具误调用、浏览器/项目工具混用、缺少必需参数、约束任务中调用工具等惩罚。实现映射：<code>schema_aware_reward.py</code> 按 AceAgent <code>server/tools/*.py</code> schema 解析并评分。</p>
+        </div>
+    </section>
+
+    <section id="pipeline">
+        <h2>Pipeline 与伪代码</h2>
+        <h3>沙盒评测循环</h3>
+        <pre><code class="language-python">def run_sandbox_case(case, agent, fixtures):
+    # 1. Load fixture-backed robot/map/store state.
+    state = SandboxState(fixtures)
+
+    # 2. Replace real side-effect tools with a proxy.
+    #    Query tools may return fixtures; execution tools create simulated tasks.
+    tool_proxy = SandboxToolProxy(state)
+
+    # 3. Run each user turn and collect model tool calls, tool results, and final text.
+    for turn in case.turns:
+        result = agent.run(turn.prompt, tools=tool_proxy.tools)
+        state.append_trace(result.tool_calls, result.final_text)
+
+    # 4. Compare trace against expected tool sequence, arguments, state, and behavior checks.
+    loss = score_trace(
+        trace=state.trace,
+        expected=case.expected,
+        weights=case.scoring_weights,
+    )
+
+    # 5. Emit recoverable artifacts for later training/eval design.
+    return {"passed": loss &lt;= case.max_loss, "loss": loss, "trace": state.trace}</code></pre>
+
+        <h3>SFT 数据构造</h3>
+        <pre><code class="language-python">def build_sft_rows(raw_sources, aceagent_schema):
+    rows = []
+    for source in raw_sources:
+        # 1. Normalize each dataset into OpenAI-compatible messages + tools.
+        normalized = normalize_source(source)
+
+        # 2. Map project robot tasks to AceAgent tool schemas.
+        #    Browser rows stay browser_deferred and are not mixed into robot suites.
+        converted = convert_to_native_tool_format(normalized, aceagent_schema)
+
+        # 3. Remove duplicate goal/trajectory pairs and project-sandbox overlaps.
+        deduped = dedupe(converted, keys=["normalized_goal", "trajectory"])
+
+        # 4. Drop unsupported low-level vision/action-token rows when training language-only.
+        rows.extend(filter_by_policy(deduped))
+    return split_train_dev_test(rows)</code></pre>
+
+        <h3>Online GRPO 训练步骤</h3>
+        <pre><code class="language-python">def grpo_step(prompt_batch, policy, ref_policy, reward_fn, G=8):
+    # 1. Sample G candidate completions per prompt under native tools protocol.
+    groups = policy.generate(prompt_batch, num_generations=G, tools=aceagent_tools)
+
+    # 2. Parse model outputs robustly, including dict, JSON string, and malformed calls.
+    parsed_groups = [parse_tool_calls(y) for y in groups]
+
+    # 3. Score each candidate with schema-aware reward.
+    rewards = [reward_fn(prompt, y, calls) for prompt, y, calls in parsed_groups]
+
+    # 4. Normalize rewards inside each group to get relative advantages.
+    advantages = group_normalize(rewards)
+
+    # 5. Compute clipped policy-gradient loss plus small reference KL.
+    loss = clipped_surrogate(policy, groups, advantages) + beta * kl(policy, ref_policy)
+
+    # 6. Backpropagate through completion tokens only; log reward components for audit.
+    loss.backward()
+    optimizer.step()
+    optimizer.zero_grad()
+    return loss, rewards</code></pre>
+
+        <h3>Native tools eval</h3>
+        <pre><code class="language-python">def native_tools_eval(model, suite, aceagent_tools):
+    metrics = MetricAccumulator()
+    for item in suite:
+        # 1. Render with Qwen3-VL native tools=tools, not a hand-written JSON prompt.
+        output = model.chat(messages=item.messages, tools=aceagent_tools)
+
+        # 2. Parse tool calls and final text with the same parser used by reward.
+        calls = parse_tool_calls(output)
+
+        # 3. Score exact fields, semantic fields, coverage, forbidden tools, and scope.
+        score = schema_aware_score(calls, item.reference_trajectory, item.policy)
+        metrics.update(score)
+    return metrics.summary()</code></pre>
+    </section>
+
+    <section id="runs">
+        <h2>逐阶段训练与评测记录</h2>
+        <h3>Run 总账</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>阶段</th>
+                    <th>Run / artifact</th>
+                    <th>模型</th>
+                    <th>数据</th>
+                    <th>关键配置</th>
+                    <th>结果</th>
+                    <th>结论</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>早期 Sandbox Eval</td>
+                    <td><code>data/agent_sandbox/runs/*summary.json</code></td>
+                    <td>Qwen35B / Qwen122B 等服务端模型</td>
+                    <td>9-10 个手工/fixture cases</td>
+                    <td>fixture-backed query + simulated execution</td>
+                    <td>Qwen35B 9/9，Qwen122B 8/9，xian10th real 10/10</td>
+                    <td>证明 eval harness 可用，但还不是训练闭环。</td>
+                </tr>
+                <tr>
+                    <td>v1 LoRA SFT</td>
+                    <td><code>sft_20260616_144429</code></td>
+                    <td>Qwen3-VL-8B-Instruct</td>
+                    <td>57,223 SFT rows</td>
+                    <td>LoRA r=16 alpha=32，8 GPUs，bs16/GPU，max_seq 1024，freeze vision，flash-attn</td>
+                    <td>300/300 steps，train_loss 0.50627，runtime 1892.95s</td>
+                    <td>建立基础工具格式与项目任务能力。</td>
+                </tr>
+                <tr>
+                    <td>v1 GRPO-style continuation</td>
+                    <td><code>grpo_20260616_190455</code></td>
+                    <td>v1 merged SFT base + fresh LoRA</td>
+                    <td>8,916 RL/GRPO rows</td>
+                    <td>非真正 online GRPO；reward-shaped continuation，200 steps</td>
+                    <td>train_loss 0.13707，安全/项目提升，browser/cross 退化</td>
+                    <td>验证 RL 数据有效，也暴露 reward/data 偏置。</td>
+                </tr>
+                <tr>
+                    <td>v2 SFT</td>
+                    <td><code>sft_native_schemaaware_20260617_162048</code></td>
+                    <td>Qwen3-VL-8B-Instruct</td>
+                    <td>62,223 language-only SFT rows</td>
+                    <td>full language params，freeze vision，native tools template，500 steps，lr 5e-6</td>
+                    <td>train_loss 0.4350，runtime 2231.7s，avg mem 47.52 GiB/card</td>
+                    <td>修复协议与参数更新边界，为 online GRPO 做初始化。</td>
+                </tr>
+                <tr>
+                    <td>v2/v3 Online GRPO</td>
+                    <td><code>grpo_native_schemaaware_20260617_170451</code></td>
+                    <td>v2 SFT init</td>
+                    <td>8,916 GRPO rows</td>
+                    <td>gen=8，full language，lr 5e-7，reward scale 0.5，KL beta 0.003，1007 steps</td>
+                    <td>train_loss -0.000467，runtime 9231.1s，无 NaN/OOM/traceback</td>
+                    <td>native tools + schema-aware reward 达到 8B 最强主线。</td>
+                </tr>
+                <tr>
+                    <td>Tool-restraint 8B</td>
+                    <td><code>grpo_tool_restraint_8b_*</code> / eval <code>native_tool_restraint_8b</code></td>
+                    <td>8B v3 branch</td>
+                    <td>9,252 train mix</td>
+                    <td>1,200 generated restraint rows，reward boundary fix</td>
+                    <td>project 1.0，browser 0.7323，cross 0.7643，但 safety tool_acc 0.0311</td>
+                    <td>学会 restraint，但过度抑制“该调用时调用”。</td>
+                </tr>
+                <tr>
+                    <td>32B SFT</td>
+                    <td><code>sft_tool_restraint_32b_20260618_075032_cpuoffload_pretargs</code></td>
+                    <td>Qwen3-VL-32B</td>
+                    <td>v2 + restraint 设计</td>
+                    <td>32B full language SFT，CPU offload</td>
+                    <td>sft holdout tool_acc 0.9542，project 1.0，safety 0.4083，browser 0.7462，cross 0.8368</td>
+                    <td>32B SFT 是稳健广谱 checkpoint。</td>
+                </tr>
+                <tr>
+                    <td>32B GRPO</td>
+                    <td><code>grpo32b_full_p1196_c256_g8_mbs3_...</code> ckpt100/200</td>
+                    <td>32B SFT init</td>
+                    <td>GRPO online mix</td>
+                    <td>gen=8，mbs3/4 探索，parser fix，ZeRO-3 CPU offload</td>
+                    <td>ckpt100 project 1.0，sft tool_acc 0.956，safety 0.3875，cross 0.827；OOD quarantine forbidden 0.0389</td>
+                    <td>ckpt100 安全优于 ckpt200；GRPO 收益小于工程成本。</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <h3>为什么每一阶段都必要</h3>
+        <p>从阶段依赖看，v1 SFT 解决“格式与初始能力”，v1 GRPO-style 解决“是否存在可用的 reward 信号”，v2 解决“真实 native tools 协议和 full parameter 容量”，v3 解决“reward 是否真正理解 schema”，tool-restraint 解决“工具可见时的过度执行”，32B 解决“模型规模是否改变收益曲线”。每一步都不是重复训练，而是在上一阶段暴露的失败模式上做最小闭环。</p>
+    </section>
+
+    <section id="reward">
+        <h2>GRPO 奖励设计</h2>
+        <h3>为什么 v1 reward 不够</h3>
+        <p>v1 continuation 的 eval 显示安全 suite 大幅提升，但 browser_deferred 与 cross_source 退化。这意味着 reward 和训练数据把策略推向“项目/安全优先”的局部最优，却没有保护浏览器 UID/target grounding 和跨源泛化。</p>
+        <table>
+            <thead>
+                <tr>
+                    <th>v1 suite</th>
+                    <th>tool acc pre -> post</th>
+                    <th>coverage pre -> post</th>
+                    <th>解释</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr><td>sft_tool_call_holdout</td><td>0.9688 -> 0.9688</td><td>0.9844 -> 1.0000</td><td>基础能力保持。</td></tr>
+                <tr><td>project_robot_sandbox_eval</td><td>1.0000 -> 1.0000</td><td>1.0000 -> 1.0000</td><td>项目近域满分。</td></tr>
+                <tr><td>safety_side_effect_eval</td><td>0.3672 -> 0.7188</td><td>0.4531 -> 0.9922</td><td>RL 数据对安全/流程有效。</td></tr>
+                <tr><td>browser_deferred_eval</td><td>0.7188 -> 0.3125</td><td>0.7344 -> 0.3359</td><td>浏览器退化，说明未被 reward/data 保护。</td></tr>
+                <tr><td>cross_source_generalization_eval</td><td>0.8594 -> 0.7109</td><td>0.8828 -> 0.7578</td><td>跨源泛化被项目/安全偏置拉低。</td></tr>
+            </tbody>
+        </table>
+
+        <h3>Schema-aware reward 的关键改进</h3>
+        <p><code>grpo_reward_schema_aware_comparison.md</code> 在 64,448 个样本上比较旧 reward 与新 reward：旧均值 0.8007，新均值 0.3908，hard_penalty 比例 0.3240。这不是变差，而是发现旧 reward 过于宽松，尤其会奖励“没有 forbidden 但也没做正确工具调用”的输出。</p>
+        <table class="tight">
+            <thead><tr><th>任务族</th><th>old_mean</th><th>new_mean</th><th>含义</th></tr></thead>
+            <tbody>
+                <tr><td>bound_scope_respected</td><td>0.8376</td><td>0.8177</td><td>scope 类任务基本一致。</td></tr>
+                <tr><td>cancellation_compensation</td><td>0.4261</td><td>-0.3739</td><td>旧 reward 没充分惩罚取消/补偿错误。</td></tr>
+                <tr><td>clarification_before_action</td><td>0.9917</td><td>0.9772</td><td>澄清任务仍高，但边界更严格。</td></tr>
+                <tr><td>no_forbidden_side_effect</td><td>0.8837</td><td>0.7110</td><td>只不犯禁不再足够，还要正确完成任务。</td></tr>
+                <tr><td>project_robot_task</td><td>0.5463</td><td>-0.4973</td><td>项目机器人任务暴露大量字段/schema 不匹配。</td></tr>
+            </tbody>
+        </table>
+
+        <h3>Tool-restraint reward 边界</h3>
+        <p>tool-restraint mix 的 generated rows 具有一个刻意设计：工具 schema 可见，但正确行为是<strong>不调用工具</strong>，而是澄清、拒绝或说明无法执行。manifest 显示 base train 8,052，generated 1,200，mixed 9,252；生成来源包括 WorkBench 108、ToolSandbox 696、ShortcutsBench 216、tau2-bench 180。</p>
+        <p>边界修复前，真实 <code>clarification_before_action</code> rows 如果 reference trajectory 存在，执行工具调用仍可能拿到正向 restraint component。修复后，clarification rows 一律要求无 structured/latent tool call，并扩展 execution verb 检测。检查结果：good_score_mean 1.0000，bad_score_mean -5.3129，bad_cases_not_penalized 0。</p>
+    </section>
+
+    <section id="matrix">
+        <h2>8B/32B 训练组合矩阵</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>组合</th>
+                    <th>设计目的</th>
+                    <th>训练模式</th>
+                    <th>为什么这样设计</th>
+                    <th>结果判断</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>8B SFT v1 LoRA</td>
+                    <td>低成本验证数据和格式</td>
+                    <td>LoRA + freeze vision</td>
+                    <td>先在资源可控的路径上证明数据转换和 tool-call 格式有效。</td>
+                    <td>成功建立基线，但不足以覆盖安全/RL 偏好。</td>
+                </tr>
+                <tr>
+                    <td>8B v1 GRPO-style</td>
+                    <td>验证 reward-shaped 数据是否能改善 project/safety</td>
+                    <td>merged SFT + fresh LoRA continuation</td>
+                    <td>当时 native online GRPO 路径不稳定，用 known-good Trainer path 先验证方向。</td>
+                    <td>项目/安全提升，browser/cross 退化。</td>
+                </tr>
+                <tr>
+                    <td>8B v2 full SFT</td>
+                    <td>对齐真实 native tools 协议</td>
+                    <td>full language parameters + freeze vision</td>
+                    <td>LoRA/旧 prompt 协议容易把能力学在错误接口上；full language 提供更强适配容量。</td>
+                    <td>稳定完成，成为 online GRPO init。</td>
+                </tr>
+                <tr>
+                    <td>8B v3 full GRPO schema-aware</td>
+                    <td>优化 schema-aware 行为偏好</td>
+                    <td>online GRPO，gen=8，KL to SFT</td>
+                    <td>同 prompt 多候选比较适合训练“哪个工具/参数/拒绝更好”。</td>
+                    <td>8B 主线最佳：project 1.0，browser 0.7484，cross 0.8582。</td>
+                </tr>
+                <tr>
+                    <td>8B tool-restraint GRPO</td>
+                    <td>抑制过度执行</td>
+                    <td>GRPO mix + no-tool rows</td>
+                    <td>OOD quarantine 暴露“看到工具就行动”的倾向，需要显式训练不调用。</td>
+                    <td>项目/浏览器可接受，但 safety suite 过度抑制，不能直接作为主模型。</td>
+                </tr>
+                <tr>
+                    <td>32B base eval</td>
+                    <td>确认大 base 是否自然更会 native tools</td>
+                    <td>无训练，仅 eval</td>
+                    <td>大模型不一定默认懂项目 schema，必须实测。</td>
+                    <td>base 32B native tools 很弱：sft tool_acc 0.3781，cross 0.2379。</td>
+                </tr>
+                <tr>
+                    <td>32B SFT</td>
+                    <td>放大 SFT 数据收益</td>
+                    <td>full language SFT + CPU offload</td>
+                    <td>验证更大参数是否改善 strict schema 与跨源泛化。</td>
+                    <td>强且稳：project 1.0，browser 0.7462，cross 0.8368，safety 0.4083。</td>
+                </tr>
+                <tr>
+                    <td>32B GRPO ckpt100/200</td>
+                    <td>验证大模型 RL 额外收益</td>
+                    <td>online GRPO gen=8，ckpt100/200 eval ladder</td>
+                    <td>32B 可能在 RL 后获得更好安全/OOD，但硬件和 parser 成本高。</td>
+                    <td>收益有限；ckpt100 安全/OOD 优于 ckpt200，建议保守选择 ckpt100 或 32B SFT。</td>
+                </tr>
+            </tbody>
+        </table>
+    </section>
+
+    <section id="results">
+        <h2>结果分析与收益归因</h2>
+        <h3>主线 native tools 结果</h3>
+        <table class="tight">
+            <thead>
+                <tr>
+                    <th>模型</th>
+                    <th>SFT tool</th>
+                    <th>Project tool</th>
+                    <th>Safety tool</th>
+                    <th>Browser tool</th>
+                    <th>Cross tool</th>
+                    <th>关键解读</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr><td>base_8b</td><td>0.6564</td><td>0.7692</td><td>0.2284</td><td>0.0484</td><td>0.4104</td><td>具备部分工具格式，但 browser/安全很弱。</td></tr>
+                <tr><td>v1_lora_grpo</td><td>0.9407</td><td>0.4462</td><td>0.3806</td><td>0.1849</td><td>0.5769</td><td>旧协议 checkpoint 在 native tools 下项目退化，说明协议迁移不可忽略。</td></tr>
+                <tr><td>v2_full_grpo</td><td>0.9460</td><td>0.9923</td><td>0.2872</td><td>0.2484</td><td>0.6291</td><td>native/full 参数修复 project，但 browser/safety 仍弱。</td></tr>
+                <tr><td>v3_full_grpo_schemaaware</td><td>0.9527</td><td>1.0000</td><td>0.4429</td><td>0.7484</td><td>0.8582</td><td>schema-aware reward 是 8B 最关键收益来源。</td></tr>
+                <tr><td>tool_restraint_8b</td><td>0.7127</td><td>1.0000</td><td>0.0311</td><td>0.7323</td><td>0.7643</td><td>过度 restraint，普通安全多步调用被抑制。</td></tr>
+                <tr><td>base_32b</td><td>0.3781</td><td>0.5923</td><td>0.2180</td><td>0.0419</td><td>0.2379</td><td>大 base 不天然等于 native tools 强。</td></tr>
+                <tr><td>32B SFT</td><td>0.9542</td><td>1.0000</td><td>0.4083</td><td>0.7462</td><td>0.8368</td><td>SFT 数据对 32B 充分有效，接近/超过 8B v3 部分指标。</td></tr>
+                <tr><td>32B GRPO ckpt100</td><td>0.9560</td><td>1.0000</td><td>0.3875</td><td>0.7462</td><td>0.8270</td><td>较 32B SFT 收益不明显，安全 D 略降，但 OOD quarantine 更好。</td></tr>
+            </tbody>
+        </table>
+
+        <h3>8B 收益分析</h3>
+        <p>8B 的收益主要来自两个阶段。第一，SFT 把 tool-call holdout 从 base 的 0.6564 拉到 0.94+ 级别，这是协议学习收益。第二，schema-aware GRPO 把 project 从 0.9923 提到 1.0，并把 browser 从 0.2484 提到 0.7484、cross 从 0.6291 提到 0.8582，这是 reward 对关键字段、semantic fields 和 domain mixing 的校正收益。</p>
+        <p>最不符合期望的是 safety：v3 safety tool_acc 0.4429、coverage 0.4913，虽然 forbidden 为 0，但多步安全任务仍常漏步骤。例如 tau2 telecom 任务 gold 需要 5 步，模型可能只调用 <code>enable_roaming</code> 或 <code>toggle_data</code> 一步。这说明“避免副作用”和“完成必要修复序列”之间仍缺中间 credit assignment。</p>
+
+        <h3>32B 收益分析</h3>
+        <p>32B base 在 native tools 下反而弱，说明 Qwen3-VL 32B 的通用能力不能自动转化为本地 AceAgent schema 能力。32B SFT 后出现最大跳跃：sft tool_acc 0.3781 -> 0.9542，project 0.5923 -> 1.0，browser 0.0419 -> 0.7462，cross 0.2379 -> 0.8368。这个结果说明数据和协议对齐比参数规模本身更重要。</p>
+        <p>32B GRPO ckpt100/ckpt200 的 D-suite 差异很小，ckpt100 安全 tool_acc 0.3875、ckpt200 0.3737；cross ckpt100 0.8270、ckpt200 0.8280。OOD quarantine 上 ckpt100 明显优于 ckpt200：execution_when_should_refuse 0.0400 vs 0.3340，forbidden 0.0389 vs 0.3330。因此如果选 32B GRPO，应偏向 ckpt100，而不是“步数更多”的 ckpt200。</p>
+
+        <h3>OOD 结果</h3>
+        <table class="tight">
+            <thead>
+                <tr>
+                    <th>Suite</th>
+                    <th>8B v3 关键信号</th>
+                    <th>32B SFT/GRPO 关键信号</th>
+                    <th>结论</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>ToolACE schema_given</td>
+                    <td>tool_acc 0.7166，优于 v2 0.4918</td>
+                    <td>32B SFT 0.7270，ckpt100 0.7230</td>
+                    <td>schema-aware reward 改善陌生 schema 泛化，但仍低于 base_32B 0.7550。</td>
+                </tr>
+                <tr>
+                    <td>Quarantine safety</td>
+                    <td>v3 forbidden 0.3504，execution 0.3504</td>
+                    <td>32B SFT forbidden 0.1998；ckpt100 forbidden 0.0389</td>
+                    <td>8B v3 不能扩展 shadow；32B ckpt100 在 quarantine 安全更可取。</td>
+                </tr>
+                <tr>
+                    <td>RoboVLM point general</td>
+                    <td>exact 0.6900</td>
+                    <td>32B SFT 0.6700，ckpt100 0.6650</td>
+                    <td>language-only 保留了文本化能力，但不证明真实视觉感知。</td>
+                </tr>
+                <tr>
+                    <td>AppWorld policy</td>
+                    <td>v3 forbidden 0.2896</td>
+                    <td>32B SFT forbidden 0.0014，ckpt100 0.0014，ckpt200 0.1530</td>
+                    <td>ckpt100/SFT32B 更安全；ckpt200 有训练后期漂移。</td>
+                </tr>
+            </tbody>
+        </table>
+    </section>
+
+    <section id="debug">
+        <h2>困难、修复与恢复清单</h2>
+        <h3>主要困难与解决</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>困难</th>
+                    <th>症状</th>
+                    <th>根因</th>
+                    <th>解决方式</th>
+                    <th>残余风险</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>SFT OOM / DeepSpeed hang</td>
+                    <td>full-param ZeRO2 hang，LoRA 无 GC bs16/12/8 OOM。</td>
+                    <td>显存与分布式配置不匹配。</td>
+                    <td>LoRA + gradient checkpointing + freeze vision + flash-attn + bs16/GPU。</td>
+                    <td>v1 只是 LoRA，无法完全代表 full-param 行为。</td>
+                </tr>
+                <tr>
+                    <td>v1 GRPO implementation 不稳定</td>
+                    <td>GPU 占用但 0% util，无 step；PeftModel + DeepSpeed/MACA hang。</td>
+                    <td>adapter continuation 与分布式栈兼容性差。</td>
+                    <td>先 merge SFT LoRA 到 base，再 fresh LoRA 训练 reward-shaped 数据。</td>
+                    <td>严格说不是 online GRPO，只是 GRPO-style continuation。</td>
+                </tr>
+                <tr>
+                    <td>协议不一致</td>
+                    <td>v1 checkpoint 在 native tools eval 下 project 只有 0.4462。</td>
+                    <td>旧训练协议与 Qwen3-VL native <code>tools=tools</code> 不一致。</td>
+                    <td>v2 改 native tools template 和 schema source。</td>
+                    <td>必须持续从 <code>server/tools/registry.py</code> 自动同步 schema。</td>
+                </tr>
+                <tr>
+                    <td>Reward hacking</td>
+                    <td>旧 reward 均值很高，但新 schema-aware 打分大量下降。</td>
+                    <td>旧 reward 过度奖励 no-forbidden、final text，低估 tool/arg 错误。</td>
+                    <td>引入 critical fields、semantic fields、coverage、hard penalties。</td>
+                    <td>semantic scoring 依赖 embedding/backend，需版本锁定。</td>
+                </tr>
+                <tr>
+                    <td>Tool restraint 过度抑制</td>
+                    <td>8B restraint safety tool_acc 降到 0.0311。</td>
+                    <td>no-tool 负样例太强，模型把“安全”学成“不调用”。</td>
+                    <td>修 reward 边界，记录不把 8B restraint 作为主模型。</td>
+                    <td>后续需要正负安全轨迹平衡和 step-level credit。</td>
+                </tr>
+                <tr>
+                    <td>32B parser bug</td>
+                    <td>GRPO step ~259 报 <code>AttributeError: 'str' object has no attribute 'get'</code>。</td>
+                    <td>模型输出中 <code>function</code> 可能是字符串，parser 假定 dict。</td>
+                    <td>parser 支持 dict、JSON string、plain/malformed，malformed 走惩罚。</td>
+                    <td>parser 必须和 eval/reward 共享，避免 train/eval 不一致。</td>
+                </tr>
+                <tr>
+                    <td>32B ZeRO-3/MACA memory handle</td>
+                    <td>mbs4 restart 在 grad norm/backward 创建 20MiB memory handle 失败。</td>
+                    <td>ZeRO-3 CPU offload 与 MACA 内存句柄限制。</td>
+                    <td>bucket5m、no-grad-clip 均未解；结论是 mbs4 不可用，回退 mbs3/2。</td>
+                    <td>32B GRPO 训练成本高，checkpoint selection 应保守。</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <h3>恢复工作所需清单</h3>
+        <ol>
+            <li>从 <code>remote_training_pipeline_v2/manifests/latest_sft_run.json</code>、<code>latest_grpo_run.json</code>、<code>latest_32b_eval_ladder.json</code> 确认最新 run 指向。</li>
+            <li>确认 eval schema 来自 <code>remote_training_pipeline_v2/eval/native_tools_v1/schema_source/server/tools/</code>，并与当前 <code>server/tools/registry.py</code> diff。</li>
+            <li>重跑 eval 时固定 native tools protocol，确保报告中出现 <code>&lt;tools&gt;</code> 而非 <code>Available tools JSON</code>。</li>
+            <li>若恢复 32B GRPO，从 ckpt200 model-only 权重启动时加载 processor/tokenizer 自 SFT model path，不尝试 Trainer/DeepSpeed optimizer resume。</li>
+            <li>GRPO parser 必须保留 2026-06-21 修复：<code>function</code>/<code>function_call</code> 可为 dict、JSON string、plain string 或 malformed。</li>
+            <li>任何生产 shadow 前，先跑 deterministic five suites + OOD quarantine；安全 suite 未过门槛时禁用 side-effect execution。</li>
+        </ol>
+    </section>
+
+    <section id="boundary">
+        <h2>公源/本地设计边界</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>类别</th>
+                    <th>内容</th>
+                    <th>边界说明</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>公有设计 / 上游公开流程</td>
+                    <td>GRPO、PPO-style clipped surrogate、Qwen3-VL native tools、PydanticAI function tools、公开数据集 API-Bank/BFCL/WebLINX 等。</td>
+                    <td>方法概念来自论文/官方文档；本项目使用并工程化适配。</td>
+                </tr>
+                <tr>
+                    <td>本地证据</td>
+                    <td>RLSandbox 状态机、AceAgent tool schema、v1/v2 数据 manifest、schema-aware reward、native eval、32B parser fix 与 eval ladder。</td>
+                    <td>这些是本项目仓库中的实现与实验记录，可从本地路径追溯。</td>
+                </tr>
+                <tr>
+                    <td>本地推断</td>
+                    <td>“v1 browser 退化来自 GRPO 数据偏项目/安全”“32B ckpt200 后期安全漂移”等。</td>
+                    <td>由指标差异和数据构成推断，报告中按推断而非直接事实表述。</td>
+                </tr>
+                <tr>
+                    <td>未核实/限制</td>
+                    <td>完整 loss 曲线、远端原始 rollout 日志、真实机器人长时 shadow 表现。</td>
+                    <td>本地 report 有 summary，但缺完整线上运行闭环；不能声称已可生产自主执行。</td>
+                </tr>
+            </tbody>
+        </table>
+    </section>
+
+    <section id="comparison">
+        <h2>方法对比与选择建议</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>候选模型</th>
+                    <th>优势</th>
+                    <th>短板</th>
+                    <th>建议用途</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>8B v3 full GRPO schema-aware</td>
+                    <td>项目机器人满分，browser/cross 大幅改善，训练成本低于 32B。</td>
+                    <td>OOD quarantine 安全差，safety 多步 coverage 仍弱。</td>
+                    <td>可做受限 shadow，side-effect tools disabled/mocked。</td>
+                </tr>
+                <tr>
+                    <td>8B tool-restraint</td>
+                    <td>不乱执行能力更强，项目仍满分。</td>
+                    <td>safety ordinary tool calling collapse。</td>
+                    <td>不建议主用；可作为 no-action/refusal behavior 的对照模型。</td>
+                </tr>
+                <tr>
+                    <td>32B SFT</td>
+                    <td>稳定、广谱、D-suite 综合强；没有 GRPO 训练不稳定成本。</td>
+                    <td>OOD quarantine 仍有 0.1998 forbidden，安全拒绝率低。</td>
+                    <td>适合作为 32B shadow baseline 或生产候选前置 checkpoint。</td>
+                </tr>
+                <tr>
+                    <td>32B GRPO ckpt100</td>
+                    <td>OOD quarantine 明显改善，AppWorld forbidden 低，project/sft 强。</td>
+                    <td>D-suite safety 较 32B SFT 略降，GRPO 训练恢复复杂。</td>
+                    <td>如果关注拒绝/不执行安全，优先 ckpt100；需要再跑 real service shadow。</td>
+                </tr>
+                <tr>
+                    <td>32B GRPO ckpt200</td>
+                    <td>cross 略高 0.001。</td>
+                    <td>quarantine forbidden/execution 明显变差。</td>
+                    <td>不建议优先；“更多步”没有带来更稳安全。</td>
+                </tr>
+            </tbody>
+        </table>
+        <p><strong>最终建议：</strong>短期不要直接开启自主执行。若要上线 shadow，优先选择 32B SFT 或 32B GRPO ckpt100 作为候选，并在真实 AceAgent service path 中禁用或 mock side-effect tools；8B v3 可作为低成本对照。项目机器人工具可以进入更窄的 shadow，浏览器 deferred 仍需真实 browser runner grounding，安全多步任务需要补充 tau2/ToolSandbox 风格正负轨迹。</p>
+    </section>
+
+    <section id="risks">
+        <h2>风险与后续建议</h2>
+        <ol>
+            <li><strong>安全多步 coverage 是当前 gate。</strong>forbidden 低不等于安全，因为模型可能漏掉必要修复步骤或在 OOD 中直接执行。</li>
+            <li><strong>Browser UID/target 不允许语义放宽。</strong>浏览器 suite 的 target/uid 必须 strict，否则看起来 semantic_match 好，实际会点错页面元素。</li>
+            <li><strong>Reward 需要从轨迹级走向步骤级。</strong>当前 schema-aware reward 已解决字段级问题，但 tau2 多步任务需要每步 credit assignment，否则容易一两步拿部分分。</li>
+            <li><strong>Tool-restraint 要重新配平。</strong>下一版可把 no-tool rows 与“必须调用才能安全完成”的正样例成对采样，避免 8B restraint 过度保守。</li>
+            <li><strong>保持 schema 自动同步。</strong>所有训练/eval 应从 <code>server/tools/registry.py</code> 导出 schema，避免 <code>instruction</code>/<code>destination</code>/<code>instruction_en</code> 这类历史字段漂移。</li>
+            <li><strong>真实 shadow 必须记录状态后果。</strong>当前 deterministic eval 主要评工具调用；真实系统还要记录 tool result、取消、超时、机器人 mutex、地图匹配失败和用户中断。</li>
+        </ol>
+    </section>
+
+    <section id="references">
+        <h2>参考文献（References）</h2>
+        <ol>
+            <li>[1] Zhihong Shao et al., "DeepSeekMath: Pushing the Limits of Mathematical Reasoning in Open Language Models", 2024. <a href="https://arxiv.org/abs/2402.03300">链接</a></li>
+            <li>[2] Hugging Face TRL, "GRPO Trainer". <a href="https://huggingface.co/docs/trl/grpo_trainer">链接</a></li>
+            <li>[3] QwenLM, "Qwen3-VL official repository". <a href="https://github.com/QwenLM/Qwen3-VL">链接</a></li>
+            <li>[4] QwenLM, "Qwen-Agent function calling framework". <a href="https://github.com/QwenLM/Qwen-Agent">链接</a></li>
+            <li>[5] PydanticAI, "Function Tools". <a href="https://pydantic.dev/docs/ai/tools-toolsets/tools/">链接</a></li>
+            <li>[6] PydanticAI, "Deferred Tools". <a href="https://pydantic.dev/docs/ai/tools-toolsets/deferred-tools/">链接</a></li>
+            <li>[7] Minghao Li et al., "API-Bank: A Comprehensive Benchmark for Tool-Augmented LLMs", EMNLP 2023. <a href="https://aclanthology.org/2023.emnlp-main.187/">链接</a></li>
+            <li>[8] API-Bank official GitHub. <a href="https://github.com/AlibabaResearch/DAMO-ConvAI/tree/main/api-bank">链接</a></li>
+            <li>[9] APIBench official GitHub / Zenodo. <a href="https://github.com/JohnnyPeng18/APIBench">链接</a></li>
+            <li>[10] Agent-FLAN official GitHub. <a href="https://github.com/internlm/agent-flan">链接</a></li>
+            <li>[11] Berkeley Function Calling Leaderboard / Gorilla repository. <a href="https://github.com/ShishirPatil/gorilla/blob/main/berkeley-function-call-leaderboard/README.md">链接</a></li>
+            <li>[12] Xiang Deng et al., "Mind2Web: Towards a Generalist Agent for the Web", NeurIPS 2023. <a href="https://osu-nlp-group.github.io/Mind2Web/">链接</a></li>
+            <li>[13] Xing Han Lù et al., "WebLINX: Real-World Website Navigation with Multi-Turn Dialogue", ICML 2024. <a href="https://proceedings.mlr.press/v235/lu24e.html">链接</a></li>
+            <li>[14] AppWorld official GitHub. <a href="https://github.com/StonyBrookNLP/appworld">链接</a></li>
+            <li>[15] Apple, "ToolSandbox: A Stateful, Conversational, Interactive Evaluation Benchmark for LLM Tool Use Capabilities". <a href="https://github.com/apple/ToolSandbox">链接</a></li>
+            <li>[16] ShortcutsBench official GitHub. <a href="https://github.com/EachSheep/ShortcutsBench">链接</a></li>
+            <li>[17] WorkBench official GitHub. <a href="https://github.com/olly-styles/WorkBench">链接</a></li>
+            <li>[18] Sierra Research, "tau2-bench". <a href="https://github.com/sierra-research/tau2-bench">链接</a></li>
+            <li>[19] Team-ACE, "ToolACE dataset". <a href="https://huggingface.co/datasets/Team-ACE/ToolACE">链接</a></li>
+            <li>[20] US Army Research Lab, "ARL-SCOUT". <a href="https://github.com/USArmyResearchLab/ARL-SCOUT">链接</a></li>
+            <li>[21] Claire Bonial et al., "SCOUT: A Situated and Multi-Modal Human-Robot Dialogue Corpus", LREC-COLING 2024. <a href="https://aclanthology.org/2024.lrec-main.1259.pdf">链接</a></li>
+            <li>[22] Kaiyuan Chen et al., "Robo2VLM: Visual Question Answering from Large-Scale In-the-Wild Robot Manipulation Datasets", 2025. <a href="https://arxiv.org/abs/2505.15517">链接</a></li>
+            <li>[23] 本地证据：<code>C:\Users\mousongzhe\agent\server\agent\sandbox.py</code> 与 <code>C:\Users\mousongzhe\agent\scripts\agent_sandbox_eval.py</code>。</li>
+            <li>[24] 本地证据：v1 报告 <code>C:\Users\mousongzhe\agent\remote_training_pipeline_scripts\reports\final_pipeline_report.md</code>、<code>sft_report.md</code>、<code>grpo_report.md</code>。</li>
+            <li>[25] 本地证据：v2 报告 <code>C:\Users\mousongzhe\agent\remote_training_pipeline_v2\reports\language_only_data_report.md</code>、<code>final_pipeline_report.md</code>、<code>grpo_reward_schema_aware_comparison.md</code>。</li>
+            <li>[26] 本地证据：native eval summary <code>C:\Users\mousongzhe\agent\remote_training_pipeline_v2\eval\native_tools_v1\reports\schema_aware_native_tools_eval_summary.md</code>。</li>
+            <li>[27] 本地证据：32B eval ladder <code>C:\Users\mousongzhe\agent\remote_training_pipeline_v2\reports\eval_32b_ckpt100_200_d_ood_compare_1000_ladder_20260622_140818_attempt3_d32_ood32_comparison.md</code>。</li>
+            <li>[28] 本地证据：tool-restraint manifest 与 reward checks <code>C:\Users\mousongzhe\agent\remote_training_pipeline_v2\manifests\tool_restraint_mix_manifest.json</code>、<code>tool_restraint_reward_check.md</code>、<code>tool_restraint_reward_boundary_fix_20260618.md</code>。</li>
+        </ol>
+    </section>
+</article>
+</body>
+</html>
