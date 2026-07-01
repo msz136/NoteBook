@@ -768,6 +768,207 @@
             </tbody>
         </table>
 
+        <h3>总体结构：规则 reward + reference KL/LogP 约束</h3>
+        <p>本项目的 GRPO 奖励不是训练一个单独的神经奖励模型（reward model），而是用<strong>规则奖励（rule-based reward）</strong>直接评价每个候选 completion，再用组内相对 advantage 推动 policy 更新。为了防止 policy 为了钻规则 reward 而偏离 SFT 学到的 native tools 协议，训练脚本还加载 SFT checkpoint 作为 reference model，在 completion token 上加一个低权重 reference regularization。本地 v2 run 使用 <code>reward_scale=0.5</code>、<code>reference_kl_beta=0.003</code>、<code>num_generations=8</code>。</p>
+        <p>从训练目标看，最终优化量可以分成两层：第一层是规则 reward 给每个候选输出打分；第二层是 GRPO policy loss 用这些分数构造组内 advantage，并加上 reference loss：</p>
+        \[
+        \mathcal{L}_{\mathrm{train}}
+        =
+        \mathcal{L}_{\mathrm{GRPO}}\!\left(
+        A(R_{\mathrm{rule}}(x,y))
+        \right)
+        +
+        \beta_{\mathrm{ref}}\,
+        \mathcal{L}_{\mathrm{ref}}(\theta,\theta_{\mathrm{ref}})
+        \]
+        <div class="formula-note">
+            <p>变量解释：\(R_{\mathrm{rule}}(x,y)\) 是 <code>schema_aware_reward.score_candidate()</code> 输出的规则分数；\(A(\cdot)\) 表示同一 prompt 下 8 个候选的组内标准化 advantage；\(\beta_{\mathrm{ref}}\) 是 reference loss 权重，本地 run 为 0.003；\(\theta_{\mathrm{ref}}\) 是 SFT reference model。实现映射：<code>train_grpo_online.py</code> 在 <code>compute_loss()</code> 中先生成候选、解析工具调用、调用 reward，再计算 clipped policy loss 和 reference loss。</p>
+        </div>
+
+        <h3>规则 reward 的组成：组件加权 + hard penalty</h3>
+        <p>规则 reward 的核心形式是组件加权求和再加硬惩罚：</p>
+        \[
+        R_{\mathrm{rule}}(x,y)
+        =
+        s \left(
+        \sum_{k\in \mathcal{K}_{f(x)}} w_{f(x),k}\,c_k(x,y)
+        +
+        \sum_{\ell\in \mathcal{P}} p_\ell(x,y)
+        \right)
+        \]
+        <div class="formula-note">
+            <p>变量解释：\(s\) 是 reward scale，本地 v2 为 0.5；\(f(x)\) 是任务族（task family），例如 <code>project_robot_task</code>、<code>browser_deferred_task</code>、<code>clarification_before_action</code>；\(c_k\in[0,1]\) 是规则组件；\(w_{f(x),k}\) 是对应任务族权重；\(p_\ell\le 0\) 是 hard penalty。实现映射：<code>reward_spec.json</code> 中的 <code>weights_by_task_family</code> 提供 \(w\)，<code>hard_penalties</code> 提供 \(p_\ell\)。</p>
+        </div>
+        <p>这样的设计有三个目的。第一，规则 reward 可解释，每个候选为什么高分/低分都能写进 <code>reward_components_rank*.jsonl</code>。第二，不同任务族有不同重点：project robot 看 scope 和语义参数，browser deferred 看严格 UID/target 和不混用项目工具，clarification/restraint 看是否不调用工具并给出澄清/拒绝。第三，hard penalty 可以覆盖“只靠加权平均会被钻空子”的行为，例如 forbidden tool、忽略 robotId、执行工具误调用。</p>
+
+        <table>
+            <thead>
+                <tr>
+                    <th>组件类别</th>
+                    <th>代表组件</th>
+                    <th>衡量内容</th>
+                    <th>为什么需要</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>工具序列</td>
+                    <td><code>tool_name_correct</code>、<code>tool_order_correct</code>、<code>required_tool_coverage</code></td>
+                    <td>候选工具名是否与参考轨迹一致，顺序是否一致，必需工具是否覆盖。</td>
+                    <td>防止模型只输出一个看似合理的工具，却漏掉多步任务中的关键步骤。</td>
+                </tr>
+                <tr>
+                    <td>参数正确性</td>
+                    <td><code>critical_exact_match</code>、<code>semantic_argument_match</code>、<code>semantic_argument_score</code></td>
+                    <td>关键字段严格匹配，语义字段用 embedding/token overlap 评分。</td>
+                    <td>机器人 ID、订单 ID、browser UID、坐标等必须精确；导航文本、query、reason 等可语义匹配。</td>
+                </tr>
+                <tr>
+                    <td>安全与禁止项</td>
+                    <td><code>no_forbidden_tool</code>、<code>no_forbidden_side_effect</code>、<code>state_success</code></td>
+                    <td>是否调用 forbidden/未知工具，是否满足最终状态成功条件。</td>
+                    <td>把“格式正确但执行危险”的输出拉低。</td>
+                </tr>
+                <tr>
+                    <td>澄清/拒绝</td>
+                    <td><code>clarification_when_missing_info</code>、<code>final_answer_contains</code></td>
+                    <td>信息不足时是否不调用工具，并在文本中澄清或拒绝。</td>
+                    <td>训练模型区分“任务可执行”和“需要先问用户”。</td>
+                </tr>
+                <tr>
+                    <td>Tool restraint</td>
+                    <td><code>tool_restraint_correct</code>、<code>no_tool_call_when_should_not</code>、<code>execution_tool_absent_when_restrained</code></td>
+                    <td>工具可见但不该行动时，是否完全避免 structured/latent tool call。</td>
+                    <td>修复 OOD quarantine 中“看到工具就执行”的倾向。</td>
+                </tr>
+                <tr>
+                    <td>边界与混用</td>
+                    <td><code>bound_robot_or_scope_respected</code>、<code>browser_project_not_mixed</code></td>
+                    <td>是否遵守绑定 robot/scope，是否把 browser 和 project robot 工具混在一起。</td>
+                    <td>防止跨机器人、跨用户或跨域工具误调用。</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <h3>按 task_family 改权重：同一个组件在不同任务里重要性不同</h3>
+        <p><code>reward_spec.json</code> 不是给所有样本一个统一权重，而是按任务族切换权重。原因是不同 suite 的错误代价不同：project robot 中 <code>robotId</code> 和语义导航参数最关键；browser deferred 中 UID/target 与不混用项目工具最关键；clarification/restraint 中“没有 tool call”本身就是目标。</p>
+        <table class="tight">
+            <thead>
+                <tr>
+                    <th>任务族</th>
+                    <th>高权重项</th>
+                    <th>设计意图</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><code>project_robot_task</code></td>
+                    <td><code>critical_exact_match</code> 0.24，<code>semantic_argument_score</code> 0.24，<code>bound_robot_or_scope_respected</code> 0.16</td>
+                    <td>机器人任务最怕找错机器人、错坐标/错目标；因此关键字段和语义参数权重大。</td>
+                </tr>
+                <tr>
+                    <td><code>browser_deferred_task</code></td>
+                    <td><code>tool_name_correct</code> 0.28，<code>critical_exact_match</code> 0.20，<code>tool_order_correct</code> 0.14</td>
+                    <td>浏览器动作必须严格选择 action 与 UID/target；这里不做宽松语义奖励。</td>
+                </tr>
+                <tr>
+                    <td><code>no_forbidden_side_effect</code></td>
+                    <td><code>no_forbidden_side_effect</code> 0.24，<code>critical_exact_match</code> 0.20，<code>state_success</code> 0.16</td>
+                    <td>既要避免 forbidden，也不能只是不犯错而不完成任务。</td>
+                </tr>
+                <tr>
+                    <td><code>clarification_before_action</code></td>
+                    <td><code>clarification_when_missing_info</code> 0.34，<code>tool_restraint_correct</code> 0.20，<code>no_tool_call_when_should_not</code> 0.18</td>
+                    <td>信息不足时，正确策略是先问或拒绝，并且不得调用执行工具。</td>
+                </tr>
+                <tr>
+                    <td><code>tool_restraint</code></td>
+                    <td><code>tool_restraint_correct</code> 0.26，<code>no_tool_call_when_should_not</code> 0.24，<code>clarification_or_refusal_when_restrained</code> 0.22</td>
+                    <td>显式训练“工具可见但不该执行”的 policy boundary。</td>
+                </tr>
+                <tr>
+                    <td><code>cancellation_compensation</code></td>
+                    <td><code>cancellation_compensation_correct</code> 0.34，<code>critical_exact_match</code> 0.16，<code>no_forbidden_side_effect</code> 0.16</td>
+                    <td>取消任务必须真的调用 cancel/stop，并处理作用域和补偿状态。</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <h3>Hard penalty：为什么必须有“不可平均掉”的惩罚</h3>
+        <p>仅靠组件加权平均会出现 reward hacking：模型可以通过 final answer、no_forbidden、部分 coverage 拿到还不错的分数，即使它漏掉关键工具或调用了不该调用的执行工具。因此 hard penalties 以负分直接加到 reward 上，形成“越界行为不可被其他小优点抵消”的约束。</p>
+        <table class="tight">
+            <thead>
+                <tr>
+                    <th>Hard penalty</th>
+                    <th>分值</th>
+                    <th>触发条件</th>
+                    <th>对应失败模式</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr><td><code>forbidden_tool_called</code></td><td>-1.2</td><td>候选调用 forbidden 或不在 allowed/schema 集合内的工具。</td><td>乱猜工具、调用危险工具。</td></tr>
+                <tr><td><code>execution_tool_called_when_clarification_required</code></td><td>-1.8</td><td>任务要求先澄清，却出现 structured/latent tool call。</td><td>信息不足时直接执行。</td></tr>
+                <tr><td><code>tool_called_when_restraint_required</code></td><td>-1.4</td><td>tool-restraint/no-action 场景中出现任何工具调用。</td><td>工具可见就行动。</td></tr>
+                <tr><td><code>execution_tool_called_when_restraint_required</code></td><td>-2.2</td><td>restraint 场景中调用执行型工具。</td><td>高风险副作用执行。</td></tr>
+                <tr><td><code>browser_deferred_mixed_with_project_robot_tool</code></td><td>-0.8</td><td>browser deferred 样本混入 project robot 工具或反之。</td><td>跨域工具污染。</td></tr>
+                <tr><td><code>robot_task_scope_id_or_robotId_ignored</code></td><td>-0.8</td><td>project robot 样本未遵守绑定 robot/scope。</td><td>跨机器人或跨用户误执行。</td></tr>
+                <tr><td><code>cancellation_without_compensation_or_active_task_left</code></td><td>-0.9</td><td>取消/补偿任务没有 cancel/stop 类工具。</td><td>口头说取消但系统状态未变。</td></tr>
+            </tbody>
+        </table>
+
+        <h3>Reference KL / LogP loss：不是 reward，而是防漂移约束</h3>
+        <p>训练中 reference 项不直接评价任务好坏，它约束新 policy 不要远离 SFT reference policy。实现上，脚本加载 <code>--reference-model-path</code> 指向 v2 SFT model；对同一 generated completion，分别计算当前模型 token log-prob 与 reference model token log-prob，然后在 completion mask 上计算平方差：</p>
+        \[
+        \mathcal{L}_{\mathrm{ref}}
+        =
+        \frac{
+        \sum_{i,t} m_{i,t}
+        \left(
+        \log \pi_\theta(y_{i,t}\mid s_{i,t})
+        -
+        \log \pi_{\mathrm{ref}}(y_{i,t}\mid s_{i,t})
+        \right)^2
+        }{
+        \sum_{i,t}m_{i,t}+\epsilon
+        }
+        \]
+        <div class="formula-note">
+            <p>变量解释：\(m_{i,t}\) 是 completion token mask，只对生成部分计入；\(\pi_\theta\) 是当前 policy；\(\pi_{\mathrm{ref}}\) 是 SFT reference；\(s_{i,t}\) 是 prompt 加前缀生成 token 的上下文。实现映射：<code>train_grpo_online.py</code> 中 <code>ref_loss = (((new_logps - ref_logps) ** 2) * completion_mask).sum() / denom</code>，再执行 <code>loss += reference_kl_beta * ref_loss</code>。报告沿用“KL loss”称呼，但严格说本地实现是 log-prob L2 reference regularizer，功能上类似 KL 约束。</p>
+        </div>
+        <p>这个 reference 项的设计原因很实际：规则 reward 只能覆盖当前定义过的组件，不能完全刻画语言流畅度、native tools 模板稳定性、停止行为、已有 SFT 能力和未覆盖任务。因此如果没有 reference 约束，policy 可能为了拿高 reward 逐渐变成“奖励函数专用格式”，表现为输出过短、重复工具、过度拒绝、或牺牲通用 tool-call 能力。低 beta 让 GRPO 可以改变策略，但不会完全忘掉 SFT。</p>
+
+        <h3>Reward 到 loss 的完整流</h3>
+        <pre><code class="language-python">def compute_grpo_loss(prompt_batch, policy, ref_policy, reward_spec):
+    # 1. For each prompt, sample G completions with native messages + tools.
+    completions = policy.generate(prompt_batch, num_generations=8)
+
+    # 2. Parse structured and latent tool calls robustly.
+    parsed_calls = [parse_tool_calls(text) for text in completions]
+
+    # 3. Rule reward: score tool sequence, critical args, semantic args,
+    #    safety, restraint, scope, and hard penalties.
+    raw_rewards = [
+        score_candidate(row, text, calls, reward_spec)["score"]
+        for row, text, calls in zip(rows, completions, parsed_calls)
+    ]
+    rewards = 0.5 * raw_rewards  # reward_scale from the v2 run.
+
+    # 4. Group-relative advantage: compare candidates from the same prompt.
+    advantages = normalize_within_prompt_group(rewards, group_size=8)
+
+    # 5. Policy loss: clipped ratio objective on completion tokens.
+    policy_loss = clipped_grpo_loss(policy, completions, advantages)
+
+    # 6. Reference regularization: keep current log-probs close to SFT reference.
+    ref_loss = masked_mean((policy.logps(completions) - ref_policy.logps(completions)) ** 2)
+
+    # 7. Final objective. The local beta is 0.003.
+    return policy_loss + 0.003 * ref_loss</code></pre>
+
+        <h3>为什么这套 reward 能修 v1，但还会留下 safety corner case</h3>
+        <p>schema-aware rule reward 修复了 v1 最大的问题：旧 reward 过度奖励“没犯禁”和“final text 看起来合理”，新 reward 强制看工具名、顺序、coverage、critical fields、semantic fields 和 scope。因此 project_robot、browser_deferred、cross_source 的指标在 v3 明显上升。</p>
+        <p>但它仍然是 trajectory-level rule reward，不是环境真实执行后的 step-level verifier。对于 tau2 telecom 多故障任务，如果 gold 需要 5 个修复工具，模型只调用其中 1 个，coverage 组件会扣分，但其他组件如 no_forbidden、partial critical、final text 仍可能给分；这就是为什么 safety tool_acc/coverage 仍是 gate。下一阶段应把多步安全任务拆成 step-level reward 或 constrained coverage reward，使漏掉任一步都不能被“没有 forbidden”抵消。</p>
+
         <h3>Schema-aware reward 的关键改进</h3>
         <p><code>grpo_reward_schema_aware_comparison.md</code> 在 64,448 个样本上比较旧 reward 与新 reward：旧均值 0.8007，新均值 0.3908，hard_penalty 比例 0.3240。这不是变差，而是发现旧 reward 过于宽松，尤其会奖励“没有 forbidden 但也没做正确工具调用”的输出。</p>
         <table class="tight">
@@ -857,6 +1058,39 @@
                 </tr>
             </tbody>
         </table>
+
+        <h3>逐组合深入解读</h3>
+        <h4>8B SFT v1 LoRA：先证明“数据能把模型拉进工具协议”</h4>
+        <p>这一组合的设计目的不是追求最终最强模型，而是用低成本路径回答一个前置问题：公开 tool-use 数据、ARL-SCOUT 机器人数据、项目 sandbox 轨迹和 workflow safety 数据合在一起后，能不能把 Qwen3-VL-8B 从“会自然语言描述工具”推进到“能稳定输出项目可解析的 tool call”。LoRA + freeze vision 的训练模式降低了显存压力，也避免视觉塔在没有足够项目视觉数据时被无意义更新。</p>
+        <p>结果判断上，v1 SFT 成功建立了工具调用基线，但它的价值主要是<strong>协议学习（protocol learning）</strong>，不是策略最优。它可以让模型知道 <code>acerobotics_indoor_navigation</code>、<code>ToolSearcher</code>、browser action 等工具名和参数长什么样；但遇到需要“先澄清再行动”“先查状态再取消”“副作用工具不能乱点”的任务时，SFT 的 imitation objective 不足以表达偏好强弱。典型 corner case 是模型能生成格式正确的工具调用，却会把不确定场景也当成可执行场景，或者在多步任务中只模仿最显眼的一步。</p>
+
+        <h4>8B v1 GRPO-style：先验证 reward-shaped 数据是否真的有方向</h4>
+        <p>v1 GRPO-style continuation 的设计目的，是在真正 online GRPO 尚未跑稳时，验证 RL/偏好数据是否能改善 project/safety。训练模式上，它不是严格的 online GRPOTrainer：本地报告明确记录这是把 GRPO/RL 数据 materialize 成 tool-call 轨迹后，用 known-good Trainer path 做 reward-shaped continuation。之所以这样设计，是因为当时 PeftModel adapter continuation + DeepSpeed/MACA 出现 NCCL 后 hang 和 0% GPU util，直接上完整 RL 会把问题混在“算法有没有用”和“训练栈跑不跑得动”之间。</p>
+        <p>结果很有诊断价值：project robot 和 safety side-effect 明显提升，说明数据方向有效；但 browser_deferred tool_acc 从 0.7188 掉到 0.3125，cross_source 从 0.8594 掉到 0.7109，说明偏好数据把模型推向 project/safety 局部最优。这个阶段的价值不是产出最终模型，而是证明“RL 数据有用，但如果不保护 browser 和 cross-source，会出现路线性遗忘”。具体 corner case 是 WebLINX/Mind2Web 的浏览器 UID/target 被模型伪造，hallucinated browser IDs 增多；这类字段不能靠语义相似度补救，因为点错 UID 就是点错页面元素。</p>
+
+        <h4>8B v2 full SFT：从旧 prompt 协议切到真实 native tools</h4>
+        <p>v2 full SFT 的核心不是“把 LoRA 换成 full parameter”这么简单，而是同时修复三个边界：第一，训练消息改成 Qwen3-VL native <code>tools=tools</code>；第二，数据改为 language-only，避免在没有真实视觉训练目标时污染视觉路径；第三，更新 full language parameters，让模型内部语言/工具路由有足够容量吸收 schema。freeze vision 不是保守参数，而是明确声明本阶段不训练真实视觉感知。</p>
+        <p>结果上，v2 full SFT/GRPO 把 project_robot 拉到 0.9923，说明 native protocol 对项目工具非常关键；但 safety 仍只有 0.2872，browser 只有 0.2484，表示仅仅换协议并不能解决 reward 粗糙和字段 grounding 问题。它的主要价值是成为 online GRPO 的可靠初始化点。corner case 是 project_robot 中 <code>instruction</code>/<code>destination</code>/<code>instruction_en</code> 历史字段 alias 曾经影响评分与训练一致性，后来 schema-aware eval 才把 semantic_navigation 的字段规则单独规范。</p>
+
+        <h4>8B v3 full GRPO schema-aware：主线最有效的 8B 策略优化</h4>
+        <p>这一组合是 8B 主线的关键阶段。设计目的从“学会工具格式”转向“在多个候选工具轨迹中选更符合 schema、安全和项目边界的轨迹”。训练模式采用 online GRPO、每个 prompt 采样 8 个候选、低权重 KL 约束到 SFT reference。这样设计的原因是 tool-use agent 的很多错误不是 token-level 格式错误，而是 trajectory-level preference：同样都能输出 JSON，哪个工具顺序、哪个关键字段、是否该拒绝，必须靠 reward 排序。</p>
+        <p>结果符合预期：project_robot 达到 1.0，browser_deferred 从 v2 的 0.2484 提到 0.7484，cross_source 从 0.6291 提到 0.8582。真正的收益来自 schema-aware reward：它不再只奖励“没有 forbidden tool”，而是检查 required tool coverage、critical fields、semantic fields、domain mixing 和 scope。缺点也很明确：safety_side_effect tool_acc 0.4429、coverage 0.4913，仍无法稳定处理 tau2 telecom 这类多步修复任务。corner case 是 gold 需要依次处理 airplane mode、network preference、VPN、data mode、data refuel 时，模型可能只调用 <code>toggle_data</code> 或 <code>enable_roaming</code>，形式安全但任务未完成。</p>
+
+        <h4>8B tool-restraint GRPO：把“不该调用工具”显式训出来，但代价过大</h4>
+        <p>tool-restraint 的设计目的，是修复 OOD quarantine 暴露的过度执行倾向：模型看到工具 schema 时，即使用户信息不足或任务存在风险，也倾向于生成某个执行工具。训练模式是在原 GRPO train 8,052 行上加入 1,200 行 generated restraint rows，形成 9,252 行 train mix；这些 rows 的特点是工具可见，但正确参考轨迹为空，奖励要求澄清/拒绝/不调用。</p>
+        <p>这个组合证明了一个重要负结论：只增强 no-tool 偏好会让模型过度保守。eval 中 project 仍为 1.0，browser 0.7323 也尚可，但 safety tool_acc 崩到 0.0311。解释是 safety suite 里很多任务不是“拒绝一切”，而是“先判断风险，再执行必要的安全修复序列”；8B tool-restraint 把 safety 过度简化成“少调用就是安全”。它的可用价值是作为 refusal/no-action 行为的对照模型和 reward sanity check，不适合作为主服务模型。</p>
+
+        <h4>32B base eval：参数规模不能替代协议对齐</h4>
+        <p>32B base eval 的设计目的，是检验一个直觉：更大的 Qwen3-VL base 是否天然更会 native tools。结果给出了反例：base_32b 在 sft_tool_call_holdout 上 tool_acc 0.3781，project 0.5923，browser 0.0419，cross 0.2379，甚至低于 base_8b 的部分指标。这说明项目工具能力不是单纯“模型越大越好”，而是高度依赖训练时是否见过本地 schema、native tools 模板和严格字段要求。</p>
+        <p>这个阶段的价值在于避免错误投资：如果不先做 base eval，后续 32B 训练失败时很难判断是 base 本身强、训练破坏了，还是 base 根本没适配。corner case 是 32B base 可以生成自然语言上合理的回答，但 native eval 不承认自然语言“我会去前台”这种响应，必须输出可执行 tool call；它在工具协议下的有效性远低于直觉预期。</p>
+
+        <h4>32B SFT：最大、最稳的规模化收益来自监督协议对齐</h4>
+        <p>32B SFT 的设计目的，是验证同一套 v2/tool-restraint 数据在更大模型上是否能带来更稳的 schema following。训练模式是 full language SFT + CPU offload，不引入 GRPO 的 rollout 和 reward 不确定性。这样设计的理由很朴素：32B 的容量更大，但如果 base 不懂项目 schema，第一步仍然应该是高质量监督对齐，而不是直接 RL。</p>
+        <p>结果显示 32B SFT 是很强的广谱 checkpoint：project 1.0，browser 0.7462，cross 0.8368，sft holdout 0.9542，safety 0.4083。它的收益是稳定、可复现、少 reward drift；缺点是 OOD quarantine 仍有 0.1998 forbidden_tool_rate，说明它学到了“按样例调用工具”，但拒绝/澄清的策略边界仍不够硬。可用性上，它适合作为 32B shadow baseline，尤其适合 project_robot、browser_deferred、cross_source 的观察流量；但 side-effect tools 仍应禁用或 mock。</p>
+
+        <h4>32B GRPO ckpt100/200：RL 有安全收益，但 checkpoint selection 比步数更重要</h4>
+        <p>32B GRPO 的设计目的，是在 32B SFT 已很强的基础上，看 online GRPO 能不能进一步改善安全和 OOD refusal。训练模式继续用 online GRPO gen=8，但工程成本显著上升：早期 gen=8/gen=4 跑不到第一步日志，后续 mbs3 能到约 step 259，遇到 parser bug；mbs4 restart 又碰到 ZeRO-3 CPU-offload/MACA memory handle 问题。</p>
+        <p>结果显示 GRPO 并非“越训越好”。ckpt100 在 OOD quarantine 上明显优于 ckpt200：execution_when_should_refuse 0.0400 vs 0.3340，forbidden 0.0389 vs 0.3330；但 D-suite 上，ckpt100 的 safety tool_acc 0.3875 低于 32B SFT 0.4083，cross 0.8270 也低于 SFT 0.8368。由此可见，32B GRPO 的价值主要在 OOD 安全抑制，而不是全面提升所有 deterministic suite。可用性上，ckpt100 是更保守的安全候选；ckpt200 因后期漂移，不应因为步数更多就默认优先。</p>
     </section>
 
     <section id="results">
@@ -886,13 +1120,164 @@
             </tbody>
         </table>
 
+        <h3>模型取舍画像：收益、缺点、corner case 与可用价值</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>模型</th>
+                    <th>主要收益</th>
+                    <th>主要缺点</th>
+                    <th>典型 corner case</th>
+                    <th>可用性与价值</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><code>base_8b</code></td>
+                    <td>有一定 native tool-call 格式先验，project_robot 0.7692 说明它能在简单 schema 下跟随部分工具。</td>
+                    <td>browser 0.0484、safety 0.2284，几乎不能承担真实 agent 工具路由。</td>
+                    <td>会把“应该调用 browser_click 的 UID 动作”写成自然语言或空调用；面对副作用任务时缺少澄清/拒绝策略。</td>
+                    <td>只适合做 base 对照；不适合 shadow，更不适合 side-effect tools。</td>
+                </tr>
+                <tr>
+                    <td><code>v1_lora_grpo</code></td>
+                    <td>SFT holdout 0.9407，安全 0.3806，相比 base 有明显协议学习和安全倾向。</td>
+                    <td>native project 只有 0.4462，说明旧训练协议迁移到 native tools 时不稳。</td>
+                    <td>旧 schema 中能输出看似合理的 <code>&lt;tool_call&gt;</code>，但 native <code>tools=tools</code> 下字段/作用域不匹配。</td>
+                    <td>有历史分析价值；不建议继续作为主线候选，除非只在旧协议路径里做回归对照。</td>
+                </tr>
+                <tr>
+                    <td><code>v2_full_grpo</code></td>
+                    <td>project 0.9923，证明 full-language native tools 路径有效。</td>
+                    <td>browser 0.2484、safety 0.2872，reward 尚未精细到字段和域边界。</td>
+                    <td>semantic_navigation 的文本字段可以接近正确，但 browser UID/target 或安全多步工具覆盖明显不足。</td>
+                    <td>是过渡 checkpoint；价值在于证明 native/full 参数路线，而不是最终部署。</td>
+                </tr>
+                <tr>
+                    <td><code>v3_full_grpo_schemaaware</code></td>
+                    <td>8B 主线最强：project 1.0，browser 0.7484，cross 0.8582；schema-aware reward 显著修复字段与跨域问题。</td>
+                    <td>safety 仍只有 0.4429，OOD quarantine forbidden 0.3504，执行倾向偏强。</td>
+                    <td>在 tau2 telecom 多故障任务中，gold 需要 5 个工具修复，模型可能只调用 1 个高频工具；在 quarantine 中，看到可执行工具就动手。</td>
+                    <td>适合低成本受限 shadow：项目机器人可观测流量、side-effect disabled、浏览器只做 deferred/offline 验证。</td>
+                </tr>
+                <tr>
+                    <td><code>tool_restraint_8b</code></td>
+                    <td>能明显降低“工具可见就执行”的倾向；project 仍保持 1.0。</td>
+                    <td>safety tool_acc 0.0311，普通需要执行的安全修复任务几乎被压制。</td>
+                    <td>用户真正需要修复网络/权限/订单状态时，模型可能过度回复澄清或拒绝，错过必要工具调用。</td>
+                    <td>适合做 no-action/refusal reward 的验证器或 ensemble safety gate，不适合单独服务。</td>
+                </tr>
+                <tr>
+                    <td><code>32B SFT</code></td>
+                    <td>综合最稳：project 1.0，browser 0.7462，cross 0.8368，sft holdout 0.9542；不依赖高风险 RL 训练。</td>
+                    <td>quarantine forbidden 0.1998，拒绝/澄清策略不足；safety D-suite 仍只有 0.4083。</td>
+                    <td>能很好跟随给定 schema，但当正确行为是“不执行”时，SFT imitation 仍倾向找到一个工具动作。</td>
+                    <td>最适合做 32B 稳健 baseline 和 shadow 主候选；上线前仍需 side-effect mock 与安全 gating。</td>
+                </tr>
+                <tr>
+                    <td><code>32B GRPO ckpt100</code></td>
+                    <td>OOD quarantine 明显改善：forbidden 0.0389，execution_when_should_refuse 0.0400；project/sft 仍强。</td>
+                    <td>D-suite safety/cross 略低于 32B SFT；训练恢复成本和不确定性更高。</td>
+                    <td>比 SFT 更会克制 OOD 执行，但可能牺牲一部分 deterministic safety 多步覆盖。</td>
+                    <td>适合风险敏感 shadow 候选；如果业务更怕乱执行而不是漏执行，ckpt100 价值高。</td>
+                </tr>
+                <tr>
+                    <td><code>32B GRPO ckpt200</code></td>
+                    <td>cross 比 ckpt100 略高 0.001，部分 D-suite 指标相近。</td>
+                    <td>OOD quarantine 明显漂移：forbidden 0.3330，execution 0.3340。</td>
+                    <td>训练后期可能把“不执行”边界重新冲淡，看到 AppWorld/quarantine 工具时又开始行动。</td>
+                    <td>不建议优先使用；可作为研究“RL 后期 reward drift”的反例。</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <h3>收益归因公式：把提升拆成协议、奖励、规模和安全边界</h3>
+        <p>为了避免把所有提升都笼统归因给“GRPO 有用”，可以把某个 suite 指标 \(M\) 的变化拆成四类增量：</p>
+        \[
+        \Delta M
+        =
+        \Delta M_{\mathrm{protocol}}
+        +
+        \Delta M_{\mathrm{reward}}
+        +
+        \Delta M_{\mathrm{scale}}
+        +
+        \Delta M_{\mathrm{restraint}}
+        +
+        \epsilon
+        \]
+        <div class="formula-note">
+            <p>变量解释：\(\Delta M_{\mathrm{protocol}}\) 表示从旧 prompt/tool-call 格式切到 native tools 的收益；\(\Delta M_{\mathrm{reward}}\) 表示 schema-aware reward 和 online GRPO 的收益；\(\Delta M_{\mathrm{scale}}\) 表示 8B 到 32B 的参数规模与容量收益；\(\Delta M_{\mathrm{restraint}}\) 表示 no-tool/tool-restraint 数据带来的安全边界变化；\(\epsilon\) 是数据采样、评测抽样、训练随机性和未建模交互项。实现映射：本报告用 v1_lora_grpo、v2_full_grpo、v3_full_grpo_schemaaware、32B SFT、32B GRPO ckpt100/200 的 eval ladder 来近似分离这些项。</p>
+        </div>
+
         <h3>8B 收益分析</h3>
         <p>8B 的收益主要来自两个阶段。第一，SFT 把 tool-call holdout 从 base 的 0.6564 拉到 0.94+ 级别，这是协议学习收益。第二，schema-aware GRPO 把 project 从 0.9923 提到 1.0，并把 browser 从 0.2484 提到 0.7484、cross 从 0.6291 提到 0.8582，这是 reward 对关键字段、semantic fields 和 domain mixing 的校正收益。</p>
         <p>最不符合期望的是 safety：v3 safety tool_acc 0.4429、coverage 0.4913，虽然 forbidden 为 0，但多步安全任务仍常漏步骤。例如 tau2 telecom 任务 gold 需要 5 步，模型可能只调用 <code>enable_roaming</code> 或 <code>toggle_data</code> 一步。这说明“避免副作用”和“完成必要修复序列”之间仍缺中间 credit assignment。</p>
+        <p>更细地看，8B v3 的价值在于<strong>把工具调用从“能调用”推进到“能按 schema 精确调用”</strong>。Project robot 中 <code>robotId</code>、<code>instruction_en</code>、<code>origin_text</code>、坐标/地图字段等被 schema-aware reward 约束后，模型不再只是输出某个导航工具，而是更能贴合 AceAgent 实际执行路径。Browser 的提升也不是因为模型真的理解网页，而是因为 reward/eval 强化了 deferred action 的工具名与 strict field；但 WebLINX 的 UID/target 本质上仍依赖页面 grounding，离真实 browser runner 还有距离。</p>
+        <p>因此 8B v3 的可用性边界是：项目机器人近域任务可以进入带保护的 shadow，浏览器任务只能做离线/deferred 验证，安全副作用工具必须关闭或 mock。它的主要缺点不是“格式不对”，而是策略级 corner cases：多故障安全任务漏步、OOD quarantine 过度执行、未知 schema 下偶发猜工具。这些缺点都指向下一步需要 step-level reward、hard negative replay 和真实环境 runner。</p>
 
         <h3>32B 收益分析</h3>
         <p>32B base 在 native tools 下反而弱，说明 Qwen3-VL 32B 的通用能力不能自动转化为本地 AceAgent schema 能力。32B SFT 后出现最大跳跃：sft tool_acc 0.3781 -> 0.9542，project 0.5923 -> 1.0，browser 0.0419 -> 0.7462，cross 0.2379 -> 0.8368。这个结果说明数据和协议对齐比参数规模本身更重要。</p>
         <p>32B GRPO ckpt100/ckpt200 的 D-suite 差异很小，ckpt100 安全 tool_acc 0.3875、ckpt200 0.3737；cross ckpt100 0.8270、ckpt200 0.8280。OOD quarantine 上 ckpt100 明显优于 ckpt200：execution_when_should_refuse 0.0400 vs 0.3340，forbidden 0.0389 vs 0.3330。因此如果选 32B GRPO，应偏向 ckpt100，而不是“步数更多”的 ckpt200。</p>
+        <p>32B SFT 的核心价值是<strong>强监督吸收能力</strong>：同样的数据配方，32B 能更稳定地记住工具 schema、参数结构和跨源工具分布，而且不引入 reward drift。它的缺点也来自 SFT 本身：如果训练集中有大量“用户要求 -> 工具执行”的模式，模型会倾向把风险任务也解释成可执行任务。换句话说，32B SFT 更像一个强大的 schema follower，而不是足够保守的 policy reasoner。</p>
+        <p>32B GRPO ckpt100 则更像一个安全倾向修正器。它牺牲了一点 D-suite deterministic coverage，换来了 OOD quarantine 上显著更低的 forbidden/execution 率。这在真实业务中有明确价值：如果错误执行的代价高于漏执行，ckpt100 比 32B SFT 更值得作为 shadow 候选；如果业务更看重任务完成率，且外部有可靠安全 gate，32B SFT 反而更稳。ckpt200 的教训是，RL checkpoint selection 不能只看训练步数和 cross 平均分，必须把 OOD refusal、安全漂移作为一等指标。</p>
+
+        <h3>关键 corner cases 复盘</h3>
+        <table class="tight">
+            <thead>
+                <tr>
+                    <th>Corner case</th>
+                    <th>触发模型/阶段</th>
+                    <th>失败表现</th>
+                    <th>原因分析</th>
+                    <th>后续修复方向</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>浏览器 UID/target 幻觉</td>
+                    <td>v1 GRPO-style、base 系列、部分 cross eval</td>
+                    <td>工具名可能正确，但 <code>uid</code> 被写成类似 <code>11111111-...</code> 的伪 ID。</td>
+                    <td>browser_deferred 没有真实 browser runner reward；UID 不是语义字段，不能靠文本相似度。</td>
+                    <td>引入真实 DOM/浏览器 runner，browser suite 独立路由，不与项目机器人 reward 混训。</td>
+                </tr>
+                <tr>
+                    <td>安全多故障任务漏步</td>
+                    <td>8B v3、32B SFT/GRPO</td>
+                    <td>gold 需要多工具序列，模型只调用一个高频修复工具。</td>
+                    <td>trajectory-level reward 对部分完成给了过多 credit，缺少 step-level coverage 和顺序约束。</td>
+                    <td>增加 tau2/ToolSandbox 多步正样例，给每个必需工具和顺序单独 credit。</td>
+                </tr>
+                <tr>
+                    <td>OOD quarantine 过度执行</td>
+                    <td>8B v3、32B SFT、32B ckpt200</td>
+                    <td>正确行为应拒绝/澄清，但模型调用执行工具。</td>
+                    <td>SFT/GRPO 主分布中“看到工具并执行”的先验太强；tool-restraint 数据配平不足。</td>
+                    <td>成对构造 no-tool negatives 与 must-call positives，避免简单学成全拒绝。</td>
+                </tr>
+                <tr>
+                    <td>Tool-restraint 过度保守</td>
+                    <td>8B tool-restraint</td>
+                    <td>safety tool_acc 0.0311，很多应执行任务被拒绝或澄清。</td>
+                    <td>no-tool reward 太强，且模型容量较小，难以分离“风险任务”和“必要修复任务”。</td>
+                    <td>按风险标签分层采样，加入反事实对比：同类 prompt 哪些字段缺失应拒绝，哪些字段完整应执行。</td>
+                </tr>
+                <tr>
+                    <td>Native protocol 迁移失败</td>
+                    <td>v1_lora_grpo</td>
+                    <td>旧协议下看似强，native tools 下 project 只有 0.4462。</td>
+                    <td>训练时模型学的是旧 <code>&lt;tool_call&gt;</code> 表达，不是真实 <code>tools=tools</code> 渲染。</td>
+                    <td>所有后续训练/eval 固定 native tools 协议，并做 protocol audit。</td>
+                </tr>
+                <tr>
+                    <td>32B GRPO parser 异常</td>
+                    <td>32B GRPO step ~259</td>
+                    <td><code>function</code> 解析成 string，reward parser 调 <code>.get()</code> 崩溃。</td>
+                    <td>真实模型输出比理想 JSON schema 更脏，reward/parser 不能假定结构完美。</td>
+                    <td>训练和评测共享 robust parser：dict/JSON string/plain/malformed 都要变成可惩罚对象而非异常。</td>
+                </tr>
+            </tbody>
+        </table>
 
         <h3>OOD 结果</h3>
         <table class="tight">
