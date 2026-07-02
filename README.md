@@ -21,3 +21,5 @@
 - [机器人与机器狗仿真平台：ROS2、Sandbox、Isaac 与生产力流程](https://msz136.github.io/NoteBook/robotics_simulation_workflow_report.html)
 - [AceAgent SFT + GRPO 训练与评测全流程报告](aceagent_sft_grpo_training_report.html)
 - [RoboCasa-UWM 迁移复现与工程恢复报告](robocasa_uwm_transfer_reproduction_report.html)
+- [Luoshuang RoboCasa kitchen24 π0.5 训练评估全流程报告](luoshuang_robocasa_kitchen24_report.html)
+- [OpenPI / OpenPiVLA LIBERO 训练评估与 Qwen-VL 适配项目恢复报告](openpivla_libero_project_report.html)
