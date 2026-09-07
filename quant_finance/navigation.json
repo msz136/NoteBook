@@ -1,0 +1,29 @@
+{
+  "title": "计量金融与量化资料库阅读顺序",
+  "reports": [
+    {"source": "modules/00_orientation_and_diagnostic_notes.md", "html": "modules/00_orientation_and_diagnostic_notes.html", "title": "M00 领域导航与能力诊断"},
+    {"source": "modules/01_mathematical_foundations_notes.md", "html": "modules/01_mathematical_foundations_notes.html", "title": "M01 数学、概率、统计与优化"},
+    {"source": "modules/02_financial_data_contract_notes.md", "html": "modules/02_financial_data_contract_notes.html", "title": "M02 金融数据契约"},
+    {"source": "modules/03_core_econometrics_notes.md", "html": "modules/03_core_econometrics_notes.html", "title": "M03 核心计量"},
+    {"source": "modules/04_financial_time_series_notes.md", "html": "modules/04_financial_time_series_notes.html", "title": "M04 金融时间序列"},
+    {"source": "modules/05_panel_and_causal_identification_notes.md", "html": "modules/05_panel_and_causal_identification_notes.html", "title": "M05 面板与因果识别"},
+    {"source": "modules/06_asset_pricing_notes.md", "html": "modules/06_asset_pricing_notes.html", "title": "M06 资产定价"},
+    {"source": "modules/07_fixed_income_derivatives_notes.md", "html": "modules/07_fixed_income_derivatives_notes.html", "title": "M07 固收、衍生品与随机过程"},
+    {"source": "modules/08_portfolio_and_risk_notes.md", "html": "modules/08_portfolio_and_risk_notes.html", "title": "M08 组合与风险"},
+    {"source": "modules/09_market_microstructure_execution_notes.md", "html": "modules/09_market_microstructure_execution_notes.html", "title": "M09 市场微观结构与执行"},
+    {"source": "modules/10_factor_research_financial_ml_notes.md", "html": "modules/10_factor_research_financial_ml_notes.html", "title": "M10 因子研究与金融 ML"},
+    {"source": "modules/11_backtest_statistics_decay_notes.md", "html": "modules/11_backtest_statistics_decay_notes.html", "title": "M11 回测统计与策略衰减"},
+    {"source": "modules/12_reproducibility_model_governance_notes.md", "html": "modules/12_reproducibility_model_governance_notes.html", "title": "M12 研究复现与模型治理"},
+    {"source": "projects/p0_statistical_simulation/p0_statistical_simulation_report.md", "html": "projects/p0_statistical_simulation/p0_statistical_simulation_report.html", "title": "P0 统计模拟实验"},
+    {"source": "projects/p1_macro_vintage/p1_macro_vintage_report.md", "html": "projects/p1_macro_vintage/p1_macro_vintage_report.html", "title": "P1 宏观 Vintage 实验"},
+    {"source": "projects/p2_volatility_forecast/p2_volatility_forecast_report.md", "html": "projects/p2_volatility_forecast/p2_volatility_forecast_report.html", "title": "P2 波动率预测实验"},
+    {"source": "projects/p3_factor_pricing/p3_factor_pricing_report.md", "html": "projects/p3_factor_pricing/p3_factor_pricing_report.html", "title": "P3 公开因子定价复现"},
+    {"source": "projects/p4_portfolio_risk/p4_portfolio_risk_report.md", "html": "projects/p4_portfolio_risk/p4_portfolio_risk_report.html", "title": "P4 组合风险敏感性实验"},
+    {"source": "projects/p5_leakage_free_alpha/p5_leakage_free_alpha_report.md", "html": "projects/p5_leakage_free_alpha/p5_leakage_free_alpha_report.html", "title": "P5 无泄漏 Alpha 研究"},
+    {"source": "projects/p6_lean_event_backtest/p6_lean_event_backtest_report.md", "html": "projects/p6_lean_event_backtest/p6_lean_event_backtest_report.html", "title": "P6 LEAN 事件驱动回测"},
+    {"source": "projects/p7_research_pipeline/p7_research_pipeline_report.md", "html": "projects/p7_research_pipeline/p7_research_pipeline_report.html", "title": "P7 研究生产管线"},
+    {"source": "projects/capstone_fama_french_1993/capstone_protocol.md", "html": "projects/capstone_fama_french_1993/capstone_protocol.html", "title": "Capstone 复现协议"},
+    {"source": "projects/capstone_fama_french_1993/capstone_execution_report.md", "html": "projects/capstone_fama_french_1993/capstone_execution_report.html", "title": "Capstone 执行与答辩"},
+    {"source": "classic_trading_strategy_models_report.md", "html": "classic_trading_strategy_models_report.html", "title": "经典交易策略模型：主观判断、计量信号与跨资产组合"}
+  ]
+}

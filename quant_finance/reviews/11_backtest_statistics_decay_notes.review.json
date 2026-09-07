@@ -1,0 +1,77 @@
+{
+  "artifact": "modules/11_backtest_statistics_decay_notes.html",
+  "canonical_source": "modules/11_backtest_statistics_decay_notes.md",
+  "source_revision": "ad35636e959e290fbcffb96068ec11ef7291c1af2db156ffb67ccd0fad2147c5",
+  "verdict": "WARN",
+  "checks": [
+    {
+      "name": "source_sha",
+      "status": "PASS",
+      "evidence": "expected=ad35636e959e290fbcffb96068ec11ef7291c1af2db156ffb67ccd0fad2147c5; embedded=ad35636e959e290fbcffb96068ec11ef7291c1af2db156ffb67ccd0fad2147c5"
+    },
+    {
+      "name": "single_h1",
+      "status": "PASS",
+      "evidence": "h1_count=1"
+    },
+    {
+      "name": "heading_hierarchy",
+      "status": "PASS",
+      "evidence": "headings=[(1, '回测统计与策略衰减：数据窥探、成本、引擎语义与失效诊断'), (2, '问题（Question）'), (2, '背景与动机（Background & Motivation）'), (2, '回测对象与时间语义'), (2, '回测统计与多重检验'), (2, '向量化与事件驱动引擎'), (2, '成本、容量与衰减'), (2, '研究与失败契约'), (2, 'Pipeline 与伪代码（Pipeline & Pseudocode）'), (2, '实现证据与结果（Implementation & Results）'), (2, '失效诊断与方法对比'), (2, '练习与答案边界（Exercises）'), (2, '答案索引（Answer Boundary）'), (2, '风险与后续建议（Risks & Next）'), (2, '参考文献（References）')]"
+    },
+    {
+      "name": "academic_template",
+      "status": "PASS",
+      "evidence": "palette/serif/1280-grid/260-sticky/900-breakpoint markers"
+    },
+    {
+      "name": "mathjax_config",
+      "status": "PASS",
+      "evidence": "MathJax 3 delimiters and skipHtmlTags markers"
+    },
+    {
+      "name": "formula_em_zero",
+      "status": "PASS",
+      "evidence": "formula_em_count=0"
+    },
+    {
+      "name": "latex_subscript_literal",
+      "status": "PASS",
+      "evidence": "source=['_{s\\\\le t}', '_{t-1}']; missing=[]"
+    },
+    {
+      "name": "internal_overflow",
+      "status": "PASS",
+      "evidence": "table/code/formula internal overflow CSS markers"
+    },
+    {
+      "name": "anchors",
+      "status": "PASS",
+      "evidence": "unresolved=[]"
+    },
+    {
+      "name": "local_links",
+      "status": "PASS",
+      "evidence": "unresolved=[]"
+    },
+    {
+      "name": "required_sections",
+      "status": "PASS",
+      "evidence": "required=['question', 'background', 'concepts', 'statistics', 'engines', 'decay', 'math', 'pipeline', 'implementation', 'comparison', 'exercises', 'risks', 'references']; missing=[]"
+    },
+    {
+      "name": "diagnostic_question_coverage",
+      "status": "PASS",
+      "evidence": "prefix=M11-Q; expected=20; counts={'M11-Q01': 2, 'M11-Q02': 2, 'M11-Q03': 2, 'M11-Q04': 2, 'M11-Q05': 2, 'M11-Q06': 2, 'M11-Q07': 2, 'M11-Q08': 2, 'M11-Q09': 2, 'M11-Q10': 2, 'M11-Q11': 2, 'M11-Q12': 2, 'M11-Q13': 2, 'M11-Q14': 2, 'M11-Q15': 2, 'M11-Q16': 2, 'M11-Q17': 2, 'M11-Q18': 2, 'M11-Q19': 2, 'M11-Q20': 2}"
+    },
+    {
+      "name": "browser_visual_qa",
+      "status": "PENDING",
+      "evidence": "环境安全策略禁止浏览器直接打开本地 file:// HTML；未绕行，待人工桌面与窄屏复核"
+    }
+  ],
+  "open_items": [
+    "browser_visual_qa"
+  ],
+  "next": "完成浏览器视觉 QA 后重新审查"
+}

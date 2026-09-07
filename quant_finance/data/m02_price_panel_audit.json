@@ -1,0 +1,67 @@
+{
+  "verdict": "PASS",
+  "checks": [
+    {
+      "name": "required_fields",
+      "status": "PASS",
+      "missing": []
+    },
+    {
+      "name": "row_count",
+      "status": "PASS",
+      "value": 7
+    },
+    {
+      "name": "timestamp_and_value_constraints",
+      "status": "PASS",
+      "failures": []
+    },
+    {
+      "name": "return_rows",
+      "status": "PASS",
+      "value": 5
+    }
+  ],
+  "returns": [
+    {
+      "symbol": "AAA",
+      "session_date": "2024-01-03",
+      "price_return_raw": 0.020000000000000018,
+      "total_return_raw": 0.020000000000000018,
+      "return_adjusted_close": 0.020000000000000018,
+      "split_factor": 1.0
+    },
+    {
+      "symbol": "AAA",
+      "session_date": "2024-01-04",
+      "price_return_raw": -0.009803921568627416,
+      "total_return_raw": 0.0,
+      "return_adjusted_close": 0.0,
+      "split_factor": 1.0
+    },
+    {
+      "symbol": "AAA",
+      "session_date": "2024-01-05",
+      "price_return_raw": -0.5,
+      "total_return_raw": -0.5,
+      "return_adjusted_close": -0.009803921568627416,
+      "split_factor": 2.0
+    },
+    {
+      "symbol": "BBB",
+      "session_date": "2024-01-03",
+      "price_return_raw": -0.012499999999999956,
+      "total_return_raw": -0.012499999999999956,
+      "return_adjusted_close": -0.012499999999999956,
+      "split_factor": 1.0
+    },
+    {
+      "symbol": "BBB",
+      "session_date": "2024-01-04",
+      "price_return_raw": 0.018987341772152,
+      "total_return_raw": 0.025316455696202445,
+      "return_adjusted_close": 0.018987341772152,
+      "split_factor": 1.0
+    }
+  ]
+}

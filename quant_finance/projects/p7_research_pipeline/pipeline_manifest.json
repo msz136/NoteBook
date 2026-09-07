@@ -1,0 +1,73 @@
+{
+  "qlib": {
+    "installed": false,
+    "official_head": "d5379c520f66a39953bad76234a7019a72796fd0"
+  },
+  "stages": [
+    {
+      "inputs": [],
+      "name": "data",
+      "output": {
+        "path": "01_data.json",
+        "sha256": "9cfc6fe858bf7db0e7b9620b77baf0d2b5dda0ff224c1cb59b890623bf6366c9"
+      },
+      "status": "PASS"
+    },
+    {
+      "inputs": [
+        {
+          "path": "01_data.json",
+          "sha256": "9cfc6fe858bf7db0e7b9620b77baf0d2b5dda0ff224c1cb59b890623bf6366c9"
+        }
+      ],
+      "name": "feature",
+      "output": {
+        "path": "02_features.json",
+        "sha256": "b0b575585b690b113251fa23d8a3f84dd5819ccf0b1c69d3a9ba109e2cb0826d"
+      },
+      "status": "PASS"
+    },
+    {
+      "inputs": [
+        {
+          "path": "02_features.json",
+          "sha256": "b0b575585b690b113251fa23d8a3f84dd5819ccf0b1c69d3a9ba109e2cb0826d"
+        }
+      ],
+      "name": "train",
+      "output": {
+        "path": "03_model.json",
+        "sha256": "06208613033ba8423725c43b2efd4f92531afb23c10f57f5ae5aee36b42629b3"
+      },
+      "status": "PASS"
+    },
+    {
+      "inputs": [
+        {
+          "path": "03_model.json",
+          "sha256": "06208613033ba8423725c43b2efd4f92531afb23c10f57f5ae5aee36b42629b3"
+        }
+      ],
+      "name": "backtest",
+      "output": {
+        "path": "04_backtest.json",
+        "sha256": "0cea7ff95b5258c94bc063ca9144fe8b1135e1f59e971fcd5aa99a0b498f2a93"
+      },
+      "status": "PASS"
+    },
+    {
+      "inputs": [
+        {
+          "path": "04_backtest.json",
+          "sha256": "0cea7ff95b5258c94bc063ca9144fe8b1135e1f59e971fcd5aa99a0b498f2a93"
+        }
+      ],
+      "name": "report",
+      "output": {
+        "path": "05_report.json",
+        "sha256": "00115f92a78958a8a5d835caaf39d7711d13fefe1c2df7c26d1ecdeaa81e1e94"
+      },
+      "status": "PASS"
+    }
+  ]
+}

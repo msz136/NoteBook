@@ -1,0 +1,633 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="generator" content="quant_finance ARIS render-html (academic, v1)">
+  <meta name="source-file" content="06_asset_pricing_notes.md">
+  <meta name="source-sha256" content="ef0dbebafc98df153b37e5363838aaf89291a17846e66be215d9475aebb7b609">
+  <title>资产定价：CAPM、SDF、因子模型与 Fama–MacBeth</title>
+  <script>
+    window.MathJax = {
+      tex: {inlineMath: [['\\(', '\\)'], ['$', '$']], displayMath: [['\\[', '\\]'], ['$$', '$$']]},
+      options: {skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']}
+    };
+  </script>
+  <script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+  <style>
+/* ARIS academic v1 — quant_finance canonical inline stylesheet. */
+:root {
+  --paper: #fdfcf7;
+  --paper-soft: #f4f1ea;
+  --ink: #1a1a1a;
+  --muted: #625f58;
+  --blue: #1a4a8c;
+  --blue-soft: #dce7f4;
+  --rust: #b8390e;
+  --rule: #b9b2a6;
+  --serif: "Source Serif Pro", "Source Serif 4", "Crimson Pro", Georgia, "Songti SC", STSong, serif;
+  --mono: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  margin: 0;
+  color: var(--ink);
+  background: var(--paper);
+  font-family: var(--serif);
+  font-size: 16px;
+  line-height: 1.8;
+}
+a { color: var(--blue); text-underline-offset: 0.16em; }
+a:hover { color: var(--rust); }
+
+.page-shell {
+  width: min(1280px, calc(100% - 40px));
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: 260px minmax(0, 1fr);
+  gap: 42px;
+  align-items: start;
+}
+.toc {
+  position: sticky;
+  top: 24px;
+  max-height: calc(100vh - 48px);
+  overflow-y: auto;
+  padding: 28px 18px 24px 0;
+  color: var(--muted);
+}
+.toc-title {
+  margin: 0 0 0.65rem;
+  color: var(--blue);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+.toc ol { margin: 0; padding: 0; list-style: none; }
+.toc li { margin: 0.24rem 0; line-height: 1.35; }
+.toc a { color: inherit; text-decoration: none; }
+.toc a:hover { color: var(--rust); }
+.toc .depth-3 { padding-left: 0.85rem; font-size: 0.92rem; }
+.toc .depth-4 { padding-left: 1.55rem; font-size: 0.86rem; }
+
+main {
+  min-width: 0;
+  margin: 24px 0 64px;
+  padding: 48px clamp(32px, 5vw, 72px) 64px;
+  background: var(--paper-soft);
+  border: 1px solid #ded8cd;
+  box-shadow: 0 16px 44px rgba(55, 47, 36, 0.08);
+}
+article { min-width: 0; }
+.eyebrow {
+  margin: 0 0 0.45rem;
+  color: var(--rust);
+  font-family: var(--serif);
+  font-size: 0.76rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+.subtitle { margin: 0 0 0.5rem; color: var(--muted); font-size: 1.05rem; }
+.meta {
+  margin: 0 0 2.2rem;
+  color: var(--muted);
+  font-size: 0.86rem;
+}
+h1 {
+  margin: 0 0 0.7rem;
+  padding: 0 0 0.8rem;
+  color: var(--ink);
+  border-bottom: 5px double var(--blue);
+  font-size: clamp(2rem, 5vw, 3.1rem);
+  line-height: 1.14;
+  letter-spacing: -0.025em;
+}
+h2 {
+  margin: 3.2rem 0 1.15rem;
+  padding-bottom: 0.42rem;
+  border-bottom: 1px solid var(--rule);
+  color: var(--ink);
+  font-size: 1.62rem;
+  line-height: 1.35;
+}
+h3 { margin: 2.15rem 0 0.8rem; color: var(--blue); font-size: 1.28rem; line-height: 1.4; }
+h4 { margin: 1.55rem 0 0.6rem; color: var(--ink); font-size: 1.06rem; line-height: 1.45; }
+p, ul, ol, blockquote { margin: 0 0 1rem; }
+ul, ol { padding-left: 1.5rem; }
+li + li { margin-top: 0.24rem; }
+strong { color: #111; }
+
+code {
+  font-family: var(--mono);
+  font-size: 0.9em;
+  background: #e9e5dc;
+  border-radius: 3px;
+  padding: 0.1em 0.32em;
+}
+pre {
+  max-width: 100%;
+  margin: 1.2rem 0 1.5rem;
+  padding: 1rem 1.1rem;
+  overflow-x: auto;
+  background: #faf9f5;
+  border: 1px solid #d8d2c7;
+  border-left: 4px solid var(--blue);
+  border-radius: 2px;
+  line-height: 1.55;
+}
+pre code {
+  display: block;
+  min-width: max-content;
+  padding: 0;
+  color: #383a42;
+  background: transparent;
+}
+/* Highlight.js atom-one-light-compatible colors for portable, inline styling. */
+.hljs-comment, .hljs-quote { color: #a0a1a7; font-style: italic; }
+.hljs-keyword, .hljs-selector-tag, .hljs-literal { color: #a626a4; }
+.hljs-string, .hljs-regexp { color: #50a14f; }
+.hljs-number, .hljs-symbol { color: #986801; }
+.hljs-title, .hljs-section, .hljs-function { color: #4078f2; }
+
+.formula {
+  max-width: 100%;
+  margin: 1.25rem 0 1.5rem;
+  padding: 1rem 1.15rem;
+  overflow-x: auto;
+  background: #faf9f5;
+  border: 1px solid #d8d2c7;
+  border-left: 4px solid var(--blue);
+}
+.formula mjx-container { min-width: max-content; }
+
+.table-wrap { max-width: 100%; margin: 1.25rem 0 1.6rem; overflow-x: auto; }
+table { width: 100%; min-width: 640px; border-collapse: collapse; font-size: 0.93rem; line-height: 1.55; }
+th, td { padding: 0.68rem 0.78rem; border: 1px solid #aaa398; text-align: left; vertical-align: top; }
+thead th { color: #fff; background: var(--blue); font-weight: 700; }
+tbody tr:nth-child(even) { background: #ebe6dc; }
+tbody tr:nth-child(odd) { background: #f8f5ee; }
+
+.note, .warning, .evidence, blockquote {
+  margin: 1.2rem 0 1.45rem;
+  padding: 0.85rem 1rem;
+  background: #f8f5ee;
+  border: 1px solid #d2cbc0;
+  border-left: 4px solid var(--blue);
+}
+.warning { border-left-color: var(--rust); background: #fff2e9; }
+.evidence { border-left-color: #6b5b8e; background: #f2eef8; }
+.note > :last-child, .warning > :last-child, .evidence > :last-child, blockquote > :last-child { margin-bottom: 0; }
+.back-to-top { display: inline-block; margin-top: 2rem; font-size: 0.88rem; }
+
+@media (max-width: 900px) {
+  .page-shell { width: min(100% - 24px, 820px); grid-template-columns: 1fr; gap: 0; }
+  .toc { position: static; max-height: none; padding: 20px 8px 4px; columns: 2; column-gap: 1.5rem; }
+  .toc-title { column-span: all; }
+  main { margin-top: 16px; padding: 34px clamp(18px, 5vw, 40px) 48px; }
+  h1 { font-size: clamp(1.8rem, 8vw, 2.55rem); }
+  table { min-width: 600px; }
+  pre, .formula, .table-wrap { overflow-x: auto; }
+}
+
+@media (max-width: 560px) {
+  .toc { columns: 1; }
+  .page-shell { width: calc(100% - 12px); }
+  main { padding-left: 15px; padding-right: 15px; }
+}
+
+@media print {
+  body { background: #fff; }
+  .page-shell { display: block; width: 100%; }
+  .toc, .back-to-top { display: none !important; }
+  main { margin: 0; padding: 0; background: #fff; border: 0; box-shadow: none; }
+  a { color: inherit; text-decoration: none; }
+  pre, .formula, table { break-inside: avoid; }
+}
+
+    .next-chapter { margin: 2.5rem 0 1rem; padding: 1rem 1.2rem; border: 1px solid #b9c9df; border-left: 4px solid #1a4a8c; background: #f4f1ea; display: flex; gap: .75rem; align-items: baseline; justify-content: space-between; }
+    .next-chapter-label { color: #1a4a8c; font-weight: 700; white-space: nowrap; }
+    .next-chapter a { color: #1a4a8c; font-weight: 700; text-decoration: none; }
+    .next-chapter a:hover, .next-chapter a:focus { color: #b8390e; text-decoration: underline; }
+    @media (max-width: 900px) { .next-chapter { display: block; } .next-chapter-label { display: block; margin-bottom: .35rem; } }
+  </style>
+</head>
+<body id="top">
+  <div class="page-shell">
+    <nav class="toc" aria-label="目录">
+      <p class="toc-title">Contents</p>
+      <ol>
+<li class="depth-2"><a href="#question">问题（Question）</a></li>
+<li class="depth-2"><a href="#background">背景与动机（Background &amp; Motivation）</a></li>
+<li class="depth-2"><a href="#concepts">基础概念与术语</a></li>
+<li class="depth-2"><a href="#methods">方法与数学形式（Methods &amp; Mathematical Form）</a></li>
+<li class="depth-3"><a href="#factor-model">CAPM 与多因子时序回归</a></li>
+<li class="depth-3"><a href="#sdf">SDF 与 GMM</a></li>
+<li class="depth-3"><a href="#fmb">Fama–MacBeth 两步法</a></li>
+<li class="depth-2"><a href="#math">数据与检验契约</a></li>
+<li class="depth-2"><a href="#pipeline">Pipeline 与伪代码（Pipeline &amp; Pseudocode）</a></li>
+<li class="depth-2"><a href="#implementation">实现证据与结果（Implementation &amp; Results）</a></li>
+<li class="depth-2"><a href="#comparison">方法对比与失败案例</a></li>
+<li class="depth-2"><a href="#exercises">练习与答案边界（Exercises）</a></li>
+<li class="depth-2"><a href="#answer-boundary">答案索引（Answer Boundary）</a></li>
+<li class="depth-2"><a href="#risks">风险与后续建议（Risks &amp; Next）</a></li>
+<li class="depth-2"><a href="#references">参考文献（References）</a></li>
+      </ol>
+    </nav>
+    <main>
+      <article>
+        <header>
+          <p class="eyebrow">Quant Finance · Asset Pricing</p>
+          <p class="subtitle">M06 · 把平均收益、因子暴露、风险价格和定价误差分开检验</p>
+          <h1>资产定价：CAPM、SDF、因子模型与 Fama–MacBeth</h1>
+          <p class="meta">发布日期：2026-07-22 · 证据截止：2026-07-22 · 源文件 SHA-256：<code>ef0dbebafc98df153b37e5363838aaf89291a17846e66be215d9475aebb7b609</code></p>
+        </header>
+<h2 id="question">问题（Question）</h2>
+<p>一项因子为什么既需要解释时间序列收益，也需要解释横截面平均收益？CAPM、随机贴现因子（SDF）、Fama–French 因子与 Fama–MacBeth 回归如何对应？本模块用已知真值的合成三因子系统验证 beta、alpha 和风险价格估计，并明确“定价误差小”不等于“可交易 alpha”。</p>
+<h2 id="background">背景与动机（Background &amp; Motivation）</h2>
+<p>Sharpe 的 CAPM 将期望超额收益与市场 beta 联系起来；Fama 与 French 扩展了经验因子模型；Fama–MacBeth 提供逐期横截面风险价格估计与时间序列推断。[1–3] SDF 形式把无套利定价统一写为贴现后收益矩条件。Kenneth French Data Library 提供公开因子和投资组合文件，是后续 P3 复现入口，但不能替代底层点时个股和退市数据审计。[4]</p>
+<div class="evidence"><strong>证据边界：</strong>理论与方法来自原始文献及官方数据入口；本地合成实验只验证两步回归、定价误差和有限样本波动。报告不声称真实因子溢价、策略收益或因果机制。</div>
+<h2 id="concepts">基础概念与术语</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>概念</th>
+<th>定义</th>
+<th>常见误读</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>超额收益</td>
+<td>资产收益减无风险收益</td>
+<td>原始价格收益不等于超额总收益</td>
+</tr>
+<tr>
+<td>beta</td>
+<td>收益对因子的条件协动/回归载荷</td>
+<td>beta 大不自动代表 alpha 高</td>
+</tr>
+<tr>
+<td>风险价格 <span class="math-inline" data-math-kind="inline">\(\lambda\)</span></td>
+<td>单位因子暴露对应的横截面期望收益</td>
+<td>样本因子均值会有大波动</td>
+</tr>
+<tr>
+<td>alpha</td>
+<td>因子模型不能解释的平均收益截距</td>
+<td>显著 alpha 不自动可交易</td>
+</tr>
+<tr>
+<td>SDF</td>
+<td>将未来收益折现到当前价格的随机变量</td>
+<td>统计 SDF 不自动等于结构偏好模型</td>
+</tr>
+<tr>
+<td>定价误差</td>
+<td>模型预测期望收益与实际平均收益差</td>
+<td>小误差可能来自弱检验资产</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="methods">方法与数学形式（Methods &amp; Mathematical Form）</h2>
+<h3 id="factor-model">CAPM 与多因子时序回归</h3>
+<p>CAPM 的期望收益关系：</p>
+<div class="formula" data-math-kind="display">\[E[R_i^e]=\beta_i E[R_M^e],\qquad
+\beta_i=\frac{Cov(R_i^e,R_M^e)}{Var(R_M^e)}.\]</div>
+<p>多因子时间序列回归：</p>
+<div class="formula" data-math-kind="display">\[R_{it}^e=\alpha_i+\beta_i'f_t+\varepsilon_{it}.\]</div>
+<p>若因子完全定价测试资产，<span class="math-inline" data-math-kind="inline">\(\alpha_i\)</span> 应接近零；联合检验比逐个挑选显著 alpha 更符合模型检验，但仍受测试资产、样本期和协方差估计影响。</p>
+<h3 id="sdf">SDF 与 GMM</h3>
+<p>无套利定价矩条件：</p>
+<div class="formula" data-math-kind="display">\[E[m_{t+1}R_{i,t+1}]=1,
+\qquad E[m_{t+1}R_{i,t+1}^e]=0.\]</div>
+<p>线性 SDF 可写为 <span class="math-inline" data-math-kind="inline">\(m=a-b'f\)</span>，并用 GMM 估计矩条件。检验需报告矩条件、权重矩阵、Hansen–Jagannathan 距离或其他定价误差度量；不能仅凭高横截面 <span class="math-inline" data-math-kind="inline">\(R^2\)</span> 宣布模型正确。</p>
+<h3 id="fmb">Fama–MacBeth 两步法</h3>
+<p>第一步按资产估计时序 beta；第二步每期做横截面回归：</p>
+<div class="formula" data-math-kind="display">\[R_{it}^e=\lambda_{0t}+\hat\beta_i'\lambda_t+u_{it},
+\qquad \hat\lambda=\frac1T\sum_{t=1}^T\hat\lambda_t.\]</div>
+<p>标准误来自 <span class="math-inline" data-math-kind="inline">\(\hat\lambda_t\)</span> 的时间序列，存在自相关时需 HAC；第一步 beta 估计误差、弱横截面分散和时间变动暴露会影响推断。</p>
+<h2 id="math">数据与检验契约</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>项目</th>
+<th>必须记录</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>收益口径</td>
+<td>总收益/价格收益、无风险利率、频率与单位</td>
+</tr>
+<tr>
+<td>因子版本</td>
+<td>French 文件名称、下载日期、档案版本和百分比/小数</td>
+</tr>
+<tr>
+<td>测试资产</td>
+<td>组合构造、再平衡、退市、微盘与点时成员</td>
+</tr>
+<tr>
+<td>时序估计</td>
+<td>样本窗、alpha/beta、HAC/联合检验</td>
+</tr>
+<tr>
+<td>横截面估计</td>
+<td>beta 来源、每期样本、lambda 序列与标准误</td>
+</tr>
+<tr>
+<td>经济边界</td>
+<td>成本、换手、容量、可交易性和数据许可</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="pipeline">Pipeline 与伪代码（Pipeline &amp; Pseudocode）</h2>
+<pre><code class="language-python">returns, factors = load_point_in_time_total_returns_and_factors(asof_at)
+assert_frequency_units_and_calendar_match(returns, factors)
+betas, alphas = time_series_regressions(returns, factors)
+lambda_t = [cross_sectional_regression(returns[t], betas) for t in dates]
+lambda_mean, lambda_se = time_series_mean_and_hac(lambda_t)
+pricing_errors = evaluate_alphas_and_sdf_moments(alphas, returns, factors)
+report_test_assets_versions_costs_and_failure_cases()
+</code></pre>
+<p>可执行合成实验见 <a href="../tools/m06_asset_pricing.py"><code>m06_asset_pricing.py</code></a>，结果见 <a href="../data/m06_asset_pricing_results.json"><code>m06_asset_pricing_results.json</code></a>。</p>
+<h2 id="implementation">实现证据与结果（Implementation &amp; Results）</h2>
+<pre><code class="language-powershell">python quant_finance/tools/m06_asset_pricing.py
+python quant_finance/data/test_m06_asset_pricing.py -v
+</code></pre>
+<p>实验生成 360 期、45 个资产、3 个因子的收益系统。时序回归恢复 beta，beta RMSE 约为 0.04，平均绝对 alpha 约为 0.001；Fama–MacBeth 风险价格接近本次样本的因子均值。第二因子的样本均值明显偏离 DGP 的总体均值，恰好展示有限样本风险溢价估计可能非常嘈杂，不能用总体真值替代样本证据。</p>
+<h2 id="comparison">方法对比与失败案例</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>失败</th>
+<th>表现</th>
+<th>处理</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>百分比与小数混用</td>
+<td>lambda/alpha 放大 100 倍</td>
+<td>数据契约和单位测试</td>
+</tr>
+<tr>
+<td>最新因子回填历史</td>
+<td>构造版本泄漏</td>
+<td>下载日期、档案和 hash</td>
+</tr>
+<tr>
+<td>只挑显著 alpha</td>
+<td>多重检验偏差</td>
+<td>联合检验、失败登记、样本外复核</td>
+</tr>
+<tr>
+<td>beta 估计误差</td>
+<td>两步风险价格偏误</td>
+<td>更长窗口、errors-in-variables 修正/稳健性</td>
+</tr>
+<tr>
+<td>测试资产太弱</td>
+<td>横截面 <span class="math-inline" data-math-kind="inline">\(R^2\)</span> 虚高</td>
+<td>扩展有经济张力的测试资产</td>
+</tr>
+<tr>
+<td>因子收益可解释即称因果</td>
+<td>混淆定价与机制</td>
+<td>将因果设计单独论证</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="exercises">练习与答案边界（Exercises）</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>ID</th>
+<th>题目</th>
+<th>达标标准</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>M06-Q01</td>
+<td>CAPM 的 beta 是什么？</td>
+<td>市场协方差除以市场方差。</td>
+</tr>
+<tr>
+<td>M06-Q02</td>
+<td>alpha 为零意味着什么？</td>
+<td>在给定测试资产/样本下模型未留下平均截距。</td>
+</tr>
+<tr>
+<td>M06-Q03</td>
+<td>SDF 定价矩条件是什么？</td>
+<td><span class="math-inline" data-math-kind="inline">\(E[mR]=1\)</span> 或超额收益形式为零。</td>
+</tr>
+<tr>
+<td>M06-Q04</td>
+<td>因子暴露与风险价格差异？</td>
+<td>beta 是数量，lambda 是单位暴露的期望补偿。</td>
+</tr>
+<tr>
+<td>M06-Q05</td>
+<td>Fama–MacBeth 两步是什么？</td>
+<td>先时序 beta，再逐期横截面 lambda。</td>
+</tr>
+<tr>
+<td>M06-Q06</td>
+<td>lambda 标准误来自哪里？</td>
+<td>每期 lambda 的时间序列。</td>
+</tr>
+<tr>
+<td>M06-Q07</td>
+<td>为什么需 HAC？</td>
+<td>lambda 序列可能自相关。</td>
+</tr>
+<tr>
+<td>M06-Q08</td>
+<td>为什么 beta 误差重要？</td>
+<td>第二步解释变量带测量误差。</td>
+</tr>
+<tr>
+<td>M06-Q09</td>
+<td>高横截面 R² 能证明模型吗？</td>
+<td>不能，依赖测试资产和模型张力。</td>
+</tr>
+<tr>
+<td>M06-Q10</td>
+<td>French 因子文件需登记什么？</td>
+<td>文件、版本、日期、单位、构造定义。</td>
+</tr>
+<tr>
+<td>M06-Q11</td>
+<td>总收益为何重要？</td>
+<td>分红和公司行动影响持有回报。</td>
+</tr>
+<tr>
+<td>M06-Q12</td>
+<td>定价 alpha 能否直接交易？</td>
+<td>还需时点、成本、换手和容量。</td>
+</tr>
+<tr>
+<td>M06-Q13</td>
+<td>SDF 与 GMM 有何关系？</td>
+<td>SDF 产生可用 GMM 估计的矩条件。</td>
+</tr>
+<tr>
+<td>M06-Q14</td>
+<td>测试资产为何影响结论？</td>
+<td>弱或相似组合无法区分模型。</td>
+</tr>
+<tr>
+<td>M06-Q15</td>
+<td>样本因子均值为何偏离总体均值？</td>
+<td>风险溢价噪声大、样本有限。</td>
+</tr>
+<tr>
+<td>M06-Q16</td>
+<td>因子定价检验是因果检验吗？</td>
+<td>不是，机制需额外识别。</td>
+</tr>
+<tr>
+<td>M06-Q17</td>
+<td>如何查单位错误？</td>
+<td>手算样例、量纲和 100 倍异常测试。</td>
+</tr>
+<tr>
+<td>M06-Q18</td>
+<td>多重因子挖掘风险？</td>
+<td>数据窥探导致偶然显著。</td>
+</tr>
+<tr>
+<td>M06-Q19</td>
+<td>合成实验支持什么？</td>
+<td>支持两步实现与已知 DGP 检查。</td>
+</tr>
+<tr>
+<td>M06-Q20</td>
+<td>何时暂停定价结论？</td>
+<td>口径、版本、测试资产或推断闸门失败时。</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="answer-boundary">答案索引（Answer Boundary）</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>ID</th>
+<th>答案边界</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>M06-Q01</td>
+<td><span class="math-inline" data-math-kind="inline">\(Cov(R_i^e,R_M^e)/Var(R_M^e)\)</span>。</td>
+</tr>
+<tr>
+<td>M06-Q02</td>
+<td>只是在该模型、样本和测试资产下截距近零。</td>
+</tr>
+<tr>
+<td>M06-Q03</td>
+<td><span class="math-inline" data-math-kind="inline">\(E[mR]=1\)</span>，超额收益为 <span class="math-inline" data-math-kind="inline">\(E[mR^e]=0\)</span>。</td>
+</tr>
+<tr>
+<td>M06-Q04</td>
+<td>beta 是暴露，lambda 是暴露价格。</td>
+</tr>
+<tr>
+<td>M06-Q05</td>
+<td>时序估 beta，横截面逐期估 lambda。</td>
+</tr>
+<tr>
+<td>M06-Q06</td>
+<td>lambda_t 的时间均值及时间序列标准误。</td>
+</tr>
+<tr>
+<td>M06-Q07</td>
+<td>修正风险价格序列的时间相关。</td>
+</tr>
+<tr>
+<td>M06-Q08</td>
+<td>第一阶段误差进入第二阶段回归变量。</td>
+</tr>
+<tr>
+<td>M06-Q09</td>
+<td>不能；需有张力的测试资产和定价误差检验。</td>
+</tr>
+<tr>
+<td>M06-Q10</td>
+<td>文件名、版本、日期、单位和构造说明。</td>
+</tr>
+<tr>
+<td>M06-Q11</td>
+<td>现金分配和公司行动属于投资者回报。</td>
+</tr>
+<tr>
+<td>M06-Q12</td>
+<td>不能；需可用时间、成本、换手和容量。</td>
+</tr>
+<tr>
+<td>M06-Q13</td>
+<td>SDF 正交条件是 GMM 的矩条件。</td>
+</tr>
+<tr>
+<td>M06-Q14</td>
+<td>测试资产决定模型被要求解释的横截面。</td>
+</tr>
+<tr>
+<td>M06-Q15</td>
+<td>因子收益方差高且 T 有限。</td>
+</tr>
+<tr>
+<td>M06-Q16</td>
+<td>不是，资产定价关系不自动识别因果机制。</td>
+</tr>
+<tr>
+<td>M06-Q17</td>
+<td>检查小数/百分比、手算和异常尺度。</td>
+</tr>
+<tr>
+<td>M06-Q18</td>
+<td>反复搜索制造样本内偶然显著。</td>
+</tr>
+<tr>
+<td>M06-Q19</td>
+<td>验证时序/横截面两步和有限样本噪声。</td>
+</tr>
+<tr>
+<td>M06-Q20</td>
+<td>任一数据、口径、版本、资产或推断闸门失败。</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="risks">风险与后续建议（Risks &amp; Next）</h2>
+<ul>
+<li>合成 beta 是稳定的，未覆盖时变暴露、条件定价、缺失资产和估计窗口选择。</li>
+<li>当前未使用真实 French 数据；P3 才会冻结公开文件、单位和样本期并复现时序/横截面检验。</li>
+<li>下一 slice G12/P3 将进行公开因子定价复现，并明确底层 CRSP/Compustat 不可由公开因子文件替代。</li>
+</ul>
+<h2 id="references">参考文献（References）</h2>
+<ol>
+<li>[1] William F. Sharpe, “Capital Asset Prices,” <em>Journal of Finance</em>, 1964. <a href="https://doi.org/10.1111/j.1540-6261.1964.tb02865.x">链接</a></li>
+<li>[2] Eugene F. Fama and Kenneth R. French, “Common Risk Factors in the Returns on Stocks and Bonds,” <em>Journal of Financial Economics</em>, 1993. <a href="https://doi.org/10.1016/0304-405X(93)90023-5">链接</a></li>
+<li>[3] Eugene F. Fama and James D. MacBeth, “Risk, Return, and Equilibrium,” <em>Journal of Political Economy</em>, 1973. <a href="https://doi.org/10.1086/260061">链接</a></li>
+<li>[4] Kenneth R. French, “Data Library.” <a href="https://mba.tuck.dartmouth.edu/pages/faculty/ken.french/data_library.html">链接</a></li>
+<li>[5] Bruce E. Hansen, “Econometrics.” <a href="https://www.ssc.wisc.edu/~bhansen/econometrics/">链接</a></li>
+</ol>
+
+        <nav class="next-chapter" aria-label="下一章节">
+          <span class="next-chapter-label">下一章节</span>
+          <a rel="next" href="07_fixed_income_derivatives_notes.html">M07 固收、衍生品与随机过程 →</a>
+        </nav>
+
+        <a class="back-to-top" href="#top">返回页首 ↑</a>
+      </article>
+    </main>
+  </div>
+</body>
+</html>

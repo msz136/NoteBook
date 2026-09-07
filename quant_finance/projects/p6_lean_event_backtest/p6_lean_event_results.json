@@ -1,0 +1,50 @@
+{
+  "lean_runtime": {
+    "cli_found": false,
+    "dotnet_found": false,
+    "official_head": "153d0b7427a918063a018ec18964ddf450edc125"
+  },
+  "initial_cash": 100000.0,
+  "final_cash": 100192.96,
+  "final_position": 0,
+  "total_fees": 3.0,
+  "event_count": 5,
+  "events": [
+    {
+      "order_id": 1,
+      "status": "submitted",
+      "quantity": 100
+    },
+    {
+      "order_id": 1,
+      "status": "partially_filled",
+      "fill_quantity": 40,
+      "fill_price": 100.02,
+      "cash": 95998.2,
+      "position": 40
+    },
+    {
+      "order_id": 1,
+      "status": "filled",
+      "fill_quantity": 60,
+      "fill_price": 100.02,
+      "cash": 89996.0,
+      "position": 100
+    },
+    {
+      "order_id": 2,
+      "status": "submitted",
+      "quantity": 100
+    },
+    {
+      "order_id": 2,
+      "status": "filled",
+      "fill_quantity": -100,
+      "fill_price": 101.9796,
+      "cash": 100192.96,
+      "position": 0
+    }
+  ],
+  "realized_pnl_after_fee_and_slippage": 192.9600000000064,
+  "evidence_boundary": "local deterministic ledger only; LEAN algorithm not executed in this environment"
+}

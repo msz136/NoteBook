@@ -1,0 +1,668 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="generator" content="quant_finance ARIS render-html (academic, v1)">
+  <meta name="source-file" content="07_fixed_income_derivatives_notes.md">
+  <meta name="source-sha256" content="34d3c5ad31518f9f8289c4c7b71641353f88bac9175e4c082f8d60f91defc3d3">
+  <title>固定收益、衍生品与随机过程：定价、数值方法与对冲边界</title>
+  <script>
+    window.MathJax = {
+      tex: {inlineMath: [['\\(', '\\)'], ['$', '$']], displayMath: [['\\[', '\\]'], ['$$', '$$']]},
+      options: {skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']}
+    };
+  </script>
+  <script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+  <style>
+/* ARIS academic v1 — quant_finance canonical inline stylesheet. */
+:root {
+  --paper: #fdfcf7;
+  --paper-soft: #f4f1ea;
+  --ink: #1a1a1a;
+  --muted: #625f58;
+  --blue: #1a4a8c;
+  --blue-soft: #dce7f4;
+  --rust: #b8390e;
+  --rule: #b9b2a6;
+  --serif: "Source Serif Pro", "Source Serif 4", "Crimson Pro", Georgia, "Songti SC", STSong, serif;
+  --mono: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  margin: 0;
+  color: var(--ink);
+  background: var(--paper);
+  font-family: var(--serif);
+  font-size: 16px;
+  line-height: 1.8;
+}
+a { color: var(--blue); text-underline-offset: 0.16em; }
+a:hover { color: var(--rust); }
+
+.page-shell {
+  width: min(1280px, calc(100% - 40px));
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: 260px minmax(0, 1fr);
+  gap: 42px;
+  align-items: start;
+}
+.toc {
+  position: sticky;
+  top: 24px;
+  max-height: calc(100vh - 48px);
+  overflow-y: auto;
+  padding: 28px 18px 24px 0;
+  color: var(--muted);
+}
+.toc-title {
+  margin: 0 0 0.65rem;
+  color: var(--blue);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+.toc ol { margin: 0; padding: 0; list-style: none; }
+.toc li { margin: 0.24rem 0; line-height: 1.35; }
+.toc a { color: inherit; text-decoration: none; }
+.toc a:hover { color: var(--rust); }
+.toc .depth-3 { padding-left: 0.85rem; font-size: 0.92rem; }
+.toc .depth-4 { padding-left: 1.55rem; font-size: 0.86rem; }
+
+main {
+  min-width: 0;
+  margin: 24px 0 64px;
+  padding: 48px clamp(32px, 5vw, 72px) 64px;
+  background: var(--paper-soft);
+  border: 1px solid #ded8cd;
+  box-shadow: 0 16px 44px rgba(55, 47, 36, 0.08);
+}
+article { min-width: 0; }
+.eyebrow {
+  margin: 0 0 0.45rem;
+  color: var(--rust);
+  font-family: var(--serif);
+  font-size: 0.76rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+.subtitle { margin: 0 0 0.5rem; color: var(--muted); font-size: 1.05rem; }
+.meta {
+  margin: 0 0 2.2rem;
+  color: var(--muted);
+  font-size: 0.86rem;
+}
+h1 {
+  margin: 0 0 0.7rem;
+  padding: 0 0 0.8rem;
+  color: var(--ink);
+  border-bottom: 5px double var(--blue);
+  font-size: clamp(2rem, 5vw, 3.1rem);
+  line-height: 1.14;
+  letter-spacing: -0.025em;
+}
+h2 {
+  margin: 3.2rem 0 1.15rem;
+  padding-bottom: 0.42rem;
+  border-bottom: 1px solid var(--rule);
+  color: var(--ink);
+  font-size: 1.62rem;
+  line-height: 1.35;
+}
+h3 { margin: 2.15rem 0 0.8rem; color: var(--blue); font-size: 1.28rem; line-height: 1.4; }
+h4 { margin: 1.55rem 0 0.6rem; color: var(--ink); font-size: 1.06rem; line-height: 1.45; }
+p, ul, ol, blockquote { margin: 0 0 1rem; }
+ul, ol { padding-left: 1.5rem; }
+li + li { margin-top: 0.24rem; }
+strong { color: #111; }
+
+code {
+  font-family: var(--mono);
+  font-size: 0.9em;
+  background: #e9e5dc;
+  border-radius: 3px;
+  padding: 0.1em 0.32em;
+}
+pre {
+  max-width: 100%;
+  margin: 1.2rem 0 1.5rem;
+  padding: 1rem 1.1rem;
+  overflow-x: auto;
+  background: #faf9f5;
+  border: 1px solid #d8d2c7;
+  border-left: 4px solid var(--blue);
+  border-radius: 2px;
+  line-height: 1.55;
+}
+pre code {
+  display: block;
+  min-width: max-content;
+  padding: 0;
+  color: #383a42;
+  background: transparent;
+}
+/* Highlight.js atom-one-light-compatible colors for portable, inline styling. */
+.hljs-comment, .hljs-quote { color: #a0a1a7; font-style: italic; }
+.hljs-keyword, .hljs-selector-tag, .hljs-literal { color: #a626a4; }
+.hljs-string, .hljs-regexp { color: #50a14f; }
+.hljs-number, .hljs-symbol { color: #986801; }
+.hljs-title, .hljs-section, .hljs-function { color: #4078f2; }
+
+.formula {
+  max-width: 100%;
+  margin: 1.25rem 0 1.5rem;
+  padding: 1rem 1.15rem;
+  overflow-x: auto;
+  background: #faf9f5;
+  border: 1px solid #d8d2c7;
+  border-left: 4px solid var(--blue);
+}
+.formula mjx-container { min-width: max-content; }
+
+.table-wrap { max-width: 100%; margin: 1.25rem 0 1.6rem; overflow-x: auto; }
+table { width: 100%; min-width: 640px; border-collapse: collapse; font-size: 0.93rem; line-height: 1.55; }
+th, td { padding: 0.68rem 0.78rem; border: 1px solid #aaa398; text-align: left; vertical-align: top; }
+thead th { color: #fff; background: var(--blue); font-weight: 700; }
+tbody tr:nth-child(even) { background: #ebe6dc; }
+tbody tr:nth-child(odd) { background: #f8f5ee; }
+
+.note, .warning, .evidence, blockquote {
+  margin: 1.2rem 0 1.45rem;
+  padding: 0.85rem 1rem;
+  background: #f8f5ee;
+  border: 1px solid #d2cbc0;
+  border-left: 4px solid var(--blue);
+}
+.warning { border-left-color: var(--rust); background: #fff2e9; }
+.evidence { border-left-color: #6b5b8e; background: #f2eef8; }
+.note > :last-child, .warning > :last-child, .evidence > :last-child, blockquote > :last-child { margin-bottom: 0; }
+.back-to-top { display: inline-block; margin-top: 2rem; font-size: 0.88rem; }
+
+@media (max-width: 900px) {
+  .page-shell { width: min(100% - 24px, 820px); grid-template-columns: 1fr; gap: 0; }
+  .toc { position: static; max-height: none; padding: 20px 8px 4px; columns: 2; column-gap: 1.5rem; }
+  .toc-title { column-span: all; }
+  main { margin-top: 16px; padding: 34px clamp(18px, 5vw, 40px) 48px; }
+  h1 { font-size: clamp(1.8rem, 8vw, 2.55rem); }
+  table { min-width: 600px; }
+  pre, .formula, .table-wrap { overflow-x: auto; }
+}
+
+@media (max-width: 560px) {
+  .toc { columns: 1; }
+  .page-shell { width: calc(100% - 12px); }
+  main { padding-left: 15px; padding-right: 15px; }
+}
+
+@media print {
+  body { background: #fff; }
+  .page-shell { display: block; width: 100%; }
+  .toc, .back-to-top { display: none !important; }
+  main { margin: 0; padding: 0; background: #fff; border: 0; box-shadow: none; }
+  a { color: inherit; text-decoration: none; }
+  pre, .formula, table { break-inside: avoid; }
+}
+
+    .next-chapter { margin: 2.5rem 0 1rem; padding: 1rem 1.2rem; border: 1px solid #b9c9df; border-left: 4px solid #1a4a8c; background: #f4f1ea; display: flex; gap: .75rem; align-items: baseline; justify-content: space-between; }
+    .next-chapter-label { color: #1a4a8c; font-weight: 700; white-space: nowrap; }
+    .next-chapter a { color: #1a4a8c; font-weight: 700; text-decoration: none; }
+    .next-chapter a:hover, .next-chapter a:focus { color: #b8390e; text-decoration: underline; }
+    @media (max-width: 900px) { .next-chapter { display: block; } .next-chapter-label { display: block; margin-bottom: .35rem; } }
+  </style>
+</head>
+<body id="top">
+  <div class="page-shell">
+    <nav class="toc" aria-label="目录">
+      <p class="toc-title">Contents</p>
+      <ol>
+<li class="depth-2"><a href="#question">问题（Question）</a></li>
+<li class="depth-2"><a href="#background">背景与动机（Background &amp; Motivation）</a></li>
+<li class="depth-2"><a href="#concepts">基础概念与术语</a></li>
+<li class="depth-2"><a href="#fixed-income">固定收益方法</a></li>
+<li class="depth-2"><a href="#stochastic">随机过程与风险中性定价</a></li>
+<li class="depth-2"><a href="#methods">数值方法</a></li>
+<li class="depth-3"><a href="#tree">二叉树</a></li>
+<li class="depth-3"><a href="#mc">Monte Carlo</a></li>
+<li class="depth-2"><a href="#math">数据与实现契约</a></li>
+<li class="depth-2"><a href="#pipeline">Pipeline 与伪代码（Pipeline &amp; Pseudocode）</a></li>
+<li class="depth-2"><a href="#implementation">实现证据与结果（Implementation &amp; Results）</a></li>
+<li class="depth-2"><a href="#comparison">方法对比与失败案例</a></li>
+<li class="depth-2"><a href="#exercises">练习与答案边界（Exercises）</a></li>
+<li class="depth-2"><a href="#answer-boundary">答案索引（Answer Boundary）</a></li>
+<li class="depth-2"><a href="#risks">风险与后续建议（Risks &amp; Next）</a></li>
+<li class="depth-2"><a href="#references">参考文献（References）</a></li>
+      </ol>
+    </nav>
+    <main>
+      <article>
+        <header>
+          <p class="eyebrow">Quant Finance · Fixed Income and Derivatives</p>
+          <p class="subtitle">M07 · 从现金流贴现到风险中性期望，并交叉验证解析解、树和 Monte Carlo</p>
+          <h1>固定收益、衍生品与随机过程：定价、数值方法与对冲边界</h1>
+          <p class="meta">发布日期：2026-07-22 · 证据截止：2026-07-22 · 源文件 SHA-256：<code>34d3c5ad31518f9f8289c4c7b71641353f88bac9175e4c082f8d60f91defc3d3</code></p>
+        </header>
+<h2 id="question">问题（Question）</h2>
+<p>债券价格、久期和收益率曲线如何连接？为什么 Black–Scholes 的风险中性定价不等于真实世界收益预测？二叉树与 Monte Carlo 如何用同一欧式期权交叉验证，何时还必须报告离散对冲误差、波动率微笑和信用/流动性风险？</p>
+<h2 id="background">背景与动机（Background &amp; Motivation）</h2>
+<p>Black 与 Scholes、Merton 建立了连续交易和无套利下的期权定价框架；Cox–Ross–Rubinstein 二叉树提供离散时间复制与数值逼近。[1–3] 固定收益定价则从未来现金流和期限结构开始。教材公式只有在计息、日计数、曲线、波动率和交易规则被精确定义时才能进入生产。</p>
+<div class="evidence"><strong>证据边界：</strong>理论公式来自经典文献；本地结果验证固定收益现金流、Black–Scholes、600 步二叉树和 antithetic Monte Carlo 的数值一致性。未使用市场期权链、收益率曲线或交易成本，不能支持校准、套利或对冲 P&amp;L 主张。</div>
+<h2 id="concepts">基础概念与术语</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>概念</th>
+<th>定义</th>
+<th>实践边界</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>折现因子</td>
+<td><span class="math-inline" data-math-kind="inline">\(P(0,T)\)</span>：T 时点一单位现金流的现值</td>
+<td>需明确曲线来源、币种、抵押和插值</td>
+</tr>
+<tr>
+<td>即期利率</td>
+<td>单一到期零息现金流的利率</td>
+<td>与 YTM、远期利率不同</td>
+</tr>
+<tr>
+<td>久期</td>
+<td>价格对收益率一阶敏感度</td>
+<td>大变动需凸性；非平行移位需 key-rate duration</td>
+</tr>
+<tr>
+<td>风险中性测度</td>
+<td>贴现资产价格为鞅的定价测度</td>
+<td>不等于真实概率或收益预测</td>
+</tr>
+<tr>
+<td>隐含波动率</td>
+<td>使模型价格等于市场价格的波动率</td>
+<td>微笑/曲面表明常数波动率失配</td>
+</tr>
+<tr>
+<td>Delta 对冲</td>
+<td>用标的局部抵消期权一阶价格风险</td>
+<td>离散交易、跳跃、成本会留下误差</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="fixed-income">固定收益方法</h2>
+<p>债券现金流现值：</p>
+<div class="formula" data-math-kind="display">\[B_0=\sum_{j=1}^{n}CF_jP(0,t_j).\]</div>
+<p>若用固定到期收益率 <span class="math-inline" data-math-kind="inline">\(y\)</span> 和每年 <span class="math-inline" data-math-kind="inline">\(m\)</span> 次复利：</p>
+<div class="formula" data-math-kind="display">\[B(y)=\sum_{j=1}^{n}\frac{CF_j}{(1+y/m)^j}.\]</div>
+<p>Macaulay 久期与 modified duration：</p>
+<div class="formula" data-math-kind="display">\[D_M=\frac{\sum_j t_jPV(CF_j)}{B},\qquad D_{mod}=\frac{D_M}{1+y/m},\qquad \frac{\Delta B}{B}\approx-D_{mod}\Delta y.\]</div>
+<p>YTM 是单一内部收益率，并不是完整期限结构；曲线构建需处理存款/OIS/期货/互换或国债报价、日计数、支付日历、插值和 bootstrap 顺序。</p>
+<h2 id="stochastic">随机过程与风险中性定价</h2>
+<p>Black–Scholes 假设下标的遵循几何布朗运动：</p>
+<div class="formula" data-math-kind="display">\[dS_t=\mu S_tdt+\sigma S_tdW_t.\]</div>
+<p>风险中性测度下漂移替换为无风险利率 <span class="math-inline" data-math-kind="inline">\(r\)</span>，欧式看涨期权：</p>
+<div class="formula" data-math-kind="display">\[C=S_0N(d_1)-Ke^{-rT}N(d_2),
+\quad d_1=\frac{\log(S_0/K)+(r+\sigma^2/2)T}{\sigma\sqrt T},\quad d_2=d_1-\sigma\sqrt T.\]</div>
+<p>该价格依赖连续交易、无摩擦、常数波动率等假设。风险中性定价消去可复制风险的真实漂移，不意味着资产真实期望收益等于 <span class="math-inline" data-math-kind="inline">\(r\)</span>。</p>
+<h2 id="methods">数值方法</h2>
+<h3 id="tree">二叉树</h3>
+<p>CRR 树取 <span class="math-inline" data-math-kind="inline">\(u=e^{\sigma\sqrt{\Delta t}}, d=1/u\)</span>，风险中性概率：</p>
+<div class="formula" data-math-kind="display">\[q=\frac{e^{r\Delta t}-d}{u-d}.\]</div>
+<p>从到期 payoff 反向递推；美式期权每个节点还要比较立即执行价值。</p>
+<h3 id="mc">Monte Carlo</h3>
+<p>欧式 payoff 的风险中性估计：</p>
+<div class="formula" data-math-kind="display">\[\hat C=e^{-rT}\frac1N\sum_{i=1}^N(S_T^{(i)}-K)^+.\]</div>
+<p>标准误按 <span class="math-inline" data-math-kind="inline">\(O(N^{-1/2})\)</span> 收敛；antithetic variates、control variates、quasi-Monte Carlo 可降方差。路径依赖和提前执行需要更专门算法。</p>
+<h2 id="math">数据与实现契约</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>项目</th>
+<th>必须冻结</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>固收</td>
+<td>现金流、日计数、结算、票息频率、曲线、插值、信用/流动性</td>
+</tr>
+<tr>
+<td>期权</td>
+<td>标的、行权价、期限、分红、利率、波动率曲面、期权类型</td>
+</tr>
+<tr>
+<td>数值</td>
+<td>网格/步数、随机 seed、路径数、误差容忍、收敛对照</td>
+</tr>
+<tr>
+<td>对冲</td>
+<td>再平衡频率、成本、跳跃、流动性、保证金和融资</td>
+</tr>
+<tr>
+<td>估值</td>
+<td>market/model input 时间戳和 <code>available_at &lt;= asof_at</code></td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="pipeline">Pipeline 与伪代码（Pipeline &amp; Pseudocode）</h2>
+<pre><code class="language-python">curve = bootstrap_discount_curve(instruments, conventions, asof_at)
+bond = present_value(cashflows, curve)
+duration = finite_difference_or_analytic_sensitivity(bond, curve)
+option_bs = black_scholes_call(S, K, r, sigma, T)
+option_tree = crr_tree_call(S, K, r, sigma, T, steps=600)
+option_mc, se = monte_carlo_call(S, K, r, sigma, T, antithetic=True)
+assert_abs(option_tree - option_bs) &lt; tolerance
+assert_abs(option_mc - option_bs) &lt; 4 * se
+</code></pre>
+<p>实现见 <a href="../tools/m07_pricing_methods.py"><code>m07_pricing_methods.py</code></a>，结果见 <a href="../data/m07_pricing_methods_results.json"><code>m07_pricing_methods_results.json</code></a>。</p>
+<h2 id="implementation">实现证据与结果（Implementation &amp; Results）</h2>
+<pre><code class="language-powershell">python quant_finance/tools/m07_pricing_methods.py
+python quant_finance/data/test_m07_pricing_methods.py -v
+</code></pre>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>项目</th>
+<th style="text-align:right">结果</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>5 年、4% 票息、4.5% YTM 债券价格</td>
+<td style="text-align:right">97.7834</td>
+</tr>
+<tr>
+<td>Macaulay duration</td>
+<td style="text-align:right">4.5753</td>
+</tr>
+<tr>
+<td>Modified duration</td>
+<td style="text-align:right">4.4747</td>
+</tr>
+<tr>
+<td>Black–Scholes call</td>
+<td style="text-align:right">9.4134</td>
+</tr>
+<tr>
+<td>600 步二叉树</td>
+<td style="text-align:right">9.4101</td>
+</tr>
+<tr>
+<td>Antithetic Monte Carlo</td>
+<td style="text-align:right">9.4065</td>
+</tr>
+<tr>
+<td>Monte Carlo 标准误</td>
+<td style="text-align:right">0.03148</td>
+</tr>
+</tbody>
+</table></div>
+<p>二叉树绝对误差约 0.0033；Monte Carlo 与解析解差异小于四倍模拟标准误。测试还验证债券价格为正且 Macaulay duration 大于 modified duration。</p>
+<h2 id="comparison">方法对比与失败案例</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>方法</th>
+<th>优点</th>
+<th>主要边界</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>解析 Black–Scholes</td>
+<td>快、可算 Greeks</td>
+<td>常数波动率、欧式、连续对冲假设</td>
+</tr>
+<tr>
+<td>二叉树</td>
+<td>直观、可处理美式执行</td>
+<td>步数和树参数影响收敛</td>
+</tr>
+<tr>
+<td>Monte Carlo</td>
+<td>适合多因子/路径依赖</td>
+<td>收敛慢、提前执行困难</td>
+</tr>
+<tr>
+<td>久期/凸性</td>
+<td>快速利率敏感度</td>
+<td>默认局部/特定曲线冲击</td>
+</tr>
+<tr>
+<td>完整重估</td>
+<td>捕获非线性</td>
+<td>依赖完整市场和模型输入</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="exercises">练习与答案边界（Exercises）</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>ID</th>
+<th>题目</th>
+<th>达标标准</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>M07-Q01</td>
+<td>折现因子是什么？</td>
+<td>T 时点一单位现金流的现值。</td>
+</tr>
+<tr>
+<td>M07-Q02</td>
+<td>YTM 与即期曲线区别？</td>
+<td>单一 IRR vs 各期限零息利率。</td>
+</tr>
+<tr>
+<td>M07-Q03</td>
+<td>modified duration 如何解释？</td>
+<td>收益率小变动下价格相对敏感度。</td>
+</tr>
+<tr>
+<td>M07-Q04</td>
+<td>为什么需要凸性？</td>
+<td>久期是一阶近似，大变动有曲率。</td>
+</tr>
+<tr>
+<td>M07-Q05</td>
+<td>风险中性概率是真实概率吗？</td>
+<td>不是，是无套利定价测度。</td>
+</tr>
+<tr>
+<td>M07-Q06</td>
+<td>Black–Scholes 的 d1/d2 是什么？</td>
+<td>能写出含 S、K、r、sigma、T 的公式。</td>
+</tr>
+<tr>
+<td>M07-Q07</td>
+<td>CRR 风险中性概率？</td>
+<td><span class="math-inline" data-math-kind="inline">\((e^{r\Delta t}-d)/(u-d)\)</span>。</td>
+</tr>
+<tr>
+<td>M07-Q08</td>
+<td>美式树多哪一步？</td>
+<td>节点比较继续持有与立即执行。</td>
+</tr>
+<tr>
+<td>M07-Q09</td>
+<td>Monte Carlo 标准误速率？</td>
+<td><span class="math-inline" data-math-kind="inline">\(N^{-1/2}\)</span>。</td>
+</tr>
+<tr>
+<td>M07-Q10</td>
+<td>antithetic 作用？</td>
+<td>用负相关路径降低方差。</td>
+</tr>
+<tr>
+<td>M07-Q11</td>
+<td>隐含波动率是什么？</td>
+<td>反解使模型价等于市场价的 sigma。</td>
+</tr>
+<tr>
+<td>M07-Q12</td>
+<td>波动率微笑说明什么？</td>
+<td>常数波动率模型与市场截面不符。</td>
+</tr>
+<tr>
+<td>M07-Q13</td>
+<td>Delta 对冲为何仍有误差？</td>
+<td>离散、成本、跳跃和模型错设。</td>
+</tr>
+<tr>
+<td>M07-Q14</td>
+<td>曲线 bootstrap 需登记什么？</td>
+<td>工具、日计数、结算、插值和顺序。</td>
+</tr>
+<tr>
+<td>M07-Q15</td>
+<td>key-rate duration 用途？</td>
+<td>非平行期限结构冲击。</td>
+</tr>
+<tr>
+<td>M07-Q16</td>
+<td>MC 能直接处理美式期权吗？</td>
+<td>不能直接，需 LSM 等方法。</td>
+</tr>
+<tr>
+<td>M07-Q17</td>
+<td>价格交叉验证为什么重要？</td>
+<td>检查公式、索引、概率和单位错误。</td>
+</tr>
+<tr>
+<td>M07-Q18</td>
+<td>point-in-time 如何进入估值？</td>
+<td>所有曲线/波动率输入必须在 asof 前可见。</td>
+</tr>
+<tr>
+<td>M07-Q19</td>
+<td>本地实验支持什么？</td>
+<td>支持数值一致性，不支持市场校准。</td>
+</tr>
+<tr>
+<td>M07-Q20</td>
+<td>何时暂停估值结论？</td>
+<td>合约、曲线、单位或收敛闸门失败时。</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="answer-boundary">答案索引（Answer Boundary）</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>ID</th>
+<th>答案边界</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>M07-Q01</td>
+<td><span class="math-inline" data-math-kind="inline">\(P(0,T)\)</span> 是未来单位现金流现值。</td>
+</tr>
+<tr>
+<td>M07-Q02</td>
+<td>YTM 是单一 IRR，即期曲线按期限变化。</td>
+</tr>
+<tr>
+<td>M07-Q03</td>
+<td><span class="math-inline" data-math-kind="inline">\(\Delta B/B\approx-D_{mod}\Delta y\)</span>。</td>
+</tr>
+<tr>
+<td>M07-Q04</td>
+<td>二阶价格—收益率曲率修正一阶误差。</td>
+</tr>
+<tr>
+<td>M07-Q05</td>
+<td>风险中性是定价测度，不是真实分布。</td>
+</tr>
+<tr>
+<td>M07-Q06</td>
+<td>正确写出对数 moneyness、r、sigma 和 T。</td>
+</tr>
+<tr>
+<td>M07-Q07</td>
+<td><span class="math-inline" data-math-kind="inline">\(q=(e^{r\Delta t}-d)/(u-d)\)</span>。</td>
+</tr>
+<tr>
+<td>M07-Q08</td>
+<td>每节点取继续价值和立即执行价值最大值。</td>
+</tr>
+<tr>
+<td>M07-Q09</td>
+<td>标准误随路径数平方根倒数下降。</td>
+</tr>
+<tr>
+<td>M07-Q10</td>
+<td>z 与 -z 配对降低 payoff 均值方差。</td>
+</tr>
+<tr>
+<td>M07-Q11</td>
+<td>从市场价反解模型 sigma。</td>
+</tr>
+<tr>
+<td>M07-Q12</td>
+<td>不同行权价/期限需要不同隐含波动率。</td>
+</tr>
+<tr>
+<td>M07-Q13</td>
+<td>连续复制假设在现实中不成立。</td>
+</tr>
+<tr>
+<td>M07-Q14</td>
+<td>报价工具、惯例、插值、顺序和 asof。</td>
+</tr>
+<tr>
+<td>M07-Q15</td>
+<td>衡量局部期限点的曲线风险。</td>
+</tr>
+<tr>
+<td>M07-Q16</td>
+<td>需回归继续价值等提前执行算法。</td>
+</tr>
+<tr>
+<td>M07-Q17</td>
+<td>独立实现应在误差容忍内收敛。</td>
+</tr>
+<tr>
+<td>M07-Q18</td>
+<td>输入满足 <code>available_at &lt;= asof_at</code>。</td>
+</tr>
+<tr>
+<td>M07-Q19</td>
+<td>只验证公式和数值方法。</td>
+</tr>
+<tr>
+<td>M07-Q20</td>
+<td>合约/输入/单位/收敛任一失败。</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="risks">风险与后续建议（Risks &amp; Next）</h2>
+<ul>
+<li>固定平坦收益率不是真实曲线；未覆盖信用利差、可赎回、浮息、抵押和多曲线框架。</li>
+<li>Black–Scholes 实验未覆盖分红、随机波动率、跳跃、微笑校准和 Greeks 对冲 P&amp;L。</li>
+<li>下一 slice G14/M08 将进入组合优化、Black–Litterman、因子风险、VaR/ES 和压力测试，并使用本模块的非线性重估边界。</li>
+</ul>
+<h2 id="references">参考文献（References）</h2>
+<ol>
+<li>[1] Fischer Black and Myron Scholes, “The Pricing of Options and Corporate Liabilities,” <em>Journal of Political Economy</em>, 1973. <a href="https://doi.org/10.1086/260062">链接</a></li>
+<li>[2] Robert C. Merton, “Theory of Rational Option Pricing,” <em>Bell Journal of Economics and Management Science</em>, 1973. <a href="https://www.jstor.org/stable/3003143">链接</a></li>
+<li>[3] John C. Cox, Stephen A. Ross, and Mark Rubinstein, “Option Pricing: A Simplified Approach,” <em>Journal of Financial Economics</em>, 1979. <a href="https://doi.org/10.1016/0304-405X(79)90015-1">链接</a></li>
+</ol>
+
+        <nav class="next-chapter" aria-label="下一章节">
+          <span class="next-chapter-label">下一章节</span>
+          <a rel="next" href="08_portfolio_and_risk_notes.html">M08 组合与风险 →</a>
+        </nav>
+
+        <a class="back-to-top" href="#top">返回页首 ↑</a>
+      </article>
+    </main>
+  </div>
+</body>
+</html>

@@ -1,0 +1,29 @@
+{
+  "t_periods": 360,
+  "n_assets": 45,
+  "k_factors": 3,
+  "true_lambda": [
+    0.004,
+    0.0025,
+    0.0015
+  ],
+  "sample_factor_mean": [
+    0.004158851913683463,
+    0.00658373570620749,
+    0.001951010680812013
+  ],
+  "fmb_mean_lambda": [
+    0.004563828744839367,
+    0.006289287718021228,
+    0.002312688208354094
+  ],
+  "fmb_lambda_se": [
+    0.002323002025121192,
+    0.001652118905261802,
+    0.0015435851039654826
+  ],
+  "mean_abs_alpha": 0.0010413566849601023,
+  "beta_rmse": 0.040055464298657306,
+  "pricing_error_rmse": 0.0012123887936687575,
+  "evidence_boundary": "synthetic factor DGP; no real asset-pricing or investability claim"
+}

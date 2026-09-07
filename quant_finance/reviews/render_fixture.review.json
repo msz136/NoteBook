@@ -1,0 +1,67 @@
+{
+  "artifact": "templates/render_fixture.html",
+  "canonical_source": "templates/render_fixture.md",
+  "source_revision": "fdaf7267916980e5dfa20992ff6e390fac0c89454cb8111dc161b85fbda2c416",
+  "verdict": "WARN",
+  "checks": [
+    {
+      "name": "source_sha",
+      "status": "PASS",
+      "evidence": "expected=fdaf7267916980e5dfa20992ff6e390fac0c89454cb8111dc161b85fbda2c416; embedded=fdaf7267916980e5dfa20992ff6e390fac0c89454cb8111dc161b85fbda2c416"
+    },
+    {
+      "name": "single_h1",
+      "status": "PASS",
+      "evidence": "h1_count=1"
+    },
+    {
+      "name": "heading_hierarchy",
+      "status": "PASS",
+      "evidence": "headings=[(1, 'ARIS 学术渲染基线测试'), (2, '问题（Question）'), (2, '公式安全（Math Safety）'), (2, '表格与横向溢出'), (2, '代码与 MathJax 跳过规则'), (2, '方法对比与选择建议'), (2, '参考文献（References）')]"
+    },
+    {
+      "name": "academic_template",
+      "status": "PASS",
+      "evidence": "palette/serif/1280-grid/260-sticky/900-breakpoint markers"
+    },
+    {
+      "name": "mathjax_config",
+      "status": "PASS",
+      "evidence": "MathJax 3 delimiters and skipHtmlTags markers"
+    },
+    {
+      "name": "formula_em_zero",
+      "status": "PASS",
+      "evidence": "formula_em_count=0"
+    },
+    {
+      "name": "latex_subscript_literal",
+      "status": "PASS",
+      "evidence": "fixture keeps _{b,h,j} literal in HTML source"
+    },
+    {
+      "name": "internal_overflow",
+      "status": "PASS",
+      "evidence": "table/code/formula internal overflow CSS markers"
+    },
+    {
+      "name": "anchors",
+      "status": "PASS",
+      "evidence": "unresolved=[]"
+    },
+    {
+      "name": "local_links",
+      "status": "PASS",
+      "evidence": "unresolved=[]"
+    },
+    {
+      "name": "browser_visual_qa",
+      "status": "PENDING",
+      "evidence": "环境安全策略禁止浏览器直接打开本地 file:// HTML；未绕行，待人工桌面与窄屏复核"
+    }
+  ],
+  "open_items": [
+    "browser_visual_qa"
+  ],
+  "next": "完成浏览器视觉 QA 后重新审查"
+}

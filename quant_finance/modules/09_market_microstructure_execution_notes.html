@@ -1,0 +1,670 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="generator" content="quant_finance ARIS render-html (academic, v1)">
+  <meta name="source-file" content="09_market_microstructure_execution_notes.md">
+  <meta name="source-sha256" content="614654316cdbf325d9a3a4e24a79aa909d7224ac039fdd62493637eb32b1ddec">
+  <title>市场微观结构与执行：订单簿、流动性、冲击与容量</title>
+  <script>
+    window.MathJax = {
+      tex: {inlineMath: [['\\(', '\\)'], ['$', '$']], displayMath: [['\\[', '\\]'], ['$$', '$$']]},
+      options: {skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']}
+    };
+  </script>
+  <script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+  <style>
+/* ARIS academic v1 — quant_finance canonical inline stylesheet. */
+:root {
+  --paper: #fdfcf7;
+  --paper-soft: #f4f1ea;
+  --ink: #1a1a1a;
+  --muted: #625f58;
+  --blue: #1a4a8c;
+  --blue-soft: #dce7f4;
+  --rust: #b8390e;
+  --rule: #b9b2a6;
+  --serif: "Source Serif Pro", "Source Serif 4", "Crimson Pro", Georgia, "Songti SC", STSong, serif;
+  --mono: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  margin: 0;
+  color: var(--ink);
+  background: var(--paper);
+  font-family: var(--serif);
+  font-size: 16px;
+  line-height: 1.8;
+}
+a { color: var(--blue); text-underline-offset: 0.16em; }
+a:hover { color: var(--rust); }
+
+.page-shell {
+  width: min(1280px, calc(100% - 40px));
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: 260px minmax(0, 1fr);
+  gap: 42px;
+  align-items: start;
+}
+.toc {
+  position: sticky;
+  top: 24px;
+  max-height: calc(100vh - 48px);
+  overflow-y: auto;
+  padding: 28px 18px 24px 0;
+  color: var(--muted);
+}
+.toc-title {
+  margin: 0 0 0.65rem;
+  color: var(--blue);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+.toc ol { margin: 0; padding: 0; list-style: none; }
+.toc li { margin: 0.24rem 0; line-height: 1.35; }
+.toc a { color: inherit; text-decoration: none; }
+.toc a:hover { color: var(--rust); }
+.toc .depth-3 { padding-left: 0.85rem; font-size: 0.92rem; }
+.toc .depth-4 { padding-left: 1.55rem; font-size: 0.86rem; }
+
+main {
+  min-width: 0;
+  margin: 24px 0 64px;
+  padding: 48px clamp(32px, 5vw, 72px) 64px;
+  background: var(--paper-soft);
+  border: 1px solid #ded8cd;
+  box-shadow: 0 16px 44px rgba(55, 47, 36, 0.08);
+}
+article { min-width: 0; }
+.eyebrow {
+  margin: 0 0 0.45rem;
+  color: var(--rust);
+  font-family: var(--serif);
+  font-size: 0.76rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+.subtitle { margin: 0 0 0.5rem; color: var(--muted); font-size: 1.05rem; }
+.meta {
+  margin: 0 0 2.2rem;
+  color: var(--muted);
+  font-size: 0.86rem;
+}
+h1 {
+  margin: 0 0 0.7rem;
+  padding: 0 0 0.8rem;
+  color: var(--ink);
+  border-bottom: 5px double var(--blue);
+  font-size: clamp(2rem, 5vw, 3.1rem);
+  line-height: 1.14;
+  letter-spacing: -0.025em;
+}
+h2 {
+  margin: 3.2rem 0 1.15rem;
+  padding-bottom: 0.42rem;
+  border-bottom: 1px solid var(--rule);
+  color: var(--ink);
+  font-size: 1.62rem;
+  line-height: 1.35;
+}
+h3 { margin: 2.15rem 0 0.8rem; color: var(--blue); font-size: 1.28rem; line-height: 1.4; }
+h4 { margin: 1.55rem 0 0.6rem; color: var(--ink); font-size: 1.06rem; line-height: 1.45; }
+p, ul, ol, blockquote { margin: 0 0 1rem; }
+ul, ol { padding-left: 1.5rem; }
+li + li { margin-top: 0.24rem; }
+strong { color: #111; }
+
+code {
+  font-family: var(--mono);
+  font-size: 0.9em;
+  background: #e9e5dc;
+  border-radius: 3px;
+  padding: 0.1em 0.32em;
+}
+pre {
+  max-width: 100%;
+  margin: 1.2rem 0 1.5rem;
+  padding: 1rem 1.1rem;
+  overflow-x: auto;
+  background: #faf9f5;
+  border: 1px solid #d8d2c7;
+  border-left: 4px solid var(--blue);
+  border-radius: 2px;
+  line-height: 1.55;
+}
+pre code {
+  display: block;
+  min-width: max-content;
+  padding: 0;
+  color: #383a42;
+  background: transparent;
+}
+/* Highlight.js atom-one-light-compatible colors for portable, inline styling. */
+.hljs-comment, .hljs-quote { color: #a0a1a7; font-style: italic; }
+.hljs-keyword, .hljs-selector-tag, .hljs-literal { color: #a626a4; }
+.hljs-string, .hljs-regexp { color: #50a14f; }
+.hljs-number, .hljs-symbol { color: #986801; }
+.hljs-title, .hljs-section, .hljs-function { color: #4078f2; }
+
+.formula {
+  max-width: 100%;
+  margin: 1.25rem 0 1.5rem;
+  padding: 1rem 1.15rem;
+  overflow-x: auto;
+  background: #faf9f5;
+  border: 1px solid #d8d2c7;
+  border-left: 4px solid var(--blue);
+}
+.formula mjx-container { min-width: max-content; }
+
+.table-wrap { max-width: 100%; margin: 1.25rem 0 1.6rem; overflow-x: auto; }
+table { width: 100%; min-width: 640px; border-collapse: collapse; font-size: 0.93rem; line-height: 1.55; }
+th, td { padding: 0.68rem 0.78rem; border: 1px solid #aaa398; text-align: left; vertical-align: top; }
+thead th { color: #fff; background: var(--blue); font-weight: 700; }
+tbody tr:nth-child(even) { background: #ebe6dc; }
+tbody tr:nth-child(odd) { background: #f8f5ee; }
+
+.note, .warning, .evidence, blockquote {
+  margin: 1.2rem 0 1.45rem;
+  padding: 0.85rem 1rem;
+  background: #f8f5ee;
+  border: 1px solid #d2cbc0;
+  border-left: 4px solid var(--blue);
+}
+.warning { border-left-color: var(--rust); background: #fff2e9; }
+.evidence { border-left-color: #6b5b8e; background: #f2eef8; }
+.note > :last-child, .warning > :last-child, .evidence > :last-child, blockquote > :last-child { margin-bottom: 0; }
+.back-to-top { display: inline-block; margin-top: 2rem; font-size: 0.88rem; }
+
+@media (max-width: 900px) {
+  .page-shell { width: min(100% - 24px, 820px); grid-template-columns: 1fr; gap: 0; }
+  .toc { position: static; max-height: none; padding: 20px 8px 4px; columns: 2; column-gap: 1.5rem; }
+  .toc-title { column-span: all; }
+  main { margin-top: 16px; padding: 34px clamp(18px, 5vw, 40px) 48px; }
+  h1 { font-size: clamp(1.8rem, 8vw, 2.55rem); }
+  table { min-width: 600px; }
+  pre, .formula, .table-wrap { overflow-x: auto; }
+}
+
+@media (max-width: 560px) {
+  .toc { columns: 1; }
+  .page-shell { width: calc(100% - 12px); }
+  main { padding-left: 15px; padding-right: 15px; }
+}
+
+@media print {
+  body { background: #fff; }
+  .page-shell { display: block; width: 100%; }
+  .toc, .back-to-top { display: none !important; }
+  main { margin: 0; padding: 0; background: #fff; border: 0; box-shadow: none; }
+  a { color: inherit; text-decoration: none; }
+  pre, .formula, table { break-inside: avoid; }
+}
+
+    .next-chapter { margin: 2.5rem 0 1rem; padding: 1rem 1.2rem; border: 1px solid #b9c9df; border-left: 4px solid #1a4a8c; background: #f4f1ea; display: flex; gap: .75rem; align-items: baseline; justify-content: space-between; }
+    .next-chapter-label { color: #1a4a8c; font-weight: 700; white-space: nowrap; }
+    .next-chapter a { color: #1a4a8c; font-weight: 700; text-decoration: none; }
+    .next-chapter a:hover, .next-chapter a:focus { color: #b8390e; text-decoration: underline; }
+    @media (max-width: 900px) { .next-chapter { display: block; } .next-chapter-label { display: block; margin-bottom: .35rem; } }
+  </style>
+</head>
+<body id="top">
+  <div class="page-shell">
+    <nav class="toc" aria-label="目录">
+      <p class="toc-title">Contents</p>
+      <ol>
+<li class="depth-2"><a href="#question">问题（Question）</a></li>
+<li class="depth-2"><a href="#background">背景与动机（Background &amp; Motivation）</a></li>
+<li class="depth-2"><a href="#concepts">基础概念与术语</a></li>
+<li class="depth-2"><a href="#order-book">订单簿与成交协议</a></li>
+<li class="depth-2"><a href="#impact">流动性与冲击</a></li>
+<li class="depth-2"><a href="#capacity">容量与成本预算</a></li>
+<li class="depth-2"><a href="#math">数据与回放契约</a></li>
+<li class="depth-2"><a href="#pipeline">Pipeline 与伪代码（Pipeline &amp; Pseudocode）</a></li>
+<li class="depth-2"><a href="#implementation">实现证据与结果（Implementation &amp; Results）</a></li>
+<li class="depth-2"><a href="#comparison">方法对比与失败案例</a></li>
+<li class="depth-2"><a href="#exercises">练习与答案边界（Exercises）</a></li>
+<li class="depth-2"><a href="#answer-boundary">答案索引（Answer Boundary）</a></li>
+<li class="depth-2"><a href="#risks">风险与后续建议（Risks &amp; Next）</a></li>
+<li class="depth-2"><a href="#references">参考文献（References）</a></li>
+      </ol>
+    </nav>
+    <main>
+      <article>
+        <header>
+          <p class="eyebrow">Quant Finance · Market Microstructure and Execution</p>
+          <p class="subtitle">M09 · 从信号收益走向可成交价格、队列状态和 implementation shortfall</p>
+          <h1>市场微观结构与执行：订单簿、流动性、冲击与容量</h1>
+          <p class="meta">发布日期：2026-07-22 · 证据截止：2026-07-22 · 源文件 SHA-256：<code>614654316cdbf325d9a3a4e24a79aa909d7224ac039fdd62493637eb32b1ddec</code></p>
+        </header>
+<h2 id="question">问题（Question）</h2>
+<p>为什么收盘价回测中的 25 bps alpha 不能直接视为可实现收益？限价簿的价差、深度、队列、冲击、延迟和成交概率如何进入 implementation shortfall？本模块用合成订单簿验证扫单数量增加时 VWAP 成本单调上升，并用平方根冲击模型给出明确但仅示例性的容量上限。</p>
+<h2 id="background">背景与动机（Background &amp; Motivation）</h2>
+<p>Kyle 模型用订单流和价格冲击描述信息交易与流动性；Almgren–Chriss 将执行问题写为冲击成本和风险之间的动态权衡。[1][2] 真实订单簿是事件序列而非静态图片：新增、撤单、改单、成交、隐藏流动性、交易所优先级和网络延迟共同决定填单。没有执行协议，研究信号不能升级为策略收益。</p>
+<div class="evidence"><strong>证据边界：</strong>理论边界来自经典微观结构和最优执行文献；本地簿、冲击参数和容量数字均为合成示例。没有真实逐笔数据、排队位置或券商成交回报，因此不支持实盘滑点、市场容量或最佳执行结论。</div>
+<h2 id="concepts">基础概念与术语</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>概念</th>
+<th>定义</th>
+<th>容易遗漏的边界</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>mid price</td>
+<td>最优买卖价中点</td>
+<td>不一定可成交</td>
+</tr>
+<tr>
+<td>quoted spread</td>
+<td>最优 ask 减 best bid</td>
+<td>与 effective/realized spread 不同</td>
+</tr>
+<tr>
+<td>depth</td>
+<td>各价位可见数量</td>
+<td>可撤单、隐藏单和重复快照</td>
+</tr>
+<tr>
+<td>queue priority</td>
+<td>同价订单的成交先后规则</td>
+<td>price-time/pro-rata 因场所不同</td>
+</tr>
+<tr>
+<td>market impact</td>
+<td>自身交易引起的价格变化</td>
+<td>临时与永久成分难分</td>
+</tr>
+<tr>
+<td>implementation shortfall</td>
+<td>决策价格到实际成交/未成交的差额</td>
+<td>包含延迟、冲击、机会成本与费用</td>
+</tr>
+<tr>
+<td>capacity</td>
+<td>在成本/风险限额下可部署规模</td>
+<td>随波动、ADV、持有期和拥挤变化</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="order-book">订单簿与成交协议</h2>
+<p>一笔买入市价单会依次消耗 ask 侧价格层。若第 <span class="math-inline" data-math-kind="inline">\(l\)</span> 层成交量为 <span class="math-inline" data-math-kind="inline">\(q_l\)</span>、价格为 <span class="math-inline" data-math-kind="inline">\(p_l\)</span>：</p>
+<div class="formula" data-math-kind="display">\[VWAP=\frac{\sum_l p_lq_l}{\sum_lq_l},
+\qquad Shortfall_{bps}=10^4\left(\frac{VWAP}{P_{decision}}-1\right).\]</div>
+<p>限价单可能降低立即成本但引入未成交和逆向选择。回放必须定义事件排序、同时间戳规则、排队位置、部分成交、撤单确认和撮合优先级。</p>
+<h2 id="impact">流动性与冲击</h2>
+<p>常见经验平方根冲击近似：</p>
+<div class="formula" data-math-kind="display">\[I(Q)=Y\sigma\sqrt{\frac{Q}{V}},\]</div>
+<p>其中 <span class="math-inline" data-math-kind="inline">\(Q\)</span> 是订单量，<span class="math-inline" data-math-kind="inline">\(V\)</span> 是对应期间成交量，<span class="math-inline" data-math-kind="inline">\(\sigma\)</span> 是波动率，<span class="math-inline" data-math-kind="inline">\(Y\)</span> 是需校准系数。它是量级模型而非市场定律；小单、大宗、不同持有期和流动性制度需要重新估计。</p>
+<p>Almgren–Chriss 类型执行在期望成本和价格风险间权衡：</p>
+<div class="formula" data-math-kind="display">\[\min_{x_t}\;E[Cost(x)]+\lambda Var(Cost(x)),\]</div>
+<p>并受完成时间、参与率、盘口深度和风险限制约束。</p>
+<h2 id="capacity">容量与成本预算</h2>
+<p>若 gross alpha 为 <span class="math-inline" data-math-kind="inline">\(a\)</span>，半价差为 <span class="math-inline" data-math-kind="inline">\(s\)</span>，可容忍冲击满足：</p>
+<div class="formula" data-math-kind="display">\[s+10^4Y\sigma\sqrt{Q/V}\le a.\]</div>
+<p>可反解 <span class="math-inline" data-math-kind="inline">\(Q/V\)</span> 的示例上限。真实容量还需双边交易、换手、借券、融资、信号衰减、拥挤、退出时间和多日执行；单日 ADV 比例不是完整容量证明。</p>
+<h2 id="math">数据与回放契约</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>类别</th>
+<th>必须保留</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>时钟</td>
+<td>exchange timestamp、receive timestamp、sequence number、时区</td>
+</tr>
+<tr>
+<td>订单</td>
+<td>venue/order id、side、price、size、type、TIF、状态转换</td>
+</tr>
+<tr>
+<td>行情</td>
+<td>bid/ask levels、trade condition、lot、tick、auction 状态</td>
+</tr>
+<tr>
+<td>执行</td>
+<td>decision/arrival/fill time、partial fill、fee/rebate、reject/cancel</td>
+</tr>
+<tr>
+<td>质量</td>
+<td>gap、duplicate、out-of-order、crossed book、halt/correction</td>
+</tr>
+<tr>
+<td>许可</td>
+<td>原始逐笔数据的访问、使用和再分发权限</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="pipeline">Pipeline 与伪代码（Pipeline &amp; Pseudocode）</h2>
+<pre><code class="language-python">events = load_sequenced_market_data(venue, session, asof_at)
+book = replay_add_cancel_modify_trade(events, priority_rule=&quot;price-time&quot;)
+decision_mid = book.mid(decision_timestamp)
+fills = simulate_or_match_orders(book, latency, queue_position, fees)
+shortfall = implementation_shortfall(decision_mid, fills, unfilled_quantity)
+impact = calibrate_by_size_volatility_adv_and_horizon(fills)
+capacity = solve_alpha_after_spread_impact_borrow_and_risk_budget()
+report_fill_rate_shortfall_tail_cost_and_failure_sessions()
+</code></pre>
+<p>合成扫单与容量实现见 <a href="../tools/m09_execution_costs.py"><code>m09_execution_costs.py</code></a>，结果见 <a href="../data/m09_execution_costs_results.json"><code>m09_execution_costs_results.json</code></a>。</p>
+<h2 id="implementation">实现证据与结果（Implementation &amp; Results）</h2>
+<pre><code class="language-powershell">python quant_finance/tools/m09_execution_costs.py
+python quant_finance/data/test_m09_execution_costs.py -v
+</code></pre>
+<p>合成 best bid/ask 为 99.99/100.01，quoted spread 为 2 bps。以 mid=100 作为 decision price：</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th style="text-align:right">买入数量</th>
+<th style="text-align:right">VWAP</th>
+<th style="text-align:right">Shortfall (bps)</th>
+<th style="text-align:right">平方根冲击 (bps)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:right">500</td>
+<td style="text-align:right">100.0100</td>
+<td style="text-align:right">1.00</td>
+<td style="text-align:right">2.21</td>
+</tr>
+<tr>
+<td style="text-align:right">1,500</td>
+<td style="text-align:right">100.0120</td>
+<td style="text-align:right">1.20</td>
+<td style="text-align:right">3.83</td>
+</tr>
+<tr>
+<td style="text-align:right">4,000</td>
+<td style="text-align:right">100.0220</td>
+<td style="text-align:right">2.20</td>
+<td style="text-align:right">6.26</td>
+</tr>
+<tr>
+<td style="text-align:right">9,000</td>
+<td style="text-align:right">100.0453</td>
+<td style="text-align:right">4.53</td>
+<td style="text-align:right">9.39</td>
+</tr>
+</tbody>
+</table></div>
+<p>测试验证扫单 shortfall 和平方根冲击均随数量单调上升。示例 25 bps gross alpha、1 bps 半价差、2% 波动率、<span class="math-inline" data-math-kind="inline">\(Y=0.7\)</span>、ADV 200 万下，模型反解上限约为 58,776 单位；这只是代数示例，不是市场容量估计。</p>
+<h2 id="comparison">方法对比与失败案例</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>失败</th>
+<th>回测偏差</th>
+<th>修复</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>用 mid/close 当成交价</td>
+<td>忽略价差和深度</td>
+<td>bid/ask 与簿级扫单</td>
+</tr>
+<tr>
+<td>假设限价单全成</td>
+<td>低估机会成本和逆向选择</td>
+<td>队列、延迟、fill probability</td>
+</tr>
+<tr>
+<td>静态盘口回放</td>
+<td>忽略撤单和事件顺序</td>
+<td>sequence-based event replay</td>
+</tr>
+<tr>
+<td>固定 bps 成本</td>
+<td>忽略规模、波动与 ADV</td>
+<td>分层冲击和容量模型</td>
+</tr>
+<tr>
+<td>只看平均 shortfall</td>
+<td>忽略尾部执行事故</td>
+<td>分位数、拒单、停牌和失败场次</td>
+</tr>
+<tr>
+<td>混用多场所时钟</td>
+<td>产生虚假先后关系</td>
+<td>时钟同步和 receive-time 审计</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="exercises">练习与答案边界（Exercises）</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>ID</th>
+<th>题目</th>
+<th>达标标准</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>M09-Q01</td>
+<td>quoted/effective spread 区别？</td>
+<td>报价宽度 vs 实际成交相对 mid。</td>
+</tr>
+<tr>
+<td>M09-Q02</td>
+<td>为什么 mid 不可成交？</td>
+<td>买入通常触及 ask，卖出触及 bid。</td>
+</tr>
+<tr>
+<td>M09-Q03</td>
+<td>VWAP 如何计算？</td>
+<td>成交价格按数量加权。</td>
+</tr>
+<tr>
+<td>M09-Q04</td>
+<td>implementation shortfall 包含什么？</td>
+<td>延迟、成交、费用和机会成本。</td>
+</tr>
+<tr>
+<td>M09-Q05</td>
+<td>限价单的主要风险？</td>
+<td>不成交和逆向选择。</td>
+</tr>
+<tr>
+<td>M09-Q06</td>
+<td>queue position 为什么重要？</td>
+<td>同价位成交按优先级分配。</td>
+</tr>
+<tr>
+<td>M09-Q07</td>
+<td>平方根冲击变量是什么？</td>
+<td>Q、V、sigma、Y。</td>
+</tr>
+<tr>
+<td>M09-Q08</td>
+<td>冲击模型为何需重估？</td>
+<td>市场、规模、期限和制度变化。</td>
+</tr>
+<tr>
+<td>M09-Q09</td>
+<td>capacity 与 ADV 比例相同吗？</td>
+<td>不同，容量还含 alpha、成本、风险和退出。</td>
+</tr>
+<tr>
+<td>M09-Q10</td>
+<td>permanent/temporary impact 差异？</td>
+<td>持久信息效应 vs 执行后回落成本。</td>
+</tr>
+<tr>
+<td>M09-Q11</td>
+<td>决策价和到达价差异？</td>
+<td>信号决策时 vs 订单到市场时。</td>
+</tr>
+<tr>
+<td>M09-Q12</td>
+<td>为什么需 sequence number？</td>
+<td>同时间戳事件仍需确定排序。</td>
+</tr>
+<tr>
+<td>M09-Q13</td>
+<td>crossed book 一定是错误吗？</td>
+<td>可能是不同场所/延迟，也需标记调查。</td>
+</tr>
+<tr>
+<td>M09-Q14</td>
+<td>auction 如何处理？</td>
+<td>独立撮合和价格形成规则。</td>
+</tr>
+<tr>
+<td>M09-Q15</td>
+<td>fee/rebate 为什么重要？</td>
+<td>改变 maker/taker 净成本。</td>
+</tr>
+<tr>
+<td>M09-Q16</td>
+<td>如何量化未成交？</td>
+<td>fill rate 和未成交机会成本。</td>
+</tr>
+<tr>
+<td>M09-Q17</td>
+<td>真实容量最少报告什么？</td>
+<td>ADV、参与率、冲击、换手、退出期。</td>
+</tr>
+<tr>
+<td>M09-Q18</td>
+<td>point-in-time 如何进入执行？</td>
+<td>决策只能看到当时收到的簿状态。</td>
+</tr>
+<tr>
+<td>M09-Q19</td>
+<td>合成实验支持什么？</td>
+<td>支持扫单/冲击公式，不支持实盘。</td>
+</tr>
+<tr>
+<td>M09-Q20</td>
+<td>何时暂停执行结论？</td>
+<td>时钟、事件、队列或成交协议不可信时。</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="answer-boundary">答案索引（Answer Boundary）</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>ID</th>
+<th>答案边界</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>M09-Q01</td>
+<td>quoted 是 bid–ask，effective 是成交相对 mid 的双倍偏离。</td>
+</tr>
+<tr>
+<td>M09-Q02</td>
+<td>mid 位于盘口之间，没有挂单保证。</td>
+</tr>
+<tr>
+<td>M09-Q03</td>
+<td><span class="math-inline" data-math-kind="inline">\(\sum pq/\sum q\)</span>。</td>
+</tr>
+<tr>
+<td>M09-Q04</td>
+<td>决策到完成的价格、费用和未成交成本。</td>
+</tr>
+<tr>
+<td>M09-Q05</td>
+<td>queue 不到和坏消息时被动成交。</td>
+</tr>
+<tr>
+<td>M09-Q06</td>
+<td>决定可成交数量和等待时间。</td>
+</tr>
+<tr>
+<td>M09-Q07</td>
+<td>订单量、成交量、波动率、校准系数。</td>
+</tr>
+<tr>
+<td>M09-Q08</td>
+<td>参数不是跨市场/时期常数。</td>
+</tr>
+<tr>
+<td>M09-Q09</td>
+<td>ADV 只是容量约束之一。</td>
+</tr>
+<tr>
+<td>M09-Q10</td>
+<td>临时成本会衰减，永久成分持续。</td>
+</tr>
+<tr>
+<td>M09-Q11</td>
+<td>arrival 包含信号到市场的延迟。</td>
+</tr>
+<tr>
+<td>M09-Q12</td>
+<td>保证事件重放顺序确定。</td>
+</tr>
+<tr>
+<td>M09-Q13</td>
+<td>先检查 venue、时钟、延迟和异常。</td>
+</tr>
+<tr>
+<td>M09-Q14</td>
+<td>使用拍卖阶段专有订单和清算价规则。</td>
+</tr>
+<tr>
+<td>M09-Q15</td>
+<td>净成本需扣返佣并加费用。</td>
+</tr>
+<tr>
+<td>M09-Q16</td>
+<td>报告 fill ratio 与未成交反事实价格。</td>
+</tr>
+<tr>
+<td>M09-Q17</td>
+<td>至少规模/ADV、参与率、冲击、换手、退出期。</td>
+</tr>
+<tr>
+<td>M09-Q18</td>
+<td>使用 receive-time 可见事件集。</td>
+</tr>
+<tr>
+<td>M09-Q19</td>
+<td>只验证合成簿 VWAP 和模型单调性。</td>
+</tr>
+<tr>
+<td>M09-Q20</td>
+<td>任一时钟、序列、队列、费用或 fill 闸门失败。</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="risks">风险与后续建议（Risks &amp; Next）</h2>
+<ul>
+<li>静态四档订单簿不含撤单、隐藏单、排队、拍卖和多场所路由。</li>
+<li>平方根冲击参数未由真实成交校准，58,776 单位不能作为部署额度。</li>
+<li>下一 slice G17/M10 将进入因子研究与金融 ML，严格引入 purging/embargo、walk-forward、概率预测和消融；执行成本继续作为标签/目标后的经济闸门。</li>
+</ul>
+<h2 id="references">参考文献（References）</h2>
+<ol>
+<li>[1] Albert S. Kyle, “Continuous Auctions and Insider Trading,” <em>Econometrica</em>, 1985. <a href="https://doi.org/10.2307/1913210">链接</a></li>
+<li>[2] Robert Almgren and Neil Chriss, “Optimal Execution of Portfolio Transactions,” <em>Journal of Risk</em>, 2001. <a href="https://www.math.nyu.edu/~chriss/optliq_f.pdf">链接</a></li>
+</ol>
+
+        <nav class="next-chapter" aria-label="下一章节">
+          <span class="next-chapter-label">下一章节</span>
+          <a rel="next" href="10_factor_research_financial_ml_notes.html">M10 因子研究与金融 ML →</a>
+        </nav>
+
+        <a class="back-to-top" href="#top">返回页首 ↑</a>
+      </article>
+    </main>
+  </div>
+</body>
+</html>

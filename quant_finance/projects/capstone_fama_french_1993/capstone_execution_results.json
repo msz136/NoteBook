@@ -1,0 +1,51 @@
+{
+  "status": "partial_reproduction",
+  "protocol_status": "protocol_frozen_not_executed",
+  "factor_sha256": "80b88699a18ac408e2456d25b1004e340f3f7f8d41d5b476a0285bc53c6f0436",
+  "portfolio_sha256": "afc2f6c40237d07b99ab84ab9375a08bc301e3801e3ad8d91aa90d5aa9ec6295",
+  "hash_match": true,
+  "sample_start": "196307",
+  "sample_end": "199112",
+  "n_months": 342,
+  "n_portfolios": 25,
+  "time_series": {
+    "mean_abs_alpha": 0.0009368909703585307,
+    "max_abs_alpha": 0.003688125423890234,
+    "mean_beta": [
+      1.0157114369383273,
+      0.5584345774102654,
+      0.21742612241341186
+    ]
+  },
+  "fama_macbeth": {
+    "mean_lambda": [
+      -0.001545648257784847,
+      0.0020029433750898447,
+      0.004254199800830306
+    ],
+    "lambda_std": [
+      0.08174922698977634,
+      0.029112396859734855,
+      0.025937314309201112
+    ],
+    "hAC_status": "NOT_RUN"
+  },
+  "difference_ledger": [
+    {
+      "item": "raw paper tables digitized",
+      "status": "NOT_RUN",
+      "reason": "paper tables not machine-extracted in this slice"
+    },
+    {
+      "item": "GRS joint pricing-error test",
+      "status": "NOT_RUN",
+      "reason": "test implementation not frozen in protocol execution environment"
+    },
+    {
+      "item": "HAC standard errors",
+      "status": "NOT_RUN",
+      "reason": "statsmodels unavailable; lambda standard deviations only"
+    }
+  ],
+  "evidence_boundary": "official files re-downloaded and hashed; outputs are partial reproduction, not proof of paper equivalence or investment alpha"
+}

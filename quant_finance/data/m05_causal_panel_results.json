@@ -1,0 +1,21 @@
+{
+  "fe": {
+    "true_beta": 1.6,
+    "pooled_beta": 2.046826529299413,
+    "within_fe_beta": 1.5771778703194197,
+    "n_entities": 120,
+    "t_periods": 8
+  },
+  "iv": {
+    "true_beta": 2.0,
+    "ols_beta": 2.4712954136946332,
+    "tsls_beta": 1.9870345553157456,
+    "first_stage_corr": 0.6834383506104352
+  },
+  "did": {
+    "true_effect": 1.5,
+    "did_estimate": 1.4714813070063468,
+    "pre_gap": 0.42674623507393783
+  },
+  "evidence_boundary": "synthetic identification checks only; no real causal or market claim"
+}

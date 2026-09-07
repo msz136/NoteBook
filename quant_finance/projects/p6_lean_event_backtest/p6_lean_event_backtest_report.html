@@ -1,0 +1,529 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="generator" content="quant_finance ARIS render-html (academic, v1)">
+  <meta name="source-file" content="p6_lean_event_backtest_report.md">
+  <meta name="source-sha256" content="69ff00388023fdcc7ce623db0bc8dfdfef35b8d223d824308118f159877fc1eb">
+  <title>P6 LEAN 事件驱动回测：订单生命周期、费用与滑点重建</title>
+  <script>
+    window.MathJax = {
+      tex: {inlineMath: [['\\(', '\\)'], ['$', '$']], displayMath: [['\\[', '\\]'], ['$$', '$$']]},
+      options: {skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']}
+    };
+  </script>
+  <script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+  <style>
+/* ARIS academic v1 — quant_finance canonical inline stylesheet. */
+:root {
+  --paper: #fdfcf7;
+  --paper-soft: #f4f1ea;
+  --ink: #1a1a1a;
+  --muted: #625f58;
+  --blue: #1a4a8c;
+  --blue-soft: #dce7f4;
+  --rust: #b8390e;
+  --rule: #b9b2a6;
+  --serif: "Source Serif Pro", "Source Serif 4", "Crimson Pro", Georgia, "Songti SC", STSong, serif;
+  --mono: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  margin: 0;
+  color: var(--ink);
+  background: var(--paper);
+  font-family: var(--serif);
+  font-size: 16px;
+  line-height: 1.8;
+}
+a { color: var(--blue); text-underline-offset: 0.16em; }
+a:hover { color: var(--rust); }
+
+.page-shell {
+  width: min(1280px, calc(100% - 40px));
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: 260px minmax(0, 1fr);
+  gap: 42px;
+  align-items: start;
+}
+.toc {
+  position: sticky;
+  top: 24px;
+  max-height: calc(100vh - 48px);
+  overflow-y: auto;
+  padding: 28px 18px 24px 0;
+  color: var(--muted);
+}
+.toc-title {
+  margin: 0 0 0.65rem;
+  color: var(--blue);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+.toc ol { margin: 0; padding: 0; list-style: none; }
+.toc li { margin: 0.24rem 0; line-height: 1.35; }
+.toc a { color: inherit; text-decoration: none; }
+.toc a:hover { color: var(--rust); }
+.toc .depth-3 { padding-left: 0.85rem; font-size: 0.92rem; }
+.toc .depth-4 { padding-left: 1.55rem; font-size: 0.86rem; }
+
+main {
+  min-width: 0;
+  margin: 24px 0 64px;
+  padding: 48px clamp(32px, 5vw, 72px) 64px;
+  background: var(--paper-soft);
+  border: 1px solid #ded8cd;
+  box-shadow: 0 16px 44px rgba(55, 47, 36, 0.08);
+}
+article { min-width: 0; }
+.eyebrow {
+  margin: 0 0 0.45rem;
+  color: var(--rust);
+  font-family: var(--serif);
+  font-size: 0.76rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+.subtitle { margin: 0 0 0.5rem; color: var(--muted); font-size: 1.05rem; }
+.meta {
+  margin: 0 0 2.2rem;
+  color: var(--muted);
+  font-size: 0.86rem;
+}
+h1 {
+  margin: 0 0 0.7rem;
+  padding: 0 0 0.8rem;
+  color: var(--ink);
+  border-bottom: 5px double var(--blue);
+  font-size: clamp(2rem, 5vw, 3.1rem);
+  line-height: 1.14;
+  letter-spacing: -0.025em;
+}
+h2 {
+  margin: 3.2rem 0 1.15rem;
+  padding-bottom: 0.42rem;
+  border-bottom: 1px solid var(--rule);
+  color: var(--ink);
+  font-size: 1.62rem;
+  line-height: 1.35;
+}
+h3 { margin: 2.15rem 0 0.8rem; color: var(--blue); font-size: 1.28rem; line-height: 1.4; }
+h4 { margin: 1.55rem 0 0.6rem; color: var(--ink); font-size: 1.06rem; line-height: 1.45; }
+p, ul, ol, blockquote { margin: 0 0 1rem; }
+ul, ol { padding-left: 1.5rem; }
+li + li { margin-top: 0.24rem; }
+strong { color: #111; }
+
+code {
+  font-family: var(--mono);
+  font-size: 0.9em;
+  background: #e9e5dc;
+  border-radius: 3px;
+  padding: 0.1em 0.32em;
+}
+pre {
+  max-width: 100%;
+  margin: 1.2rem 0 1.5rem;
+  padding: 1rem 1.1rem;
+  overflow-x: auto;
+  background: #faf9f5;
+  border: 1px solid #d8d2c7;
+  border-left: 4px solid var(--blue);
+  border-radius: 2px;
+  line-height: 1.55;
+}
+pre code {
+  display: block;
+  min-width: max-content;
+  padding: 0;
+  color: #383a42;
+  background: transparent;
+}
+/* Highlight.js atom-one-light-compatible colors for portable, inline styling. */
+.hljs-comment, .hljs-quote { color: #a0a1a7; font-style: italic; }
+.hljs-keyword, .hljs-selector-tag, .hljs-literal { color: #a626a4; }
+.hljs-string, .hljs-regexp { color: #50a14f; }
+.hljs-number, .hljs-symbol { color: #986801; }
+.hljs-title, .hljs-section, .hljs-function { color: #4078f2; }
+
+.formula {
+  max-width: 100%;
+  margin: 1.25rem 0 1.5rem;
+  padding: 1rem 1.15rem;
+  overflow-x: auto;
+  background: #faf9f5;
+  border: 1px solid #d8d2c7;
+  border-left: 4px solid var(--blue);
+}
+.formula mjx-container { min-width: max-content; }
+
+.table-wrap { max-width: 100%; margin: 1.25rem 0 1.6rem; overflow-x: auto; }
+table { width: 100%; min-width: 640px; border-collapse: collapse; font-size: 0.93rem; line-height: 1.55; }
+th, td { padding: 0.68rem 0.78rem; border: 1px solid #aaa398; text-align: left; vertical-align: top; }
+thead th { color: #fff; background: var(--blue); font-weight: 700; }
+tbody tr:nth-child(even) { background: #ebe6dc; }
+tbody tr:nth-child(odd) { background: #f8f5ee; }
+
+.note, .warning, .evidence, blockquote {
+  margin: 1.2rem 0 1.45rem;
+  padding: 0.85rem 1rem;
+  background: #f8f5ee;
+  border: 1px solid #d2cbc0;
+  border-left: 4px solid var(--blue);
+}
+.warning { border-left-color: var(--rust); background: #fff2e9; }
+.evidence { border-left-color: #6b5b8e; background: #f2eef8; }
+.note > :last-child, .warning > :last-child, .evidence > :last-child, blockquote > :last-child { margin-bottom: 0; }
+.back-to-top { display: inline-block; margin-top: 2rem; font-size: 0.88rem; }
+
+@media (max-width: 900px) {
+  .page-shell { width: min(100% - 24px, 820px); grid-template-columns: 1fr; gap: 0; }
+  .toc { position: static; max-height: none; padding: 20px 8px 4px; columns: 2; column-gap: 1.5rem; }
+  .toc-title { column-span: all; }
+  main { margin-top: 16px; padding: 34px clamp(18px, 5vw, 40px) 48px; }
+  h1 { font-size: clamp(1.8rem, 8vw, 2.55rem); }
+  table { min-width: 600px; }
+  pre, .formula, .table-wrap { overflow-x: auto; }
+}
+
+@media (max-width: 560px) {
+  .toc { columns: 1; }
+  .page-shell { width: calc(100% - 12px); }
+  main { padding-left: 15px; padding-right: 15px; }
+}
+
+@media print {
+  body { background: #fff; }
+  .page-shell { display: block; width: 100%; }
+  .toc, .back-to-top { display: none !important; }
+  main { margin: 0; padding: 0; background: #fff; border: 0; box-shadow: none; }
+  a { color: inherit; text-decoration: none; }
+  pre, .formula, table { break-inside: avoid; }
+}
+
+    .next-chapter { margin: 2.5rem 0 1rem; padding: 1rem 1.2rem; border: 1px solid #b9c9df; border-left: 4px solid #1a4a8c; background: #f4f1ea; display: flex; gap: .75rem; align-items: baseline; justify-content: space-between; }
+    .next-chapter-label { color: #1a4a8c; font-weight: 700; white-space: nowrap; }
+    .next-chapter a { color: #1a4a8c; font-weight: 700; text-decoration: none; }
+    .next-chapter a:hover, .next-chapter a:focus { color: #b8390e; text-decoration: underline; }
+    @media (max-width: 900px) { .next-chapter { display: block; } .next-chapter-label { display: block; margin-bottom: .35rem; } }
+  </style>
+</head>
+<body id="top">
+  <div class="page-shell">
+    <nav class="toc" aria-label="目录">
+      <p class="toc-title">Contents</p>
+      <ol>
+<li class="depth-2"><a href="#question">问题（Question）</a></li>
+<li class="depth-2"><a href="#background">背景与动机（Background &amp; Motivation）</a></li>
+<li class="depth-2"><a href="#concepts">冻结环境与产物</a></li>
+<li class="depth-2"><a href="#lean-contract">LEAN 策略契约</a></li>
+<li class="depth-2"><a href="#methods">订单生命周期与账本</a></li>
+<li class="depth-2"><a href="#pipeline">Pipeline 与伪代码（Pipeline &amp; Pseudocode）</a></li>
+<li class="depth-2"><a href="#implementation">实现证据与结果（Implementation &amp; Results）</a></li>
+<li class="depth-2"><a href="#comparison">LEAN 与本地证据对照</a></li>
+<li class="depth-2"><a href="#exercises">练习与答案边界（Exercises）</a></li>
+<li class="depth-2"><a href="#answer-boundary">答案索引（Answer Boundary）</a></li>
+<li class="depth-2"><a href="#risks">风险与后续建议（Risks &amp; Next）</a></li>
+<li class="depth-2"><a href="#references">参考文献（References）</a></li>
+      </ol>
+    </nav>
+    <main>
+      <article>
+        <header>
+          <p class="eyebrow">Quant Finance · LEAN Event-Driven Backtest</p>
+          <p class="subtitle">冻结官方 revision，交付 QCAlgorithm 骨架，并诚实记录本机无 LEAN/.NET 运行时</p>
+          <h1>P6 LEAN 事件驱动回测：订单生命周期、费用与滑点重建</h1>
+          <p class="meta">发布日期：2026-07-22 · 证据截止：2026-07-22 · 源文件 SHA-256：<code>69ff00388023fdcc7ce623db0bc8dfdfef35b8d223d824308118f159877fc1eb</code></p>
+        </header>
+<h2 id="question">问题（Question）</h2>
+<p>如何把研究信号迁移到 LEAN 的事件、订单和成交语义中？当本机没有 LEAN CLI 与 .NET 时，哪些内容可以真实验证，哪些必须保持 <code>NOT RUN</code>？本项目交付一个 <code>QCAlgorithm</code> 兼容骨架和独立本地订单账本，验证提交、部分成交、完成、费用、滑点、现金和持仓守恒。</p>
+<h2 id="background">背景与动机（Background &amp; Motivation）</h2>
+<p>LEAN 是 QuantConnect 的开源事件驱动算法交易引擎，支持研究、回测和实盘接口。[1] 本项目在 2026-07-22 通过 <code>git ls-remote</code> 冻结官方仓库 HEAD <code>153d0b7427a918063a018ec18964ddf450edc125</code>。环境检查结果为 <code>LEAN_CLI_NOT_FOUND</code>、<code>DOTNET_NOT_FOUND</code>，因此没有生成或声称任何 LEAN 回测统计。</p>
+<div class="evidence"><strong>证据边界：</strong>`lean_momentum_algorithm.py` 已通过 Python AST 语法检查，但由于 `AlgorithmImports` 只存在于 LEAN 环境，API 兼容性和引擎运行均未验证。本地事件账本是独立 deterministic harness，不是 LEAN 替代品。官方 HEAD 是访问时状态，不等于长期稳定版本。</div>
+<h2 id="concepts">冻结环境与产物</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>项目</th>
+<th>状态</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>LEAN CLI</td>
+<td>NOT FOUND</td>
+</tr>
+<tr>
+<td>.NET SDK/runtime</td>
+<td>NOT FOUND</td>
+</tr>
+<tr>
+<td>官方仓库 HEAD</td>
+<td><code>153d0b7427a918063a018ec18964ddf450edc125</code></td>
+</tr>
+<tr>
+<td>QCAlgorithm 骨架</td>
+<td>已创建、AST parse PASS</td>
+</tr>
+<tr>
+<td>LEAN compile/backtest</td>
+<td>NOT RUN</td>
+</tr>
+<tr>
+<td>本地事件账本</td>
+<td>PASS</td>
+</tr>
+<tr>
+<td>真实市场数据/成交</td>
+<td>未使用</td>
+</tr>
+</tbody>
+</table></div>
+<p>产物包括 <a href="lean_momentum_algorithm.py"><code>lean_momentum_algorithm.py</code></a>、<a href="local_event_ledger.py"><code>local_event_ledger.py</code></a> 和 <a href="p6_lean_event_results.json"><code>p6_lean_event_results.json</code></a>。</p>
+<h2 id="lean-contract">LEAN 策略契约</h2>
+<p>策略骨架冻结：SPY 日线、2020 年样例区间、初始现金 100,000、六期滚动窗口、五日动量为正时目标仓位 50%，否则空仓。配置示例固定 <code>ConstantFeeModel(1.0)</code> 和 <code>ConstantSlippageModel(0.0002)</code>，并在 <code>on_order_event</code> 记录部分成交/完成事件。</p>
+<p>这只是接口候选。真正运行前必须在冻结 revision 下确认 Python API 命名、模型构造器、数据订阅、warm-up、拆股分红、时区和历史数据许可。</p>
+<h2 id="methods">订单生命周期与账本</h2>
+<p>订单状态至少包括：</p>
+<div class="formula" data-math-kind="display">\[New\rightarrow Submitted\rightarrow PartiallyFilled\rightarrow Filled,\]</div>
+<p>并允许 CancelPending、Canceled、Invalid/Rejected。买入成交对现金和持仓的更新：</p>
+<div class="formula" data-math-kind="display">\[Cash_{new}=Cash_{old}-qP_{fill}-Fee,
+\qquad Position_{new}=Position_{old}+q.\]</div>
+<p>卖出时 <span class="math-inline" data-math-kind="inline">\(q\)</span> 的方向相反。账本必须逐 fill 更新，不能在订单提交时假设全额成交。</p>
+<p>本地 harness 模拟：100 股买单分 40/60 两次成交，随后 100 股卖单一次成交；每个 fill 收费 1，买卖方向各施加 2 bps 不利滑点。</p>
+<h2 id="pipeline">Pipeline 与伪代码（Pipeline &amp; Pseudocode）</h2>
+<pre><code class="language-python">freeze_lean_commit_and_runtime_versions()
+algorithm = load_qcalgorithm_skeleton()
+subscribe_data_and_define_point_in_time_signal()
+configure_fee_slippage_fill_and_brokerage_models()
+submit_orders_only_after_signal_is_available()
+for order_event in engine_events:
+    update_cash_position_fee_and_order_state(order_event)
+reconcile_engine_orders_fills_holdings_cash_and_statistics()
+mark_NOT_RUN_if_lean_cli_or_data_runtime_is_missing()
+</code></pre>
+<h2 id="implementation">实现证据与结果（Implementation &amp; Results）</h2>
+<pre><code class="language-powershell">python quant_finance/projects/p6_lean_event_backtest/local_event_ledger.py
+python quant_finance/projects/p6_lean_event_backtest/test_local_event_ledger.py -v
+</code></pre>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>指标</th>
+<th style="text-align:right">本地账本结果</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>初始现金</td>
+<td style="text-align:right">100,000.00</td>
+</tr>
+<tr>
+<td>最终现金</td>
+<td style="text-align:right">100,192.96</td>
+</tr>
+<tr>
+<td>最终持仓</td>
+<td style="text-align:right">0</td>
+</tr>
+<tr>
+<td>fill 数</td>
+<td style="text-align:right">3</td>
+</tr>
+<tr>
+<td>总费用</td>
+<td style="text-align:right">3.00</td>
+</tr>
+<tr>
+<td>费用/滑点后已实现 P&amp;L</td>
+<td style="text-align:right">192.96</td>
+</tr>
+</tbody>
+</table></div>
+<p>测试确认包含 <code>partially_filled</code>，两个订单最终各有一个 <code>filled</code>，最终持仓归零，费用等于三次 fill×1，算法文件可被 AST 解析且包含 <code>QCAlgorithm</code> 与 <code>on_order_event</code>。</p>
+<h2 id="comparison">LEAN 与本地证据对照</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>能力</th>
+<th>本地 harness</th>
+<th>LEAN 引擎</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>确定性状态转换</td>
+<td>已验证</td>
+<td>未运行</td>
+</tr>
+<tr>
+<td>部分成交与现金守恒</td>
+<td>已验证固定场景</td>
+<td>未运行</td>
+</tr>
+<tr>
+<td><code>QCAlgorithm</code> API</td>
+<td>仅静态骨架</td>
+<td>未编译/未执行</td>
+</tr>
+<tr>
+<td>数据订阅/公司行动</td>
+<td>不支持</td>
+<td>未验证</td>
+</tr>
+<tr>
+<td>官方 fill/fee/slippage 模型</td>
+<td>不支持</td>
+<td>未验证</td>
+</tr>
+<tr>
+<td>统计与结果 JSON</td>
+<td>本地自定义</td>
+<td>未生成</td>
+</tr>
+</tbody>
+</table></div>
+<p>不能把本地 P&amp;L 与 LEAN 回测结果等同。P6 的诚实退出状态是：事件账本 slice 完成，LEAN runtime integration 仍为开放边界。</p>
+<h2 id="exercises">练习与答案边界（Exercises）</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>ID</th>
+<th>题目</th>
+<th>达标标准</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>P6-Q01</td>
+<td>冻结的 LEAN revision？</td>
+<td>给出完整 40 字符 commit。</td>
+</tr>
+<tr>
+<td>P6-Q02</td>
+<td>为什么未运行 LEAN？</td>
+<td>CLI 和 .NET 均不存在。</td>
+</tr>
+<tr>
+<td>P6-Q03</td>
+<td>AST 通过能证明 API 可用吗？</td>
+<td>不能，只证明 Python 语法。</td>
+</tr>
+<tr>
+<td>P6-Q04</td>
+<td>部分成交如何更新账本？</td>
+<td>每个 fill 分别更新现金/持仓/费用。</td>
+</tr>
+<tr>
+<td>P6-Q05</td>
+<td>滑点方向如何设置？</td>
+<td>买入价格上调、卖出价格下调。</td>
+</tr>
+<tr>
+<td>P6-Q06</td>
+<td>费用为何按 fill 而非 order？</td>
+<td>本示例模型定义为每次成交收费。</td>
+</tr>
+<tr>
+<td>P6-Q07</td>
+<td>最终持仓为何为零？</td>
+<td>买入 100 后卖出 100。</td>
+</tr>
+<tr>
+<td>P6-Q08</td>
+<td>LEAN 运行前还需核验什么？</td>
+<td>API、数据、时区、公司行动和模型配置。</td>
+</tr>
+<tr>
+<td>P6-Q09</td>
+<td>本地 P&amp;L 能否称 LEAN 结果？</td>
+<td>不能。</td>
+</tr>
+<tr>
+<td>P6-Q10</td>
+<td>下一步集成证据是什么？</td>
+<td>冻结 runtime 下成功编译/回测及结果哈希。</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="answer-boundary">答案索引（Answer Boundary）</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>ID</th>
+<th>答案边界</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>P6-Q01</td>
+<td><code>153d0b7427a918063a018ec18964ddf450edc125</code>。</td>
+</tr>
+<tr>
+<td>P6-Q02</td>
+<td>环境输出 <code>LEAN_CLI_NOT_FOUND</code>、<code>DOTNET_NOT_FOUND</code>。</td>
+</tr>
+<tr>
+<td>P6-Q03</td>
+<td>不能；缺少 <code>AlgorithmImports</code> 和引擎类型检查。</td>
+</tr>
+<tr>
+<td>P6-Q04</td>
+<td>每次成交立即记数量、价格、现金和费用。</td>
+</tr>
+<tr>
+<td>P6-Q05</td>
+<td>对交易者不利方向应用。</td>
+</tr>
+<tr>
+<td>P6-Q06</td>
+<td>三个 fill 因而收三次固定费用。</td>
+</tr>
+<tr>
+<td>P6-Q07</td>
+<td>+40+60-100=0。</td>
+</tr>
+<tr>
+<td>P6-Q08</td>
+<td>至少 API revision、数据、时区、公司行动、fee/fill/slippage。</td>
+</tr>
+<tr>
+<td>P6-Q09</td>
+<td>不能，本地 harness 不是 LEAN。</td>
+</tr>
+<tr>
+<td>P6-Q10</td>
+<td>引擎退出码、日志、订单/fill/统计和产物哈希。</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="risks">风险与后续建议（Risks &amp; Next）</h2>
+<ul>
+<li><code>ConstantFeeModel</code>、<code>ConstantSlippageModel</code> 及 snake_case API 需要在冻结 LEAN Python 环境中实际编译确认。</li>
+<li>示例只包含一个证券和固定费用/滑点，不含公司行动、现金利息、保证金、借券、分红或真实数据。</li>
+<li>下一 slice G21/P7 将建立 Qlib 或自建研究生产管线；当前环境若同样缺包，将用可执行本地 stage manifest 验证数据—特征—训练—回测—报告闭环，并明确 Qlib 未运行。</li>
+</ul>
+<h2 id="references">参考文献（References）</h2>
+<ol>
+<li>[1] QuantConnect, “LEAN,” official repository. <a href="https://github.com/QuantConnect/Lean">链接</a></li>
+<li>[2] QuantConnect, “LEAN Documentation.” <a href="https://www.quantconnect.com/docs/v2/lean-engine/getting-started/lean-cli">链接</a></li>
+</ol>
+
+        <nav class="next-chapter" aria-label="下一章节">
+          <span class="next-chapter-label">下一章节</span>
+          <a rel="next" href="../p7_research_pipeline/p7_research_pipeline_report.html">P7 研究生产管线 →</a>
+        </nav>
+
+        <a class="back-to-top" href="#top">返回页首 ↑</a>
+      </article>
+    </main>
+  </div>
+</body>
+</html>

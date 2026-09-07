@@ -1,0 +1,60 @@
+{
+  "protocol": {
+    "n_assets": 8,
+    "n_days": 720,
+    "lookback": 120,
+    "rebalance_days": 20,
+    "cost_bps_per_unit_turnover": 10
+  },
+  "sample_mean": {
+    "gross": {
+      "mean_daily": 0.0003894807675492404,
+      "vol_daily": 0.005580107786697852,
+      "sharpe_annualized": 1.1080100500936538
+    },
+    "net": {
+      "mean_daily": 0.00036956139318798344,
+      "vol_daily": 0.005574855045800642,
+      "sharpe_annualized": 1.0523332346900944
+    },
+    "total_turnover": 11.951624616754172,
+    "stress_loss": 0.09671427791450143
+  },
+  "shrink_turnover_cap": {
+    "gross": {
+      "mean_daily": 0.0004889172477521892,
+      "vol_daily": 0.004168290564191935,
+      "sharpe_annualized": 1.861991282980361
+    },
+    "net": {
+      "mean_daily": 0.00048252705863972606,
+      "vol_daily": 0.00416615308700409,
+      "sharpe_annualized": 1.838597725084905
+    },
+    "total_turnover": 3.83411346747788,
+    "stress_loss": 0.09988836065617406
+  },
+  "final_weights": {
+    "sample_mean": [
+      0.004026394680244435,
+      0.2193427250594169,
+      0.19636395198500473,
+      0.0,
+      0.12382207197214183,
+      0.11602750875224856,
+      0.34041734755094355,
+      0.0
+    ],
+    "shrink_turnover_cap": [
+      0.08844202912199492,
+      0.1579966857213596,
+      0.15245749036071504,
+      0.0903454827109789,
+      0.1253988584901332,
+      0.12206379020937083,
+      0.18111738921342932,
+      0.08217827417201813
+    ]
+  },
+  "evidence_boundary": "synthetic walk-forward comparison; no real performance or investment claim"
+}

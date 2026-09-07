@@ -1,0 +1,77 @@
+{
+  "artifact": "projects/capstone_fama_french_1993/capstone_execution_report.html",
+  "canonical_source": "projects/capstone_fama_french_1993/capstone_execution_report.md",
+  "source_revision": "a070103690b6e034daae9db53f7ec82ad9ecb9e7a6b36acc9f9bae06e195648b",
+  "verdict": "WARN",
+  "checks": [
+    {
+      "name": "source_sha",
+      "status": "PASS",
+      "evidence": "expected=a070103690b6e034daae9db53f7ec82ad9ecb9e7a6b36acc9f9bae06e195648b; embedded=a070103690b6e034daae9db53f7ec82ad9ecb9e7a6b36acc9f9bae06e195648b"
+    },
+    {
+      "name": "single_h1",
+      "status": "PASS",
+      "evidence": "h1_count=1"
+    },
+    {
+      "name": "heading_hierarchy",
+      "status": "PASS",
+      "evidence": "headings=[(1, 'Capstone 执行与答辩材料：Fama–French (1993) 部分复现'), (2, '问题（Question）'), (2, '执行状态与证据边界（Background & Motivation）'), (2, '数据核验'), (2, '估计结果'), (2, '差异与失败账本'), (2, 'Pipeline 与伪代码（Pipeline & Pseudocode）'), (2, '答辩问题与答案边界'), (2, '答案索引（Answer Boundary）'), (2, '风险与后续建议（Risks & Next）'), (2, '参考文献（References）')]"
+    },
+    {
+      "name": "academic_template",
+      "status": "PASS",
+      "evidence": "palette/serif/1280-grid/260-sticky/900-breakpoint markers"
+    },
+    {
+      "name": "mathjax_config",
+      "status": "PASS",
+      "evidence": "MathJax 3 delimiters and skipHtmlTags markers"
+    },
+    {
+      "name": "formula_em_zero",
+      "status": "PASS",
+      "evidence": "formula_em_count=0"
+    },
+    {
+      "name": "latex_subscript_literal",
+      "status": "PASS",
+      "evidence": "source=['_{Mi}', '_{ft}', '_{it}']; missing=[]"
+    },
+    {
+      "name": "internal_overflow",
+      "status": "PASS",
+      "evidence": "table/code/formula internal overflow CSS markers"
+    },
+    {
+      "name": "anchors",
+      "status": "PASS",
+      "evidence": "unresolved=[]"
+    },
+    {
+      "name": "local_links",
+      "status": "PASS",
+      "evidence": "unresolved=[]"
+    },
+    {
+      "name": "required_sections",
+      "status": "PASS",
+      "evidence": "required=['question', 'background', 'data', 'methods', 'difference', 'pipeline', 'exercises', 'risks', 'references']; missing=[]"
+    },
+    {
+      "name": "diagnostic_question_coverage",
+      "status": "PASS",
+      "evidence": "prefix=G24-Q; expected=10; counts={'G24-Q01': 2, 'G24-Q02': 2, 'G24-Q03': 2, 'G24-Q04': 2, 'G24-Q05': 2, 'G24-Q06': 2, 'G24-Q07': 2, 'G24-Q08': 2, 'G24-Q09': 2, 'G24-Q10': 2}"
+    },
+    {
+      "name": "browser_visual_qa",
+      "status": "PENDING",
+      "evidence": "环境安全策略禁止浏览器直接打开本地 file:// HTML；未绕行，待人工桌面与窄屏复核"
+    }
+  ],
+  "open_items": [
+    "browser_visual_qa"
+  ],
+  "next": "完成浏览器视觉 QA 后重新审查"
+}

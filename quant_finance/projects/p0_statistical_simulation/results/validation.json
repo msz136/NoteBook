@@ -1,0 +1,122 @@
+{
+  "verdict": "PASS",
+  "checks": [
+    {
+      "name": "protocol_version",
+      "status": "PASS",
+      "evidence": "p0-v1"
+    },
+    {
+      "name": "fixed_seed",
+      "status": "PASS",
+      "evidence": 20260722
+    },
+    {
+      "name": "finite_lln_clt_metrics",
+      "status": "PASS",
+      "evidence": "all LLN/CLT floating metrics are finite"
+    },
+    {
+      "name": "lln_rmse_contracts",
+      "status": "PASS",
+      "evidence": {
+        "centered_lognormal": {
+          "n_first": 20,
+          "rmse_first": 0.21950679199895767,
+          "n_last": 2000,
+          "rmse_last": 0.022567799514838886
+        },
+        "normal": {
+          "n_first": 20,
+          "rmse_first": 0.22476103563464486,
+          "n_last": 2000,
+          "rmse_last": 0.0224866515629766
+        },
+        "student_t_df3": {
+          "n_first": 20,
+          "rmse_first": 0.21953475238713271,
+          "n_last": 2000,
+          "rmse_last": 0.02215207362192973
+        }
+      }
+    },
+    {
+      "name": "large_n_clt_coverage",
+      "status": "PASS",
+      "evidence": {
+        "centered_lognormal": 0.94475,
+        "normal": 0.94625,
+        "student_t_df3": 0.94675
+      }
+    },
+    {
+      "name": "unbiased_variance_improves_bias",
+      "status": "PASS",
+      "evidence": [
+        {
+          "ddof0_bias": -0.20558857218867732,
+          "ddof0_mean": 0.7944114278113227,
+          "ddof1_bias": -0.00698571523584679,
+          "ddof1_mean": 0.9930142847641532,
+          "n": 5
+        },
+        {
+          "ddof0_bias": -0.09452873124633943,
+          "ddof0_mean": 0.9054712687536606,
+          "ddof1_bias": 0.006079187504067107,
+          "ddof1_mean": 1.006079187504067,
+          "n": 10
+        },
+        {
+          "ddof0_bias": -0.03480516682924961,
+          "ddof0_mean": 0.9651948331707504,
+          "ddof1_bias": 0.015994561232368865,
+          "ddof1_mean": 1.0159945612323689,
+          "n": 20
+        },
+        {
+          "ddof0_bias": -0.02150968788063723,
+          "ddof0_mean": 0.9784903121193628,
+          "ddof1_bias": -0.0015404978373850797,
+          "ddof1_mean": 0.9984595021626149,
+          "n": 50
+        },
+        {
+          "ddof0_bias": -0.01123585786809489,
+          "ddof0_mean": 0.9887641421319051,
+          "ddof1_bias": -0.0012483412809037864,
+          "ddof1_mean": 0.9987516587190962,
+          "n": 100
+        }
+      ]
+    },
+    {
+      "name": "normal_t_interval_coverage",
+      "status": "PASS",
+      "evidence": {
+        "10": 0.94925,
+        "20": 0.9465,
+        "50": 0.94925,
+        "100": 0.95075
+      }
+    },
+    {
+      "name": "bootstrap_coverage_bounded",
+      "status": "PASS",
+      "evidence": {
+        "20": 0.938,
+        "50": 0.94,
+        "100": 0.958
+      }
+    },
+    {
+      "name": "plot_exists",
+      "status": "PASS",
+      "evidence": {
+        "path": "C:\\Users\\mousongzhe\\NoteBook\\quant_finance\\projects\\p0_statistical_simulation\\results\\summary.svg",
+        "bytes": 117987
+      }
+    }
+  ],
+  "open_items": []
+}

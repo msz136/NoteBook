@@ -1,0 +1,637 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="generator" content="quant_finance ARIS render-html (academic, v1)">
+  <meta name="source-file" content="12_reproducibility_model_governance_notes.md">
+  <meta name="source-sha256" content="d0809710970838ef30a3e7135a16f0dc3ea9b5436ca393de5d50993246970ed4">
+  <title>研究复现与模型治理：实验追踪、CI、监控、审计与退役</title>
+  <script>
+    window.MathJax = {
+      tex: {inlineMath: [['\\(', '\\)'], ['$', '$']], displayMath: [['\\[', '\\]'], ['$$', '$$']]},
+      options: {skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']}
+    };
+  </script>
+  <script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+  <style>
+/* ARIS academic v1 — quant_finance canonical inline stylesheet. */
+:root {
+  --paper: #fdfcf7;
+  --paper-soft: #f4f1ea;
+  --ink: #1a1a1a;
+  --muted: #625f58;
+  --blue: #1a4a8c;
+  --blue-soft: #dce7f4;
+  --rust: #b8390e;
+  --rule: #b9b2a6;
+  --serif: "Source Serif Pro", "Source Serif 4", "Crimson Pro", Georgia, "Songti SC", STSong, serif;
+  --mono: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  margin: 0;
+  color: var(--ink);
+  background: var(--paper);
+  font-family: var(--serif);
+  font-size: 16px;
+  line-height: 1.8;
+}
+a { color: var(--blue); text-underline-offset: 0.16em; }
+a:hover { color: var(--rust); }
+
+.page-shell {
+  width: min(1280px, calc(100% - 40px));
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: 260px minmax(0, 1fr);
+  gap: 42px;
+  align-items: start;
+}
+.toc {
+  position: sticky;
+  top: 24px;
+  max-height: calc(100vh - 48px);
+  overflow-y: auto;
+  padding: 28px 18px 24px 0;
+  color: var(--muted);
+}
+.toc-title {
+  margin: 0 0 0.65rem;
+  color: var(--blue);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+.toc ol { margin: 0; padding: 0; list-style: none; }
+.toc li { margin: 0.24rem 0; line-height: 1.35; }
+.toc a { color: inherit; text-decoration: none; }
+.toc a:hover { color: var(--rust); }
+.toc .depth-3 { padding-left: 0.85rem; font-size: 0.92rem; }
+.toc .depth-4 { padding-left: 1.55rem; font-size: 0.86rem; }
+
+main {
+  min-width: 0;
+  margin: 24px 0 64px;
+  padding: 48px clamp(32px, 5vw, 72px) 64px;
+  background: var(--paper-soft);
+  border: 1px solid #ded8cd;
+  box-shadow: 0 16px 44px rgba(55, 47, 36, 0.08);
+}
+article { min-width: 0; }
+.eyebrow {
+  margin: 0 0 0.45rem;
+  color: var(--rust);
+  font-family: var(--serif);
+  font-size: 0.76rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+.subtitle { margin: 0 0 0.5rem; color: var(--muted); font-size: 1.05rem; }
+.meta {
+  margin: 0 0 2.2rem;
+  color: var(--muted);
+  font-size: 0.86rem;
+}
+h1 {
+  margin: 0 0 0.7rem;
+  padding: 0 0 0.8rem;
+  color: var(--ink);
+  border-bottom: 5px double var(--blue);
+  font-size: clamp(2rem, 5vw, 3.1rem);
+  line-height: 1.14;
+  letter-spacing: -0.025em;
+}
+h2 {
+  margin: 3.2rem 0 1.15rem;
+  padding-bottom: 0.42rem;
+  border-bottom: 1px solid var(--rule);
+  color: var(--ink);
+  font-size: 1.62rem;
+  line-height: 1.35;
+}
+h3 { margin: 2.15rem 0 0.8rem; color: var(--blue); font-size: 1.28rem; line-height: 1.4; }
+h4 { margin: 1.55rem 0 0.6rem; color: var(--ink); font-size: 1.06rem; line-height: 1.45; }
+p, ul, ol, blockquote { margin: 0 0 1rem; }
+ul, ol { padding-left: 1.5rem; }
+li + li { margin-top: 0.24rem; }
+strong { color: #111; }
+
+code {
+  font-family: var(--mono);
+  font-size: 0.9em;
+  background: #e9e5dc;
+  border-radius: 3px;
+  padding: 0.1em 0.32em;
+}
+pre {
+  max-width: 100%;
+  margin: 1.2rem 0 1.5rem;
+  padding: 1rem 1.1rem;
+  overflow-x: auto;
+  background: #faf9f5;
+  border: 1px solid #d8d2c7;
+  border-left: 4px solid var(--blue);
+  border-radius: 2px;
+  line-height: 1.55;
+}
+pre code {
+  display: block;
+  min-width: max-content;
+  padding: 0;
+  color: #383a42;
+  background: transparent;
+}
+/* Highlight.js atom-one-light-compatible colors for portable, inline styling. */
+.hljs-comment, .hljs-quote { color: #a0a1a7; font-style: italic; }
+.hljs-keyword, .hljs-selector-tag, .hljs-literal { color: #a626a4; }
+.hljs-string, .hljs-regexp { color: #50a14f; }
+.hljs-number, .hljs-symbol { color: #986801; }
+.hljs-title, .hljs-section, .hljs-function { color: #4078f2; }
+
+.formula {
+  max-width: 100%;
+  margin: 1.25rem 0 1.5rem;
+  padding: 1rem 1.15rem;
+  overflow-x: auto;
+  background: #faf9f5;
+  border: 1px solid #d8d2c7;
+  border-left: 4px solid var(--blue);
+}
+.formula mjx-container { min-width: max-content; }
+
+.table-wrap { max-width: 100%; margin: 1.25rem 0 1.6rem; overflow-x: auto; }
+table { width: 100%; min-width: 640px; border-collapse: collapse; font-size: 0.93rem; line-height: 1.55; }
+th, td { padding: 0.68rem 0.78rem; border: 1px solid #aaa398; text-align: left; vertical-align: top; }
+thead th { color: #fff; background: var(--blue); font-weight: 700; }
+tbody tr:nth-child(even) { background: #ebe6dc; }
+tbody tr:nth-child(odd) { background: #f8f5ee; }
+
+.note, .warning, .evidence, blockquote {
+  margin: 1.2rem 0 1.45rem;
+  padding: 0.85rem 1rem;
+  background: #f8f5ee;
+  border: 1px solid #d2cbc0;
+  border-left: 4px solid var(--blue);
+}
+.warning { border-left-color: var(--rust); background: #fff2e9; }
+.evidence { border-left-color: #6b5b8e; background: #f2eef8; }
+.note > :last-child, .warning > :last-child, .evidence > :last-child, blockquote > :last-child { margin-bottom: 0; }
+.back-to-top { display: inline-block; margin-top: 2rem; font-size: 0.88rem; }
+
+@media (max-width: 900px) {
+  .page-shell { width: min(100% - 24px, 820px); grid-template-columns: 1fr; gap: 0; }
+  .toc { position: static; max-height: none; padding: 20px 8px 4px; columns: 2; column-gap: 1.5rem; }
+  .toc-title { column-span: all; }
+  main { margin-top: 16px; padding: 34px clamp(18px, 5vw, 40px) 48px; }
+  h1 { font-size: clamp(1.8rem, 8vw, 2.55rem); }
+  table { min-width: 600px; }
+  pre, .formula, .table-wrap { overflow-x: auto; }
+}
+
+@media (max-width: 560px) {
+  .toc { columns: 1; }
+  .page-shell { width: calc(100% - 12px); }
+  main { padding-left: 15px; padding-right: 15px; }
+}
+
+@media print {
+  body { background: #fff; }
+  .page-shell { display: block; width: 100%; }
+  .toc, .back-to-top { display: none !important; }
+  main { margin: 0; padding: 0; background: #fff; border: 0; box-shadow: none; }
+  a { color: inherit; text-decoration: none; }
+  pre, .formula, table { break-inside: avoid; }
+}
+
+    .next-chapter { margin: 2.5rem 0 1rem; padding: 1rem 1.2rem; border: 1px solid #b9c9df; border-left: 4px solid #1a4a8c; background: #f4f1ea; display: flex; gap: .75rem; align-items: baseline; justify-content: space-between; }
+    .next-chapter-label { color: #1a4a8c; font-weight: 700; white-space: nowrap; }
+    .next-chapter a { color: #1a4a8c; font-weight: 700; text-decoration: none; }
+    .next-chapter a:hover, .next-chapter a:focus { color: #b8390e; text-decoration: underline; }
+    @media (max-width: 900px) { .next-chapter { display: block; } .next-chapter-label { display: block; margin-bottom: .35rem; } }
+  </style>
+</head>
+<body id="top">
+  <div class="page-shell">
+    <nav class="toc" aria-label="目录">
+      <p class="toc-title">Contents</p>
+      <ol>
+<li class="depth-2"><a href="#question">问题（Question）</a></li>
+<li class="depth-2"><a href="#background">背景与动机（Background &amp; Motivation）</a></li>
+<li class="depth-2"><a href="#concepts">治理对象与角色</a></li>
+<li class="depth-2"><a href="#repro">复现与实验追踪</a></li>
+<li class="depth-2"><a href="#ci">CI 与验证门</a></li>
+<li class="depth-2"><a href="#monitoring">监控、事件与退役</a></li>
+<li class="depth-2"><a href="#math">治理记录与状态机</a></li>
+<li class="depth-2"><a href="#pipeline">Pipeline 与伪代码（Pipeline &amp; Pseudocode）</a></li>
+<li class="depth-2"><a href="#implementation">实现证据与结果（Implementation &amp; Results）</a></li>
+<li class="depth-2"><a href="#comparison">治理对比与失败案例</a></li>
+<li class="depth-2"><a href="#exercises">练习与答案边界（Exercises）</a></li>
+<li class="depth-2"><a href="#answer-boundary">答案索引（Answer Boundary）</a></li>
+<li class="depth-2"><a href="#risks">风险与后续建议（Risks &amp; Next）</a></li>
+<li class="depth-2"><a href="#references">参考文献（References）</a></li>
+      </ol>
+    </nav>
+    <main>
+      <article>
+        <header>
+          <p class="eyebrow">Quant Finance · Reproducibility and Model Governance</p>
+          <p class="subtitle">M12 · 让模型从“能跑”进入可复核、可批准、可暂停和可恢复状态</p>
+          <h1>研究复现与模型治理：实验追踪、CI、监控、审计与退役</h1>
+          <p class="meta">发布日期：2026-07-22 · 证据截止：2026-07-22 · 源文件 SHA-256：<code>d0809710970838ef30a3e7135a16f0dc3ea9b5436ca393de5d50993246970ed4</code></p>
+        </header>
+<h2 id="question">问题（Question）</h2>
+<p>一个研究模型何时可以被别人复现、被风险人员批准、被监控和被安全退役？如何把数据/代码/环境版本、实验参数、批准角色、风险限额、故障演练和 rollback 证据连成一条审计链？本模块创建可执行治理记录验证器，并用负向测试拒绝缺 owner 或未批准部署。</p>
+<h2 id="background">背景与动机（Background &amp; Motivation）</h2>
+<p>Wilson 等人将数据、软件、版本和项目组织视为可复现计算的基本实践；NIST AI RMF 将治理、映射、测量和管理作为风险生命周期；SR 11-7 则强调模型开发、验证、治理和持续监控。[1–3] 金融模型还需保留数据许可、点时性、成本、容量和人工 override 证据，不能把 Git commit 等同于风险批准。</p>
+<div class="evidence"><strong>证据边界：</strong>来源支撑治理原则和生命周期，不替代机构政策/法律意见。`m12_model_governance_record.json` 是本地合成模板，`m12_validate_governance.py` 是本地规则验证器；它们不代表生产模型已获批准或部署。</div>
+<h2 id="concepts">治理对象与角色</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>对象</th>
+<th>必须记录</th>
+<th>失败后果</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>模型身份</td>
+<td>model_id、目的、owner、版本</td>
+<td>无法归责/复现</td>
+</tr>
+<tr>
+<td>数据</td>
+<td>source、revision、许可、hash、point-in-time</td>
+<td>结果无法重建或侵权</td>
+</tr>
+<tr>
+<td>代码/环境</td>
+<td>commit、锁文件、OS、包、随机算法</td>
+<td>“在我机器上能跑”</td>
+</tr>
+<tr>
+<td>验证</td>
+<td>指标、基准、压力、失败和独立 reviewer</td>
+<td>自我批准</td>
+</tr>
+<tr>
+<td>运行</td>
+<td>freshness、drift、P&amp;L、风险限额、告警</td>
+<td>失效后继续下单</td>
+</tr>
+<tr>
+<td>退役</td>
+<td>trigger、rollback artifact、审批和通知</td>
+<td>无法安全停止</td>
+</tr>
+</tbody>
+</table></div>
+<p>独立验证人不能与模型 owner 相同；生产批准是显式状态，不应由“测试通过”自动推导。</p>
+<h2 id="repro">复现与实验追踪</h2>
+<p>一次运行的最小身份：</p>
+<div class="formula" data-math-kind="display">\[RunID=H(data\_revision,code\_revision,environment\_lock,config,seed).\]</div>
+<p>每个 stage 应记录输入/输出 hash、命令、开始/结束、状态和日志位置。实验追踪必须保存失败和被否决的 run；只保存最佳模型会破坏多重检验和审计。</p>
+<h2 id="ci">CI 与验证门</h2>
+<p>CI 至少分层：</p>
+<ol>
+<li>schema、单位、point-in-time 和本地链接检查；</li>
+<li>纯函数/估计器/订单账本单元测试；</li>
+<li>小 fixture 端到端 smoke；</li>
+<li>结果 hash/指标基线 drift 检查；</li>
+<li>安全、依赖、许可和密钥扫描；</li>
+<li>人工 review、批准和发布签名。</li>
+</ol>
+<p>绿色 CI 只证明定义的测试通过，不证明模型识别、收益、容量或监管合规。</p>
+<h2 id="monitoring">监控、事件与退役</h2>
+<p>监控应覆盖：数据新鲜度、缺失、分布/特征漂移、预测校准、成交/成本、P&amp;L、回撤、暴露、限额和系统健康。阈值触发 warning、降级、阻断下单或 rollback；每类动作需 owner、SLA 和通知路径。</p>
+<p>事件演练至少验证：</p>
+<div class="formula" data-math-kind="display">\[Detect\rightarrow Notify\rightarrow Block\rightarrow Rollback\rightarrow Verify\rightarrow Review.\]</div>
+<p>“模型停止”不等于“风险消失”：需要现金、未成交订单、持仓、借券、融资、数据修订和恢复版本的完整检查。</p>
+<h2 id="math">治理记录与状态机</h2>
+<p>推荐状态：<code>draft → validated_not_deployed → approved → deployed → degraded/blocked → retired</code>。禁止 <code>deployed</code> 没有 production approval。每次状态转移要记录人、时间、证据和理由。</p>
+<p>本地验证规则：</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>检查</th>
+<th>规则</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>required_fields</td>
+<td>身份、版本、指标、限额、监控、rollback、事件演练齐全</td>
+</tr>
+<tr>
+<td>independent_roles</td>
+<td>owner 与 reviewer 不同</td>
+</tr>
+<tr>
+<td>production_approval</td>
+<td>deployed 必须显式 production=true</td>
+</tr>
+<tr>
+<td>incident_drill</td>
+<td>detected/blocked/notified/recovered 全为 true</td>
+</tr>
+<tr>
+<td>rollback_defined</td>
+<td>action 与 artifact_revision 非空</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="pipeline">Pipeline 与伪代码（Pipeline &amp; Pseudocode）</h2>
+<pre><code class="language-python">record = load_governance_record(model_id)
+validate_schema_roles_versions_limits_monitoring_and_rollback(record)
+run_ci_and_reproducibility_smoke(record.code_revision, record.environment_hash)
+if record.status == &quot;deployed&quot;:
+    require(record.approvals.production is True)
+simulate_stale_data_incident()
+assert orders_blocked and owner_notified and rollback_verified
+append_audit_event(actor, transition, evidence_hash)
+</code></pre>
+<p>实现见 <a href="../tools/m12_validate_governance.py"><code>m12_validate_governance.py</code></a>，模板见 <a href="../data/m12_model_governance_record.json"><code>m12_model_governance_record.json</code></a>，验证输出见 <a href="../data/m12_model_governance_validation.json"><code>m12_model_governance_validation.json</code></a>。</p>
+<h2 id="implementation">实现证据与结果（Implementation &amp; Results）</h2>
+<pre><code class="language-powershell">python quant_finance/tools/m12_validate_governance.py
+python quant_finance/data/test_m12_governance.py -v
+</code></pre>
+<p>有效记录验证 <code>PASS</code>：required fields、独立角色、未批准部署阻断、rollback 和 stale-data 事件演练全部通过。负向测试删除 owner 或将 status 改为 deployed 但不批准，均返回 <code>FAIL</code>。这是规则覆盖证据，不是生产审批。</p>
+<h2 id="comparison">治理对比与失败案例</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>失败</th>
+<th>为什么危险</th>
+<th>防护</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>只有代码 commit</td>
+<td>数据/环境/参数仍漂移</td>
+<td>RunID 与多版本 hash</td>
+</tr>
+<tr>
+<td>只保存最佳实验</td>
+<td>多重检验不可见</td>
+<td>append-only 实验账本</td>
+</tr>
+<tr>
+<td>owner 自己批准</td>
+<td>独立验证缺失</td>
+<td>reviewer/审批分离</td>
+</tr>
+<tr>
+<td>监控只有 P&amp;L</td>
+<td>数据/成本/暴露先失效</td>
+<td>多层运行和风险指标</td>
+</tr>
+<tr>
+<td>告警无动作</td>
+<td>风险继续扩大</td>
+<td>block/rollback/SLA</td>
+</tr>
+<tr>
+<td>rollback 无 artifact</td>
+<td>无法恢复已知版本</td>
+<td>immutable artifact 与演练</td>
+</tr>
+<tr>
+<td>测试绿即部署</td>
+<td>测试范围有限</td>
+<td>显式 production approval</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="exercises">练习与答案边界（Exercises）</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>ID</th>
+<th>题目</th>
+<th>达标标准</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>M12-Q01</td>
+<td>RunID 应包含什么？</td>
+<td>数据、代码、环境、配置、seed。</td>
+</tr>
+<tr>
+<td>M12-Q02</td>
+<td>为什么保存失败 run？</td>
+<td>审计搜索空间和多重检验。</td>
+</tr>
+<tr>
+<td>M12-Q03</td>
+<td>owner/reviewer 为何分离？</td>
+<td>独立验证减少自我确认。</td>
+</tr>
+<tr>
+<td>M12-Q04</td>
+<td>deployed 需要什么？</td>
+<td>显式 production approval。</td>
+</tr>
+<tr>
+<td>M12-Q05</td>
+<td>监控哪些类别？</td>
+<td>新鲜度、漂移、校准、成本、P&amp;L、暴露、系统。</td>
+</tr>
+<tr>
+<td>M12-Q06</td>
+<td>事件响应顺序？</td>
+<td>detect→notify→block→rollback→verify→review。</td>
+</tr>
+<tr>
+<td>M12-Q07</td>
+<td>rollback 记录什么？</td>
+<td>动作、目标 artifact revision、验证证据。</td>
+</tr>
+<tr>
+<td>M12-Q08</td>
+<td>CI 绿灯证明什么？</td>
+<td>定义测试通过，不证明收益/合规。</td>
+</tr>
+<tr>
+<td>M12-Q09</td>
+<td>为什么需要环境 hash？</td>
+<td>包/OS/算法差异影响结果。</td>
+</tr>
+<tr>
+<td>M12-Q10</td>
+<td>数据修订如何治理？</td>
+<td>新 revision/hash，不静默覆盖。</td>
+</tr>
+<tr>
+<td>M12-Q11</td>
+<td>stale data 事件如何演练？</td>
+<td>检测、阻断订单、通知、恢复和验证。</td>
+</tr>
+<tr>
+<td>M12-Q12</td>
+<td>模型退役为何不止删代码？</td>
+<td>需处理持仓、订单、融资、数据和审计。</td>
+</tr>
+<tr>
+<td>M12-Q13</td>
+<td>risk limit 与 metric 区别？</td>
+<td>限额是动作边界，metric 是观测量。</td>
+</tr>
+<tr>
+<td>M12-Q14</td>
+<td>生产批准可否由测试自动给？</td>
+<td>不可，需权限分离。</td>
+</tr>
+<tr>
+<td>M12-Q15</td>
+<td>drift 阈值如何使用？</td>
+<td>warning/blocked 动作和 owner/SLA 预先定义。</td>
+</tr>
+<tr>
+<td>M12-Q16</td>
+<td>合成模板支持什么？</td>
+<td>验证字段和规则路径。</td>
+</tr>
+<tr>
+<td>M12-Q17</td>
+<td>审计事件最少字段？</td>
+<td>actor、transition、time、reason、evidence hash。</td>
+</tr>
+<tr>
+<td>M12-Q18</td>
+<td>模型风险与数据风险差异？</td>
+<td>模型错设/实现 vs 输入/可见性/质量。</td>
+</tr>
+<tr>
+<td>M12-Q19</td>
+<td>为什么要锁文件？</td>
+<td>复现依赖和安全更新可追踪。</td>
+</tr>
+<tr>
+<td>M12-Q20</td>
+<td>何时暂停治理结论？</td>
+<td>角色、版本、事件或 rollback 闸门缺失。</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="answer-boundary">答案索引（Answer Boundary）</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>ID</th>
+<th>答案边界</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>M12-Q01</td>
+<td>hash(data, code, env, config, seed)。</td>
+</tr>
+<tr>
+<td>M12-Q02</td>
+<td>否则无法知道搜索分母和失败边界。</td>
+</tr>
+<tr>
+<td>M12-Q03</td>
+<td>reviewer 不等于 owner。</td>
+</tr>
+<tr>
+<td>M12-Q04</td>
+<td>production=true 的显式批准。</td>
+</tr>
+<tr>
+<td>M12-Q05</td>
+<td>数据、特征、预测、执行、风险和系统健康。</td>
+</tr>
+<tr>
+<td>M12-Q06</td>
+<td>六步状态机。</td>
+</tr>
+<tr>
+<td>M12-Q07</td>
+<td>动作＋不可变目标版本＋恢复检查。</td>
+</tr>
+<tr>
+<td>M12-Q08</td>
+<td>只证明测试范围内不失败。</td>
+</tr>
+<tr>
+<td>M12-Q09</td>
+<td>环境改变会改变数值和安全。</td>
+</tr>
+<tr>
+<td>M12-Q10</td>
+<td>建新版本并保留旧工件。</td>
+</tr>
+<tr>
+<td>M12-Q11</td>
+<td>发现、阻断、通知、回滚和复核。</td>
+</tr>
+<tr>
+<td>M12-Q12</td>
+<td>还要处置订单/持仓/融资和审计。</td>
+</tr>
+<tr>
+<td>M12-Q13</td>
+<td>metric 观测，limit 触发动作。</td>
+</tr>
+<tr>
+<td>M12-Q14</td>
+<td>不可，审批是权限和责任决策。</td>
+</tr>
+<tr>
+<td>M12-Q15</td>
+<td>每阈值绑定动作、owner 和 SLA。</td>
+</tr>
+<tr>
+<td>M12-Q16</td>
+<td>规则/字段的本地验证。</td>
+</tr>
+<tr>
+<td>M12-Q17</td>
+<td>actor、transition、time、reason、evidence。</td>
+</tr>
+<tr>
+<td>M12-Q18</td>
+<td>模型结构风险 vs 输入版本/质量/时点风险。</td>
+</tr>
+<tr>
+<td>M12-Q19</td>
+<td>依赖版本、漏洞和升级可重建。</td>
+</tr>
+<tr>
+<td>M12-Q20</td>
+<td>任一治理证据不可验证。</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="risks">风险与后续建议（Risks &amp; Next）</h2>
+<ul>
+<li>验证器是最小规则集，不覆盖机构权限系统、密钥管理、隐私、监管报告或法律意见。</li>
+<li>监控阈值是示例值，不能直接作为生产限额。</li>
+<li>下一 slice G23 将冻结 Capstone 论文、数据、指标、协议与复现边界；G24 再执行并形成最终答辩材料。</li>
+</ul>
+<h2 id="references">参考文献（References）</h2>
+<ol>
+<li>[1] Greg Wilson et al., “Good Enough Practices in Scientific Computing,” 2017. <a href="https://doi.org/10.1371/journal.pcbi.1005510">链接</a></li>
+<li>[2] NIST, “AI Risk Management Framework (AI RMF 1.0),” 2023. <a href="https://www.nist.gov/itl/ai-risk-management-framework">链接</a></li>
+<li>[3] Federal Reserve and OCC, “Supervisory Guidance on Model Risk Management (SR 11-7),” 2011. <a href="https://www.federalreserve.gov/supervisionreg/srletters/sr1107.htm">链接</a></li>
+</ol>
+
+        <nav class="next-chapter" aria-label="下一章节">
+          <span class="next-chapter-label">下一章节</span>
+          <a rel="next" href="../projects/p0_statistical_simulation/p0_statistical_simulation_report.html">P0 统计模拟实验 →</a>
+        </nav>
+
+        <a class="back-to-top" href="#top">返回页首 ↑</a>
+      </article>
+    </main>
+  </div>
+</body>
+</html>

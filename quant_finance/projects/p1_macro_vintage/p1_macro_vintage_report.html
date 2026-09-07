@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="generator" content="quant_finance ARIS render-html (academic, v1)">
+  <meta name="source-file" content="p1_macro_vintage_report.md">
+  <meta name="source-sha256" content="210297c6adf3a9c1c2012f19f6bb8f291f1cc1eb3734a881dafa6b6afb9a6238">
+  <title>P1 宏观实时数据实验：FRED/ALFRED Vintage 泄漏对照</title>
+  <script>
+    window.MathJax = {
+      tex: {inlineMath: [['\\(', '\\)'], ['$', '$']], displayMath: [['\\[', '\\]'], ['$$', '$$']]},
+      options: {skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']}
+    };
+  </script>
+  <script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+  <style>
+/* ARIS academic v1 — quant_finance canonical inline stylesheet. */
+:root {
+  --paper: #fdfcf7;
+  --paper-soft: #f4f1ea;
+  --ink: #1a1a1a;
+  --muted: #625f58;
+  --blue: #1a4a8c;
+  --blue-soft: #dce7f4;
+  --rust: #b8390e;
+  --rule: #b9b2a6;
+  --serif: "Source Serif Pro", "Source Serif 4", "Crimson Pro", Georgia, "Songti SC", STSong, serif;
+  --mono: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  margin: 0;
+  color: var(--ink);
+  background: var(--paper);
+  font-family: var(--serif);
+  font-size: 16px;
+  line-height: 1.8;
+}
+a { color: var(--blue); text-underline-offset: 0.16em; }
+a:hover { color: var(--rust); }
+
+.page-shell {
+  width: min(1280px, calc(100% - 40px));
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: 260px minmax(0, 1fr);
+  gap: 42px;
+  align-items: start;
+}
+.toc {
+  position: sticky;
+  top: 24px;
+  max-height: calc(100vh - 48px);
+  overflow-y: auto;
+  padding: 28px 18px 24px 0;
+  color: var(--muted);
+}
+.toc-title {
+  margin: 0 0 0.65rem;
+  color: var(--blue);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+.toc ol { margin: 0; padding: 0; list-style: none; }
+.toc li { margin: 0.24rem 0; line-height: 1.35; }
+.toc a { color: inherit; text-decoration: none; }
+.toc a:hover { color: var(--rust); }
+.toc .depth-3 { padding-left: 0.85rem; font-size: 0.92rem; }
+.toc .depth-4 { padding-left: 1.55rem; font-size: 0.86rem; }
+
+main {
+  min-width: 0;
+  margin: 24px 0 64px;
+  padding: 48px clamp(32px, 5vw, 72px) 64px;
+  background: var(--paper-soft);
+  border: 1px solid #ded8cd;
+  box-shadow: 0 16px 44px rgba(55, 47, 36, 0.08);
+}
+article { min-width: 0; }
+.eyebrow {
+  margin: 0 0 0.45rem;
+  color: var(--rust);
+  font-family: var(--serif);
+  font-size: 0.76rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+.subtitle { margin: 0 0 0.5rem; color: var(--muted); font-size: 1.05rem; }
+.meta {
+  margin: 0 0 2.2rem;
+  color: var(--muted);
+  font-size: 0.86rem;
+}
+h1 {
+  margin: 0 0 0.7rem;
+  padding: 0 0 0.8rem;
+  color: var(--ink);
+  border-bottom: 5px double var(--blue);
+  font-size: clamp(2rem, 5vw, 3.1rem);
+  line-height: 1.14;
+  letter-spacing: -0.025em;
+}
+h2 {
+  margin: 3.2rem 0 1.15rem;
+  padding-bottom: 0.42rem;
+  border-bottom: 1px solid var(--rule);
+  color: var(--ink);
+  font-size: 1.62rem;
+  line-height: 1.35;
+}
+h3 { margin: 2.15rem 0 0.8rem; color: var(--blue); font-size: 1.28rem; line-height: 1.4; }
+h4 { margin: 1.55rem 0 0.6rem; color: var(--ink); font-size: 1.06rem; line-height: 1.45; }
+p, ul, ol, blockquote { margin: 0 0 1rem; }
+ul, ol { padding-left: 1.5rem; }
+li + li { margin-top: 0.24rem; }
+strong { color: #111; }
+
+code {
+  font-family: var(--mono);
+  font-size: 0.9em;
+  background: #e9e5dc;
+  border-radius: 3px;
+  padding: 0.1em 0.32em;
+}
+pre {
+  max-width: 100%;
+  margin: 1.2rem 0 1.5rem;
+  padding: 1rem 1.1rem;
+  overflow-x: auto;
+  background: #faf9f5;
+  border: 1px solid #d8d2c7;
+  border-left: 4px solid var(--blue);
+  border-radius: 2px;
+  line-height: 1.55;
+}
+pre code {
+  display: block;
+  min-width: max-content;
+  padding: 0;
+  color: #383a42;
+  background: transparent;
+}
+/* Highlight.js atom-one-light-compatible colors for portable, inline styling. */
+.hljs-comment, .hljs-quote { color: #a0a1a7; font-style: italic; }
+.hljs-keyword, .hljs-selector-tag, .hljs-literal { color: #a626a4; }
+.hljs-string, .hljs-regexp { color: #50a14f; }
+.hljs-number, .hljs-symbol { color: #986801; }
+.hljs-title, .hljs-section, .hljs-function { color: #4078f2; }
+
+.formula {
+  max-width: 100%;
+  margin: 1.25rem 0 1.5rem;
+  padding: 1rem 1.15rem;
+  overflow-x: auto;
+  background: #faf9f5;
+  border: 1px solid #d8d2c7;
+  border-left: 4px solid var(--blue);
+}
+.formula mjx-container { min-width: max-content; }
+
+.table-wrap { max-width: 100%; margin: 1.25rem 0 1.6rem; overflow-x: auto; }
+table { width: 100%; min-width: 640px; border-collapse: collapse; font-size: 0.93rem; line-height: 1.55; }
+th, td { padding: 0.68rem 0.78rem; border: 1px solid #aaa398; text-align: left; vertical-align: top; }
+thead th { color: #fff; background: var(--blue); font-weight: 700; }
+tbody tr:nth-child(even) { background: #ebe6dc; }
+tbody tr:nth-child(odd) { background: #f8f5ee; }
+
+.note, .warning, .evidence, blockquote {
+  margin: 1.2rem 0 1.45rem;
+  padding: 0.85rem 1rem;
+  background: #f8f5ee;
+  border: 1px solid #d2cbc0;
+  border-left: 4px solid var(--blue);
+}
+.warning { border-left-color: var(--rust); background: #fff2e9; }
+.evidence { border-left-color: #6b5b8e; background: #f2eef8; }
+.note > :last-child, .warning > :last-child, .evidence > :last-child, blockquote > :last-child { margin-bottom: 0; }
+.back-to-top { display: inline-block; margin-top: 2rem; font-size: 0.88rem; }
+
+@media (max-width: 900px) {
+  .page-shell { width: min(100% - 24px, 820px); grid-template-columns: 1fr; gap: 0; }
+  .toc { position: static; max-height: none; padding: 20px 8px 4px; columns: 2; column-gap: 1.5rem; }
+  .toc-title { column-span: all; }
+  main { margin-top: 16px; padding: 34px clamp(18px, 5vw, 40px) 48px; }
+  h1 { font-size: clamp(1.8rem, 8vw, 2.55rem); }
+  table { min-width: 600px; }
+  pre, .formula, .table-wrap { overflow-x: auto; }
+}
+
+@media (max-width: 560px) {
+  .toc { columns: 1; }
+  .page-shell { width: calc(100% - 12px); }
+  main { padding-left: 15px; padding-right: 15px; }
+}
+
+@media print {
+  body { background: #fff; }
+  .page-shell { display: block; width: 100%; }
+  .toc, .back-to-top { display: none !important; }
+  main { margin: 0; padding: 0; background: #fff; border: 0; box-shadow: none; }
+  a { color: inherit; text-decoration: none; }
+  pre, .formula, table { break-inside: avoid; }
+}
+
+    .next-chapter { margin: 2.5rem 0 1rem; padding: 1rem 1.2rem; border: 1px solid #b9c9df; border-left: 4px solid #1a4a8c; background: #f4f1ea; display: flex; gap: .75rem; align-items: baseline; justify-content: space-between; }
+    .next-chapter-label { color: #1a4a8c; font-weight: 700; white-space: nowrap; }
+    .next-chapter a { color: #1a4a8c; font-weight: 700; text-decoration: none; }
+    .next-chapter a:hover, .next-chapter a:focus { color: #b8390e; text-decoration: underline; }
+    @media (max-width: 900px) { .next-chapter { display: block; } .next-chapter-label { display: block; margin-bottom: .35rem; } }
+  </style>
+</head>
+<body id="top">
+  <div class="page-shell">
+    <nav class="toc" aria-label="目录">
+      <p class="toc-title">Contents</p>
+      <ol>
+<li class="depth-2"><a href="#question">问题（Question）</a></li>
+<li class="depth-2"><a href="#background">背景与动机（Background &amp; Motivation）</a></li>
+<li class="depth-2"><a href="#concepts">概念与数据契约</a></li>
+<li class="depth-2"><a href="#methods">方法与数学形式（Methods &amp; Mathematical Form）</a></li>
+<li class="depth-2"><a href="#pipeline">Pipeline 与伪代码（Pipeline &amp; Pseudocode）</a></li>
+<li class="depth-2"><a href="#implementation">实现证据与结果（Implementation &amp; Results）</a></li>
+<li class="depth-2"><a href="#comparison">对照与失败案例</a></li>
+<li class="depth-2"><a href="#exercises">实践任务与答案边界</a></li>
+<li class="depth-2"><a href="#risks">风险与后续建议（Risks &amp; Next）</a></li>
+<li class="depth-2"><a href="#references">参考文献（References）</a></li>
+<li class="depth-2"><a href="#answer-boundary">答案索引（Answer Boundary）</a></li>
+      </ol>
+    </nav>
+    <main>
+      <article>
+        <header>
+          <p class="eyebrow">Quant Finance · Macro Vintage Experiment</p>
+          <p class="subtitle">用发布日期筛选历史信息集，而不是把最终修订值回填到过去</p>
+          <h1>P1 宏观实时数据实验：FRED/ALFRED Vintage 泄漏对照</h1>
+          <p class="meta">发布日期：2026-07-22 · 证据截止：2026-07-22 · 源文件 SHA-256：<code>210297c6adf3a9c1c2012f19f6bb8f291f1cc1eb3734a881dafa6b6afb9a6238</code></p>
+        </header>
+<h2 id="question">问题（Question）</h2>
+<p>如果同一个宏观观测在首次发布后被修订，十年前的回测应该看到哪个数值？本项目构造一个小型、可再分发的 vintage fixture，比较 2024-06-30 研究快照与最终修订快照，验证 point-in-time 选择规则和泄漏证据。</p>
+<h2 id="background">背景与动机（Background &amp; Motivation）</h2>
+<p>FRED 提供官方宏观序列 API，ALFRED 面向 vintage/realtime period 访问历史版本。[1][2] 普通下载得到的最新值适合描述当前数据库状态，但不自动等于过去研究者当时可见的信息。M02 已冻结 <code>available_at &lt;= asof_at</code> 契约；P1 将它具体化为对每个 <code>series_id, observation_date</code> 选择快照前最新发布版本。</p>
+<div class="evidence"><strong>证据边界：</strong>本地 fixture、脚本和结果是 local-evidence；FRED/ALFRED 链接支持官方入口和 vintage 研究方向。由于当前环境不直接下载真实 ALFRED 数据，本报告不声称复现任何真实 GDP 或交易策略表现。</div>
+<h2 id="concepts">概念与数据契约</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>字段</th>
+<th>语义</th>
+<th>约束</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>series_id</code></td>
+<td>官方序列标识</td>
+<td>不用展示名称代替稳定 ID</td>
+</tr>
+<tr>
+<td><code>observation_date</code></td>
+<td>经济观测所属期间</td>
+<td>不等于发布日期</td>
+</tr>
+<tr>
+<td><code>release_at</code></td>
+<td>该版本首次可被研究者看到的时间</td>
+<td>point-in-time 过滤依据</td>
+</tr>
+<tr>
+<td><code>vintage_at</code></td>
+<td>数据库快照/版本时间</td>
+<td>需与来源文档一致</td>
+</tr>
+<tr>
+<td><code>value</code></td>
+<td>该版本的数值</td>
+<td>同期可有多次修订</td>
+</tr>
+<tr>
+<td><code>asof_at</code></td>
+<td>回测或研究重放的快照时间</td>
+<td>只选择 <code>release_at &lt;= asof_at</code></td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="methods">方法与数学形式（Methods &amp; Mathematical Form）</h2>
+<p>对序列和观测期 <span class="math-inline" data-math-kind="inline">\(o\)</span>，研究快照 <span class="math-inline" data-math-kind="inline">\(a\)</span> 的可见版本为：</p>
+<div class="formula" data-math-kind="display">\[r^*(o,a)=\arg\max_{r:\;release\_at(r)\le a,\;observation\_date(r)=o} release\_at(r).\]</div>
+<p>若直接使用最终版本 <span class="math-inline" data-math-kind="inline">\(r^*(o,\infty)\)</span>，则对历史快照的泄漏量为：</p>
+<div class="formula" data-math-kind="display">\[\Delta(o,a)=value\big(r^*(o,\infty)\big)-value\big(r^*(o,a)\big).\]</div>
+<p>非零 <span class="math-inline" data-math-kind="inline">\(\Delta\)</span> 证明最终修订值不能无条件回填到过去；它不证明任何模型一定盈利或修订一定有方向性。</p>
+<h2 id="pipeline">Pipeline 与伪代码（Pipeline &amp; Pseudocode）</h2>
+<pre><code class="language-python">rows = load_vintage_rows(source_version)
+assert_schema(rows, [&quot;series_id&quot;, &quot;observation_date&quot;, &quot;release_at&quot;, &quot;vintage_at&quot;, &quot;value&quot;])
+visible = [r for r in rows if r.release_at &lt;= asof_at]
+snapshot = latest_by(visible, keys=[&quot;series_id&quot;, &quot;observation_date&quot;], order=&quot;release_at&quot;)
+final = latest_by(rows, keys=[&quot;series_id&quot;, &quot;observation_date&quot;], order=&quot;release_at&quot;)
+revision_delta = compare(snapshot, final)
+write_hash_and_dropped_rows(snapshot, revision_delta)
+</code></pre>
+<p>实现见 <a href="audit_macro_vintage.py"><code>audit_macro_vintage.py</code></a>，fixture 见 <a href="p1_macro_vintage_fixture.csv"><code>p1_macro_vintage_fixture.csv</code></a>，结果见 <a href="p1_macro_vintage_results.json"><code>p1_macro_vintage_results.json</code></a>。</p>
+<h2 id="implementation">实现证据与结果（Implementation &amp; Results）</h2>
+<pre><code class="language-powershell">python quant_finance/projects/p1_macro_vintage/audit_macro_vintage.py
+python quant_finance/projects/p1_macro_vintage/test_audit_macro_vintage.py -v
+</code></pre>
+<p>截至 2024-02-28，fixture 中只有首段观测已发布；最终快照包含三段观测。共同观测的最终修订差异非零，审计器报告 <code>leakage_detected=true</code>。测试还确认未来发布日期不会进入历史快照。</p>
+<h2 id="comparison">对照与失败案例</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>做法</th>
+<th>历史快照结果</th>
+<th>结论</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>release_at &lt;= asof_at</code> 后取最新</td>
+<td>只看到当时已发布版本</td>
+<td>可用于实时重放</td>
+</tr>
+<tr>
+<td>直接取数据库当前最终值</td>
+<td>包含未来修订</td>
+<td>产生 vintage leakage</td>
+</tr>
+<tr>
+<td>只按 <code>observation_date</code> join</td>
+<td>无法表达发布日期</td>
+<td>不是 point-in-time join</td>
+</tr>
+<tr>
+<td>只保存最终 CSV</td>
+<td>无法重建当时信息集</td>
+<td>研究不可审计</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="exercises">实践任务与答案边界</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>ID</th>
+<th>任务</th>
+<th>达标标准</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>P1-Q01</td>
+<td>定义 observation、release、vintage、asof。</td>
+<td>能区分经济期间与信息可见时间。</td>
+</tr>
+<tr>
+<td>P1-Q02</td>
+<td>写出 point-in-time 选择规则。</td>
+<td><code>release_at &lt;= asof_at</code> 且按观测期取最新。</td>
+</tr>
+<tr>
+<td>P1-Q03</td>
+<td>为什么最终修订值会泄漏？</td>
+<td>因为发布日期晚于回测快照。</td>
+</tr>
+<tr>
+<td>P1-Q04</td>
+<td>如何证明 fixture 存在修订？</td>
+<td>同一观测期多版本且 value 不同。</td>
+</tr>
+<tr>
+<td>P1-Q05</td>
+<td>FRED 与 ALFRED 在本实验中分别扮演什么角色？</td>
+<td>FRED 是序列入口，ALFRED 是 vintage 语义入口。</td>
+</tr>
+<tr>
+<td>P1-Q06</td>
+<td>只按 observation_date join 有何问题？</td>
+<td>丢失发布日期约束。</td>
+</tr>
+<tr>
+<td>P1-Q07</td>
+<td>为什么保留 source_version？</td>
+<td>可重放下载和变换。</td>
+</tr>
+<tr>
+<td>P1-Q08</td>
+<td>如何测试未来版本过滤？</td>
+<td>注入晚于 asof 的版本并断言不可见。</td>
+</tr>
+<tr>
+<td>P1-Q09</td>
+<td>修订差异能否直接转成交易信号？</td>
+<td>不能，需定义发布时间、交易延迟和成本。</td>
+</tr>
+<tr>
+<td>P1-Q10</td>
+<td>何时可以使用最终值？</td>
+<td>描述当前历史或明确不模拟实时信息集时。</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="risks">风险与后续建议（Risks &amp; Next）</h2>
+<ul>
+<li>本项目使用合成 fixture，未对真实 ALFRED API 字段、速率限制和许可作新的成功核验。</li>
+<li>宏观发布往往有时区、初值、修订、缺失和多频率对齐问题；生产管线需记录下载时间、请求参数、响应哈希和许可证。</li>
+<li>下一 slice G09/P2 将把严格时间切分应用到 EWMA/GARCH 波动率预测，并比较 QLIKE 与成本边界。</li>
+</ul>
+<h2 id="references">参考文献（References）</h2>
+<ol>
+<li>[1] Federal Reserve Bank of St. Louis, “FRED API.” <a href="https://fred.stlouisfed.org/docs/api/fred/">链接</a></li>
+<li>[2] Federal Reserve Bank of St. Louis, “ALFRED.” <a href="https://alfred.stlouisfed.org/">链接</a></li>
+<li>[3] Bruce E. Hansen, “Econometrics.” <a href="https://www.ssc.wisc.edu/~bhansen/econometrics/">链接</a></li>
+</ol>
+<h2 id="answer-boundary">答案索引（Answer Boundary）</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>ID</th>
+<th>答案边界</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>P1-Q01</td>
+<td>观测期描述经济发生时间，release/vintage 描述信息版本，asof 是研究快照。</td>
+</tr>
+<tr>
+<td>P1-Q02</td>
+<td>先过滤 <code>release_at &lt;= asof_at</code>，再按观测期取发布日期最新版本。</td>
+</tr>
+<tr>
+<td>P1-Q03</td>
+<td>最终值可能在回测时尚未发布。</td>
+</tr>
+<tr>
+<td>P1-Q04</td>
+<td>同一观测期有多个版本且数值变化。</td>
+</tr>
+<tr>
+<td>P1-Q05</td>
+<td>FRED 提供序列/API 入口，ALFRED 表达 realtime/vintage 访问。</td>
+</tr>
+<tr>
+<td>P1-Q06</td>
+<td>join 没有信息集条件，无法防止未来版本进入。</td>
+</tr>
+<tr>
+<td>P1-Q07</td>
+<td>记录版本才能重建相同输入。</td>
+</tr>
+<tr>
+<td>P1-Q08</td>
+<td>构造未来 <code>release_at</code>，断言 visible snapshot 不含它。</td>
+</tr>
+<tr>
+<td>P1-Q09</td>
+<td>还需交易时延、成本和策略定义。</td>
+</tr>
+<tr>
+<td>P1-Q10</td>
+<td>仅在研究目标明确允许最终修订时。</td>
+</tr>
+</tbody>
+</table></div>
+
+        <nav class="next-chapter" aria-label="下一章节">
+          <span class="next-chapter-label">下一章节</span>
+          <a rel="next" href="../p2_volatility_forecast/p2_volatility_forecast_report.html">P2 波动率预测实验 →</a>
+        </nav>
+
+        <a class="back-to-top" href="#top">返回页首 ↑</a>
+      </article>
+    </main>
+  </div>
+</body>
+</html>

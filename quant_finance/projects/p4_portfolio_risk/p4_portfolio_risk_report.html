@@ -1,0 +1,537 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="generator" content="quant_finance ARIS render-html (academic, v1)">
+  <meta name="source-file" content="p4_portfolio_risk_report.md">
+  <meta name="source-sha256" content="310301687abce3c7b6d69a98ebc52164de6280c73b4c2e6a4ccb74283737762d">
+  <title>P4 组合与风险实验：估计误差、换手、成本与压力敏感性</title>
+  <script>
+    window.MathJax = {
+      tex: {inlineMath: [['\\(', '\\)'], ['$', '$']], displayMath: [['\\[', '\\]'], ['$$', '$$']]},
+      options: {skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']}
+    };
+  </script>
+  <script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+  <style>
+/* ARIS academic v1 — quant_finance canonical inline stylesheet. */
+:root {
+  --paper: #fdfcf7;
+  --paper-soft: #f4f1ea;
+  --ink: #1a1a1a;
+  --muted: #625f58;
+  --blue: #1a4a8c;
+  --blue-soft: #dce7f4;
+  --rust: #b8390e;
+  --rule: #b9b2a6;
+  --serif: "Source Serif Pro", "Source Serif 4", "Crimson Pro", Georgia, "Songti SC", STSong, serif;
+  --mono: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  margin: 0;
+  color: var(--ink);
+  background: var(--paper);
+  font-family: var(--serif);
+  font-size: 16px;
+  line-height: 1.8;
+}
+a { color: var(--blue); text-underline-offset: 0.16em; }
+a:hover { color: var(--rust); }
+
+.page-shell {
+  width: min(1280px, calc(100% - 40px));
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: 260px minmax(0, 1fr);
+  gap: 42px;
+  align-items: start;
+}
+.toc {
+  position: sticky;
+  top: 24px;
+  max-height: calc(100vh - 48px);
+  overflow-y: auto;
+  padding: 28px 18px 24px 0;
+  color: var(--muted);
+}
+.toc-title {
+  margin: 0 0 0.65rem;
+  color: var(--blue);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+.toc ol { margin: 0; padding: 0; list-style: none; }
+.toc li { margin: 0.24rem 0; line-height: 1.35; }
+.toc a { color: inherit; text-decoration: none; }
+.toc a:hover { color: var(--rust); }
+.toc .depth-3 { padding-left: 0.85rem; font-size: 0.92rem; }
+.toc .depth-4 { padding-left: 1.55rem; font-size: 0.86rem; }
+
+main {
+  min-width: 0;
+  margin: 24px 0 64px;
+  padding: 48px clamp(32px, 5vw, 72px) 64px;
+  background: var(--paper-soft);
+  border: 1px solid #ded8cd;
+  box-shadow: 0 16px 44px rgba(55, 47, 36, 0.08);
+}
+article { min-width: 0; }
+.eyebrow {
+  margin: 0 0 0.45rem;
+  color: var(--rust);
+  font-family: var(--serif);
+  font-size: 0.76rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+.subtitle { margin: 0 0 0.5rem; color: var(--muted); font-size: 1.05rem; }
+.meta {
+  margin: 0 0 2.2rem;
+  color: var(--muted);
+  font-size: 0.86rem;
+}
+h1 {
+  margin: 0 0 0.7rem;
+  padding: 0 0 0.8rem;
+  color: var(--ink);
+  border-bottom: 5px double var(--blue);
+  font-size: clamp(2rem, 5vw, 3.1rem);
+  line-height: 1.14;
+  letter-spacing: -0.025em;
+}
+h2 {
+  margin: 3.2rem 0 1.15rem;
+  padding-bottom: 0.42rem;
+  border-bottom: 1px solid var(--rule);
+  color: var(--ink);
+  font-size: 1.62rem;
+  line-height: 1.35;
+}
+h3 { margin: 2.15rem 0 0.8rem; color: var(--blue); font-size: 1.28rem; line-height: 1.4; }
+h4 { margin: 1.55rem 0 0.6rem; color: var(--ink); font-size: 1.06rem; line-height: 1.45; }
+p, ul, ol, blockquote { margin: 0 0 1rem; }
+ul, ol { padding-left: 1.5rem; }
+li + li { margin-top: 0.24rem; }
+strong { color: #111; }
+
+code {
+  font-family: var(--mono);
+  font-size: 0.9em;
+  background: #e9e5dc;
+  border-radius: 3px;
+  padding: 0.1em 0.32em;
+}
+pre {
+  max-width: 100%;
+  margin: 1.2rem 0 1.5rem;
+  padding: 1rem 1.1rem;
+  overflow-x: auto;
+  background: #faf9f5;
+  border: 1px solid #d8d2c7;
+  border-left: 4px solid var(--blue);
+  border-radius: 2px;
+  line-height: 1.55;
+}
+pre code {
+  display: block;
+  min-width: max-content;
+  padding: 0;
+  color: #383a42;
+  background: transparent;
+}
+/* Highlight.js atom-one-light-compatible colors for portable, inline styling. */
+.hljs-comment, .hljs-quote { color: #a0a1a7; font-style: italic; }
+.hljs-keyword, .hljs-selector-tag, .hljs-literal { color: #a626a4; }
+.hljs-string, .hljs-regexp { color: #50a14f; }
+.hljs-number, .hljs-symbol { color: #986801; }
+.hljs-title, .hljs-section, .hljs-function { color: #4078f2; }
+
+.formula {
+  max-width: 100%;
+  margin: 1.25rem 0 1.5rem;
+  padding: 1rem 1.15rem;
+  overflow-x: auto;
+  background: #faf9f5;
+  border: 1px solid #d8d2c7;
+  border-left: 4px solid var(--blue);
+}
+.formula mjx-container { min-width: max-content; }
+
+.table-wrap { max-width: 100%; margin: 1.25rem 0 1.6rem; overflow-x: auto; }
+table { width: 100%; min-width: 640px; border-collapse: collapse; font-size: 0.93rem; line-height: 1.55; }
+th, td { padding: 0.68rem 0.78rem; border: 1px solid #aaa398; text-align: left; vertical-align: top; }
+thead th { color: #fff; background: var(--blue); font-weight: 700; }
+tbody tr:nth-child(even) { background: #ebe6dc; }
+tbody tr:nth-child(odd) { background: #f8f5ee; }
+
+.note, .warning, .evidence, blockquote {
+  margin: 1.2rem 0 1.45rem;
+  padding: 0.85rem 1rem;
+  background: #f8f5ee;
+  border: 1px solid #d2cbc0;
+  border-left: 4px solid var(--blue);
+}
+.warning { border-left-color: var(--rust); background: #fff2e9; }
+.evidence { border-left-color: #6b5b8e; background: #f2eef8; }
+.note > :last-child, .warning > :last-child, .evidence > :last-child, blockquote > :last-child { margin-bottom: 0; }
+.back-to-top { display: inline-block; margin-top: 2rem; font-size: 0.88rem; }
+
+@media (max-width: 900px) {
+  .page-shell { width: min(100% - 24px, 820px); grid-template-columns: 1fr; gap: 0; }
+  .toc { position: static; max-height: none; padding: 20px 8px 4px; columns: 2; column-gap: 1.5rem; }
+  .toc-title { column-span: all; }
+  main { margin-top: 16px; padding: 34px clamp(18px, 5vw, 40px) 48px; }
+  h1 { font-size: clamp(1.8rem, 8vw, 2.55rem); }
+  table { min-width: 600px; }
+  pre, .formula, .table-wrap { overflow-x: auto; }
+}
+
+@media (max-width: 560px) {
+  .toc { columns: 1; }
+  .page-shell { width: calc(100% - 12px); }
+  main { padding-left: 15px; padding-right: 15px; }
+}
+
+@media print {
+  body { background: #fff; }
+  .page-shell { display: block; width: 100%; }
+  .toc, .back-to-top { display: none !important; }
+  main { margin: 0; padding: 0; background: #fff; border: 0; box-shadow: none; }
+  a { color: inherit; text-decoration: none; }
+  pre, .formula, table { break-inside: avoid; }
+}
+
+    .next-chapter { margin: 2.5rem 0 1rem; padding: 1rem 1.2rem; border: 1px solid #b9c9df; border-left: 4px solid #1a4a8c; background: #f4f1ea; display: flex; gap: .75rem; align-items: baseline; justify-content: space-between; }
+    .next-chapter-label { color: #1a4a8c; font-weight: 700; white-space: nowrap; }
+    .next-chapter a { color: #1a4a8c; font-weight: 700; text-decoration: none; }
+    .next-chapter a:hover, .next-chapter a:focus { color: #b8390e; text-decoration: underline; }
+    @media (max-width: 900px) { .next-chapter { display: block; } .next-chapter-label { display: block; margin-bottom: .35rem; } }
+  </style>
+</head>
+<body id="top">
+  <div class="page-shell">
+    <nav class="toc" aria-label="目录">
+      <p class="toc-title">Contents</p>
+      <ol>
+<li class="depth-2"><a href="#question">问题（Question）</a></li>
+<li class="depth-2"><a href="#background">背景与动机（Background &amp; Motivation）</a></li>
+<li class="depth-2"><a href="#concepts">实验协议</a></li>
+<li class="depth-2"><a href="#methods">方法与数学形式（Methods &amp; Mathematical Form）</a></li>
+<li class="depth-2"><a href="#pipeline">Pipeline 与伪代码（Pipeline &amp; Pseudocode）</a></li>
+<li class="depth-2"><a href="#implementation">实现证据与结果（Implementation &amp; Results）</a></li>
+<li class="depth-2"><a href="#comparison">敏感性与失败案例</a></li>
+<li class="depth-2"><a href="#exercises">练习与答案边界（Exercises）</a></li>
+<li class="depth-2"><a href="#answer-boundary">答案索引（Answer Boundary）</a></li>
+<li class="depth-2"><a href="#risks">风险与后续建议（Risks &amp; Next）</a></li>
+<li class="depth-2"><a href="#references">参考文献（References）</a></li>
+      </ol>
+    </nav>
+    <main>
+      <article>
+        <header>
+          <p class="eyebrow">Quant Finance · Portfolio Risk Experiment</p>
+          <p class="subtitle">严格 walk-forward 比较样本均值组合与收缩均值＋换手限制组合</p>
+          <h1>P4 组合与风险实验：估计误差、换手、成本与压力敏感性</h1>
+          <p class="meta">发布日期：2026-07-22 · 证据截止：2026-07-22 · 源文件 SHA-256：<code>310301687abce3c7b6d69a98ebc52164de6280c73b4c2e6a4ccb74283737762d</code></p>
+        </header>
+<h2 id="question">问题（Question）</h2>
+<p>均值估计噪声如何通过优化器变成集中持仓和高换手？加入横截面均值收缩、单次换手上限和线性交易成本后，样本外组合表现及压力损失如何变化？本项目用合成八资产收益执行 720 日 walk-forward 实验。</p>
+<h2 id="background">背景与动机（Background &amp; Motivation）</h2>
+<p>Markowitz 框架对预期收益输入高度敏感；M08 已说明收缩、约束、成本和压力测试是生产组合不可分割的部分。[1] 本项目不比较“神奇策略”，而是固定同一收益样本、协方差窗口和风险厌恶，只改变均值处理与换手控制，直接观察估计误差和成本的传播。</p>
+<div class="evidence"><strong>证据边界：</strong>所有收益、成本和压力情景均为合成。本结果只验证 walk-forward、换手、成本扣除和约束实现；Sharpe 数字不是实际市场表现、投资建议或未来收益证据。</div>
+<h2 id="concepts">实验协议</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>项目</th>
+<th>冻结值</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>资产数</td>
+<td>8</td>
+</tr>
+<tr>
+<td>总样本</td>
+<td>720 个交易日</td>
+</tr>
+<tr>
+<td>初始/滚动估计窗</td>
+<td>120 日</td>
+</tr>
+<tr>
+<td>再平衡</td>
+<td>每 20 日</td>
+</tr>
+<tr>
+<td>交易成本</td>
+<td>每单位双边 L1 换手 10 bps</td>
+</tr>
+<tr>
+<td>约束</td>
+<td>长仓、权重和为 1</td>
+</tr>
+<tr>
+<td>策略 A</td>
+<td>直接样本均值＋样本协方差</td>
+</tr>
+<tr>
+<td>策略 B</td>
+<td>25% 样本均值＋75% 横截面均值；单次 L1 换手上限 0.35</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="methods">方法与数学形式（Methods &amp; Mathematical Form）</h2>
+<p>每次再平衡只使用此前 120 日估计 <span class="math-inline" data-math-kind="inline">\(\hat\mu_t,\hat\Sigma_t\)</span>：</p>
+<div class="formula" data-math-kind="display">\[w_t^*=\arg\max_{w\ge0,\mathbf1'w=1}
+w'\hat\mu_t-\frac{\gamma}{2}w'\hat\Sigma_tw.\]</div>
+<p>策略 B 的收缩均值：</p>
+<div class="formula" data-math-kind="display">\[\tilde\mu_t=0.25\hat\mu_t+0.75\bar\mu_t\mathbf1.\]</div>
+<p>换手和净收益：</p>
+<div class="formula" data-math-kind="display">\[TO_t=\sum_i|w_{i,t}-w_{i,t^-}|,
+\qquad R_{t,net}=R_{t,gross}-c\,TO_t.\]</div>
+<p>成本在再平衡块的第一天扣除；这是简化线性模型，没有报价价差、冲击、延迟、税费或容量函数。</p>
+<h2 id="pipeline">Pipeline 与伪代码（Pipeline &amp; Pseudocode）</h2>
+<pre><code class="language-python">for rebalance_t in range(lookback, T, 20):
+    history = returns[rebalance_t-120:rebalance_t]
+    mu, cov = estimate(history)
+    raw_weights = optimize_long_only(mu, cov)
+    shrink_weights = optimize_long_only(shrink(mu), cov)
+    shrink_weights = cap_l1_turnover(old_weights, shrink_weights, 0.35)
+    gross = future_20_days @ weights
+    net[0] = gross[0] - 0.0010 * l1_turnover
+    record_weights_returns_turnover_and_stress()
+</code></pre>
+<p>实现见 <a href="p4_portfolio_risk.py"><code>p4_portfolio_risk.py</code></a>，结果见 <a href="p4_portfolio_risk_results.json"><code>p4_portfolio_risk_results.json</code></a>。</p>
+<h2 id="implementation">实现证据与结果（Implementation &amp; Results）</h2>
+<pre><code class="language-powershell">python quant_finance/projects/p4_portfolio_risk/p4_portfolio_risk.py
+python quant_finance/projects/p4_portfolio_risk/test_p4_portfolio_risk.py -v
+</code></pre>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>指标</th>
+<th style="text-align:right">样本均值</th>
+<th style="text-align:right">收缩＋换手上限</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>总 L1 换手</td>
+<td style="text-align:right">11.9516</td>
+<td style="text-align:right">3.8341</td>
+</tr>
+<tr>
+<td>Gross 日均收益</td>
+<td style="text-align:right">0.000389</td>
+<td style="text-align:right">0.000489</td>
+</tr>
+<tr>
+<td>Net 日均收益</td>
+<td style="text-align:right">0.000370</td>
+<td style="text-align:right">0.000483</td>
+</tr>
+<tr>
+<td>Gross 年化 Sharpe</td>
+<td style="text-align:right">1.1080</td>
+<td style="text-align:right">1.8620</td>
+</tr>
+<tr>
+<td>Net 年化 Sharpe</td>
+<td style="text-align:right">1.0523</td>
+<td style="text-align:right">1.8386</td>
+</tr>
+<tr>
+<td>压力损失</td>
+<td style="text-align:right">0.0967</td>
+<td style="text-align:right">0.0999</td>
+</tr>
+</tbody>
+</table></div>
+<p>在该 seed 和 DGP 下，收缩＋换手限制同时降低换手和提高样本外风险调整结果；但其压力损失略高，说明低波动/低换手不保证所有情景下更安全。该排序不能外推到真实市场或其他 DGP。</p>
+<h2 id="comparison">敏感性与失败案例</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>失败</th>
+<th>本实验如何暴露</th>
+<th>后续要求</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>均值噪声</td>
+<td>策略 A 权重更集中、换手更高</td>
+<td>多 shrink 强度和窗口敏感性</td>
+</tr>
+<tr>
+<td>线性成本过简</td>
+<td>只扣 10 bps×换手</td>
+<td>分段冲击、ADV、容量和价差</td>
+</tr>
+<tr>
+<td>单一 seed</td>
+<td>排名可能偶然</td>
+<td>多 seed/多制度 Monte Carlo</td>
+</tr>
+<tr>
+<td>Sharpe 年化</td>
+<td>假设日收益尺度稳定</td>
+<td>置信区间和序列相关修正</td>
+</tr>
+<tr>
+<td>单一压力情景</td>
+<td>不能代表全尾部</td>
+<td>历史、假设和反向压力集合</td>
+</tr>
+<tr>
+<td>无可交易数据</td>
+<td>无停牌/涨跌停/成交约束</td>
+<td>真实点时数据和执行协议</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="exercises">练习与答案边界（Exercises）</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>ID</th>
+<th>题目</th>
+<th>达标标准</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>P4-Q01</td>
+<td>实验如何避免未来泄漏？</td>
+<td>每次只用此前 120 日。</td>
+</tr>
+<tr>
+<td>P4-Q02</td>
+<td>L1 换手怎么定义？</td>
+<td>新旧权重绝对差之和。</td>
+</tr>
+<tr>
+<td>P4-Q03</td>
+<td>成本在哪里扣除？</td>
+<td>再平衡块第一日按换手扣。</td>
+</tr>
+<tr>
+<td>P4-Q04</td>
+<td>均值收缩作用？</td>
+<td>降低横截面噪声和极端权重。</td>
+</tr>
+<tr>
+<td>P4-Q05</td>
+<td>换手上限为何不是成本模型？</td>
+<td>只限制交易量，不给真实冲击价格。</td>
+</tr>
+<tr>
+<td>P4-Q06</td>
+<td>净收益为什么低于 gross？</td>
+<td>扣除了非负成本。</td>
+</tr>
+<tr>
+<td>P4-Q07</td>
+<td>低换手为何仍可能压力损失高？</td>
+<td>压力方向与持仓暴露不同于常态方差。</td>
+</tr>
+<tr>
+<td>P4-Q08</td>
+<td>Sharpe 排名能否推广？</td>
+<td>不能，依赖 seed、DGP 和协议。</td>
+</tr>
+<tr>
+<td>P4-Q09</td>
+<td>真实容量还需要什么？</td>
+<td>ADV、冲击、成交时延和退出期。</td>
+</tr>
+<tr>
+<td>P4-Q10</td>
+<td>下一步最重要的稳健性？</td>
+<td>多 seed、窗口、成本和压力网格。</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="answer-boundary">答案索引（Answer Boundary）</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>ID</th>
+<th>答案边界</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>P4-Q01</td>
+<td>估计窗严格结束在再平衡日前。</td>
+</tr>
+<tr>
+<td>P4-Q02</td>
+<td><span class="math-inline" data-math-kind="inline">\(\sum_i|w_{i,t}-w_{i,t^-}|\)</span>。</td>
+</tr>
+<tr>
+<td>P4-Q03</td>
+<td>每个新持仓块第一期。</td>
+</tr>
+<tr>
+<td>P4-Q04</td>
+<td>把 noisy 均值拉向共同中心。</td>
+</tr>
+<tr>
+<td>P4-Q05</td>
+<td>上限没有映射到价差和非线性冲击。</td>
+</tr>
+<tr>
+<td>P4-Q06</td>
+<td>线性成本为非负且按换手扣除。</td>
+</tr>
+<tr>
+<td>P4-Q07</td>
+<td>常态协方差与指定尾部冲击方向不同。</td>
+</tr>
+<tr>
+<td>P4-Q08</td>
+<td>不能；只是一个合成路径。</td>
+</tr>
+<tr>
+<td>P4-Q09</td>
+<td>需要成交量、价差、冲击、延迟和清算。</td>
+</tr>
+<tr>
+<td>P4-Q10</td>
+<td>对随机路径、窗口、成本和压力做网格敏感性。</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="risks">风险与后续建议（Risks &amp; Next）</h2>
+<ul>
+<li>未实现非线性市场冲击、融资、借券、税费、现金缓冲与不可交易状态。</li>
+<li>未给 Sharpe 差异置信区间，不能声称策略 B 在统计上优越。</li>
+<li>下一 slice G16/M09 将进入市场微观结构、订单簿、流动性、市场冲击、执行和容量，为成本模型补足机制。</li>
+</ul>
+<h2 id="references">参考文献（References）</h2>
+<ol>
+<li>[1] Harry Markowitz, “Portfolio Selection,” <em>Journal of Finance</em>, 1952. <a href="https://doi.org/10.1111/j.1540-6261.1952.tb01525.x">链接</a></li>
+<li>[2] Fischer Black and Robert Litterman, “Global Portfolio Optimization,” <em>Financial Analysts Journal</em>, 1992. <a href="https://doi.org/10.2469/faj.v48.n5.28">链接</a></li>
+</ol>
+
+        <nav class="next-chapter" aria-label="下一章节">
+          <span class="next-chapter-label">下一章节</span>
+          <a rel="next" href="../p5_leakage_free_alpha/p5_leakage_free_alpha_report.html">P5 无泄漏 Alpha 研究 →</a>
+        </nav>
+
+        <a class="back-to-top" href="#top">返回页首 ↑</a>
+      </article>
+    </main>
+  </div>
+</body>
+</html>

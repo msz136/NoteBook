@@ -1,0 +1,77 @@
+{
+  "artifact": "projects/p5_leakage_free_alpha/p5_leakage_free_alpha_report.html",
+  "canonical_source": "projects/p5_leakage_free_alpha/p5_leakage_free_alpha_report.md",
+  "source_revision": "03415539e4e4ebc3bf38afe673d8dc4d1662cc59ffc4328cd3c837d9f36baa37",
+  "verdict": "WARN",
+  "checks": [
+    {
+      "name": "source_sha",
+      "status": "PASS",
+      "evidence": "expected=03415539e4e4ebc3bf38afe673d8dc4d1662cc59ffc4328cd3c837d9f36baa37; embedded=03415539e4e4ebc3bf38afe673d8dc4d1662cc59ffc4328cd3c837d9f36baa37"
+    },
+    {
+      "name": "single_h1",
+      "status": "PASS",
+      "evidence": "h1_count=1"
+    },
+    {
+      "name": "heading_hierarchy",
+      "status": "PASS",
+      "evidence": "headings=[(1, 'P5 无泄漏 Alpha 研究：冻结切分、实验账本与成本后测试'), (2, '问题（Question）'), (2, '背景与动机（Background & Motivation）'), (2, '冻结协议'), (2, '方法与数学形式（Methods & Mathematical Form）'), (2, '实验账本'), (2, 'Pipeline 与伪代码（Pipeline & Pseudocode）'), (2, '实现证据与结果（Implementation & Results）'), (2, '失败案例与审计边界'), (2, '练习与答案边界（Exercises）'), (2, '答案索引（Answer Boundary）'), (2, '风险与后续建议（Risks & Next）'), (2, '参考文献（References）')]"
+    },
+    {
+      "name": "academic_template",
+      "status": "PASS",
+      "evidence": "palette/serif/1280-grid/260-sticky/900-breakpoint markers"
+    },
+    {
+      "name": "mathjax_config",
+      "status": "PASS",
+      "evidence": "MathJax 3 delimiters and skipHtmlTags markers"
+    },
+    {
+      "name": "formula_em_zero",
+      "status": "PASS",
+      "evidence": "formula_em_count=0"
+    },
+    {
+      "name": "latex_subscript_literal",
+      "status": "PASS",
+      "evidence": "source=['_{adj}', '_{j,t-1}', '_{j,t}', '_{j,val}', '_{naive}', '_{t+1}']; missing=[]"
+    },
+    {
+      "name": "internal_overflow",
+      "status": "PASS",
+      "evidence": "table/code/formula internal overflow CSS markers"
+    },
+    {
+      "name": "anchors",
+      "status": "PASS",
+      "evidence": "unresolved=[]"
+    },
+    {
+      "name": "local_links",
+      "status": "PASS",
+      "evidence": "unresolved=[]"
+    },
+    {
+      "name": "required_sections",
+      "status": "PASS",
+      "evidence": "required=['question', 'background', 'concepts', 'methods', 'ledger', 'pipeline', 'implementation', 'comparison', 'exercises', 'risks', 'references']; missing=[]"
+    },
+    {
+      "name": "diagnostic_question_coverage",
+      "status": "PASS",
+      "evidence": "prefix=P5-Q; expected=10; counts={'P5-Q01': 2, 'P5-Q02': 2, 'P5-Q03': 2, 'P5-Q04': 2, 'P5-Q05': 2, 'P5-Q06': 2, 'P5-Q07': 2, 'P5-Q08': 2, 'P5-Q09': 2, 'P5-Q10': 2}"
+    },
+    {
+      "name": "browser_visual_qa",
+      "status": "PENDING",
+      "evidence": "环境安全策略禁止浏览器直接打开本地 file:// HTML；未绕行，待人工桌面与窄屏复核"
+    }
+  ],
+  "open_items": [
+    "browser_visual_qa"
+  ],
+  "next": "完成浏览器视觉 QA 后重新审查"
+}

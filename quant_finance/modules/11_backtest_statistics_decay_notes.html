@@ -1,0 +1,691 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="generator" content="quant_finance ARIS render-html (academic, v1)">
+  <meta name="source-file" content="11_backtest_statistics_decay_notes.md">
+  <meta name="source-sha256" content="ad35636e959e290fbcffb96068ec11ef7291c1af2db156ffb67ccd0fad2147c5">
+  <title>回测统计与策略衰减：数据窥探、成本、引擎语义与失效诊断</title>
+  <script>
+    window.MathJax = {
+      tex: {inlineMath: [['\\(', '\\)'], ['$', '$']], displayMath: [['\\[', '\\]'], ['$$', '$$']]},
+      options: {skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']}
+    };
+  </script>
+  <script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+  <style>
+/* ARIS academic v1 — quant_finance canonical inline stylesheet. */
+:root {
+  --paper: #fdfcf7;
+  --paper-soft: #f4f1ea;
+  --ink: #1a1a1a;
+  --muted: #625f58;
+  --blue: #1a4a8c;
+  --blue-soft: #dce7f4;
+  --rust: #b8390e;
+  --rule: #b9b2a6;
+  --serif: "Source Serif Pro", "Source Serif 4", "Crimson Pro", Georgia, "Songti SC", STSong, serif;
+  --mono: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  margin: 0;
+  color: var(--ink);
+  background: var(--paper);
+  font-family: var(--serif);
+  font-size: 16px;
+  line-height: 1.8;
+}
+a { color: var(--blue); text-underline-offset: 0.16em; }
+a:hover { color: var(--rust); }
+
+.page-shell {
+  width: min(1280px, calc(100% - 40px));
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: 260px minmax(0, 1fr);
+  gap: 42px;
+  align-items: start;
+}
+.toc {
+  position: sticky;
+  top: 24px;
+  max-height: calc(100vh - 48px);
+  overflow-y: auto;
+  padding: 28px 18px 24px 0;
+  color: var(--muted);
+}
+.toc-title {
+  margin: 0 0 0.65rem;
+  color: var(--blue);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+.toc ol { margin: 0; padding: 0; list-style: none; }
+.toc li { margin: 0.24rem 0; line-height: 1.35; }
+.toc a { color: inherit; text-decoration: none; }
+.toc a:hover { color: var(--rust); }
+.toc .depth-3 { padding-left: 0.85rem; font-size: 0.92rem; }
+.toc .depth-4 { padding-left: 1.55rem; font-size: 0.86rem; }
+
+main {
+  min-width: 0;
+  margin: 24px 0 64px;
+  padding: 48px clamp(32px, 5vw, 72px) 64px;
+  background: var(--paper-soft);
+  border: 1px solid #ded8cd;
+  box-shadow: 0 16px 44px rgba(55, 47, 36, 0.08);
+}
+article { min-width: 0; }
+.eyebrow {
+  margin: 0 0 0.45rem;
+  color: var(--rust);
+  font-family: var(--serif);
+  font-size: 0.76rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+.subtitle { margin: 0 0 0.5rem; color: var(--muted); font-size: 1.05rem; }
+.meta {
+  margin: 0 0 2.2rem;
+  color: var(--muted);
+  font-size: 0.86rem;
+}
+h1 {
+  margin: 0 0 0.7rem;
+  padding: 0 0 0.8rem;
+  color: var(--ink);
+  border-bottom: 5px double var(--blue);
+  font-size: clamp(2rem, 5vw, 3.1rem);
+  line-height: 1.14;
+  letter-spacing: -0.025em;
+}
+h2 {
+  margin: 3.2rem 0 1.15rem;
+  padding-bottom: 0.42rem;
+  border-bottom: 1px solid var(--rule);
+  color: var(--ink);
+  font-size: 1.62rem;
+  line-height: 1.35;
+}
+h3 { margin: 2.15rem 0 0.8rem; color: var(--blue); font-size: 1.28rem; line-height: 1.4; }
+h4 { margin: 1.55rem 0 0.6rem; color: var(--ink); font-size: 1.06rem; line-height: 1.45; }
+p, ul, ol, blockquote { margin: 0 0 1rem; }
+ul, ol { padding-left: 1.5rem; }
+li + li { margin-top: 0.24rem; }
+strong { color: #111; }
+
+code {
+  font-family: var(--mono);
+  font-size: 0.9em;
+  background: #e9e5dc;
+  border-radius: 3px;
+  padding: 0.1em 0.32em;
+}
+pre {
+  max-width: 100%;
+  margin: 1.2rem 0 1.5rem;
+  padding: 1rem 1.1rem;
+  overflow-x: auto;
+  background: #faf9f5;
+  border: 1px solid #d8d2c7;
+  border-left: 4px solid var(--blue);
+  border-radius: 2px;
+  line-height: 1.55;
+}
+pre code {
+  display: block;
+  min-width: max-content;
+  padding: 0;
+  color: #383a42;
+  background: transparent;
+}
+/* Highlight.js atom-one-light-compatible colors for portable, inline styling. */
+.hljs-comment, .hljs-quote { color: #a0a1a7; font-style: italic; }
+.hljs-keyword, .hljs-selector-tag, .hljs-literal { color: #a626a4; }
+.hljs-string, .hljs-regexp { color: #50a14f; }
+.hljs-number, .hljs-symbol { color: #986801; }
+.hljs-title, .hljs-section, .hljs-function { color: #4078f2; }
+
+.formula {
+  max-width: 100%;
+  margin: 1.25rem 0 1.5rem;
+  padding: 1rem 1.15rem;
+  overflow-x: auto;
+  background: #faf9f5;
+  border: 1px solid #d8d2c7;
+  border-left: 4px solid var(--blue);
+}
+.formula mjx-container { min-width: max-content; }
+
+.table-wrap { max-width: 100%; margin: 1.25rem 0 1.6rem; overflow-x: auto; }
+table { width: 100%; min-width: 640px; border-collapse: collapse; font-size: 0.93rem; line-height: 1.55; }
+th, td { padding: 0.68rem 0.78rem; border: 1px solid #aaa398; text-align: left; vertical-align: top; }
+thead th { color: #fff; background: var(--blue); font-weight: 700; }
+tbody tr:nth-child(even) { background: #ebe6dc; }
+tbody tr:nth-child(odd) { background: #f8f5ee; }
+
+.note, .warning, .evidence, blockquote {
+  margin: 1.2rem 0 1.45rem;
+  padding: 0.85rem 1rem;
+  background: #f8f5ee;
+  border: 1px solid #d2cbc0;
+  border-left: 4px solid var(--blue);
+}
+.warning { border-left-color: var(--rust); background: #fff2e9; }
+.evidence { border-left-color: #6b5b8e; background: #f2eef8; }
+.note > :last-child, .warning > :last-child, .evidence > :last-child, blockquote > :last-child { margin-bottom: 0; }
+.back-to-top { display: inline-block; margin-top: 2rem; font-size: 0.88rem; }
+
+@media (max-width: 900px) {
+  .page-shell { width: min(100% - 24px, 820px); grid-template-columns: 1fr; gap: 0; }
+  .toc { position: static; max-height: none; padding: 20px 8px 4px; columns: 2; column-gap: 1.5rem; }
+  .toc-title { column-span: all; }
+  main { margin-top: 16px; padding: 34px clamp(18px, 5vw, 40px) 48px; }
+  h1 { font-size: clamp(1.8rem, 8vw, 2.55rem); }
+  table { min-width: 600px; }
+  pre, .formula, .table-wrap { overflow-x: auto; }
+}
+
+@media (max-width: 560px) {
+  .toc { columns: 1; }
+  .page-shell { width: calc(100% - 12px); }
+  main { padding-left: 15px; padding-right: 15px; }
+}
+
+@media print {
+  body { background: #fff; }
+  .page-shell { display: block; width: 100%; }
+  .toc, .back-to-top { display: none !important; }
+  main { margin: 0; padding: 0; background: #fff; border: 0; box-shadow: none; }
+  a { color: inherit; text-decoration: none; }
+  pre, .formula, table { break-inside: avoid; }
+}
+
+    .next-chapter { margin: 2.5rem 0 1rem; padding: 1rem 1.2rem; border: 1px solid #b9c9df; border-left: 4px solid #1a4a8c; background: #f4f1ea; display: flex; gap: .75rem; align-items: baseline; justify-content: space-between; }
+    .next-chapter-label { color: #1a4a8c; font-weight: 700; white-space: nowrap; }
+    .next-chapter a { color: #1a4a8c; font-weight: 700; text-decoration: none; }
+    .next-chapter a:hover, .next-chapter a:focus { color: #b8390e; text-decoration: underline; }
+    @media (max-width: 900px) { .next-chapter { display: block; } .next-chapter-label { display: block; margin-bottom: .35rem; } }
+  </style>
+</head>
+<body id="top">
+  <div class="page-shell">
+    <nav class="toc" aria-label="目录">
+      <p class="toc-title">Contents</p>
+      <ol>
+<li class="depth-2"><a href="#question">问题（Question）</a></li>
+<li class="depth-2"><a href="#background">背景与动机（Background &amp; Motivation）</a></li>
+<li class="depth-2"><a href="#concepts">回测对象与时间语义</a></li>
+<li class="depth-2"><a href="#statistics">回测统计与多重检验</a></li>
+<li class="depth-2"><a href="#engines">向量化与事件驱动引擎</a></li>
+<li class="depth-2"><a href="#decay">成本、容量与衰减</a></li>
+<li class="depth-2"><a href="#math">研究与失败契约</a></li>
+<li class="depth-2"><a href="#pipeline">Pipeline 与伪代码（Pipeline &amp; Pseudocode）</a></li>
+<li class="depth-2"><a href="#implementation">实现证据与结果（Implementation &amp; Results）</a></li>
+<li class="depth-2"><a href="#comparison">失效诊断与方法对比</a></li>
+<li class="depth-2"><a href="#exercises">练习与答案边界（Exercises）</a></li>
+<li class="depth-2"><a href="#answer-boundary">答案索引（Answer Boundary）</a></li>
+<li class="depth-2"><a href="#risks">风险与后续建议（Risks &amp; Next）</a></li>
+<li class="depth-2"><a href="#references">参考文献（References）</a></li>
+      </ol>
+    </nav>
+    <main>
+      <article>
+        <header>
+          <p class="eyebrow">Quant Finance · Backtest Statistics and Strategy Decay</p>
+          <p class="subtitle">M11 · 把回测视为可证伪的事件协议，而不是收益曲线生成器</p>
+          <h1>回测统计与策略衰减：数据窥探、成本、引擎语义与失效诊断</h1>
+          <p class="meta">发布日期：2026-07-22 · 证据截止：2026-07-22 · 源文件 SHA-256：<code>ad35636e959e290fbcffb96068ec11ef7291c1af2db156ffb67ccd0fad2147c5</code></p>
+        </header>
+<h2 id="question">问题（Question）</h2>
+<p>为什么同一信号在向量化回测和事件驱动引擎中会得到不同收益？如何区分数据窥探、成本遗漏、成交假设和真实策略衰减？本模块用合成制度变化对照“满额、无成本向量回测”和“90% 成交、费用与滑点事件回测”，并记录早期/晚期失效。</p>
+<h2 id="background">背景与动机（Background &amp; Motivation）</h2>
+<p>White Reality Check 针对数据窥探下的模型比较；Carr–López de Prado 讨论反复回测校准规则的过拟合边界。[1][2] Qlib 提供面向量化研究的数据和工作流；LEAN 提供事件驱动回测与交易引擎。[3][4] 工具本身不会消除时间泄漏、错误成交语义或选择偏差，因此两种引擎的差异必须成为研究对象。</p>
+<div class="evidence"><strong>证据边界：</strong>本地结果来自合成信号、已知制度衰减、90% 填单和固定 bps 成本；只验证引擎语义、成本和衰减诊断。没有实际运行 Qlib/LEAN，也不构成真实策略或平台性能比较。</div>
+<h2 id="concepts">回测对象与时间语义</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>时点</th>
+<th>必须区分</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>observed_at</td>
+<td>市场/事件实际发生时间</td>
+</tr>
+<tr>
+<td>available_at</td>
+<td>数据首次可用于策略的时间</td>
+</tr>
+<tr>
+<td>decision_at</td>
+<td>策略生成目标仓位时间</td>
+</tr>
+<tr>
+<td>submitted_at</td>
+<td>订单发送时间</td>
+</tr>
+<tr>
+<td>accepted_at</td>
+<td>市场/券商接受时间</td>
+</tr>
+<tr>
+<td>filled_at</td>
+<td>实际成交时间</td>
+</tr>
+<tr>
+<td>marked_at</td>
+<td>P&amp;L 估值时间与价格来源</td>
+</tr>
+</tbody>
+</table></div>
+<p>若使用 close 生成信号，则不能无条件以同一 close 满额成交。回测必须指定 next-open、VWAP、limit/market、延迟、部分成交和未成交处理。</p>
+<h2 id="statistics">回测统计与多重检验</h2>
+<p>样本 Sharpe：</p>
+<div class="formula" data-math-kind="display">\[\widehat{SR}=\frac{\bar r}{s_r}\sqrt A.\]</div>
+<p>年化因子 <span class="math-inline" data-math-kind="inline">\(A\)</span> 依赖频率；收益自相关、偏度、厚尾和非平稳会破坏朴素标准误。多重检验下应登记尝试次数、相关性、选择规则，并根据问题使用 Reality Check、SPA、FDR、deflated Sharpe 或 PBO；不存在单一万能校正。</p>
+<p>最大回撤：</p>
+<div class="formula" data-math-kind="display">\[MDD=\min_t\left(\frac{W_t}{\max_{s\le t}W_s}-1\right).\]</div>
+<p>回撤依赖路径和样本端点，不能作为尾部概率的完整替代。</p>
+<h2 id="engines">向量化与事件驱动引擎</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>方面</th>
+<th>向量化</th>
+<th>事件驱动</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>速度</td>
+<td>快，适合研究筛选</td>
+<td>慢，逐事件状态更新</td>
+</tr>
+<tr>
+<td>成交</td>
+<td>常用收益×仓位近似</td>
+<td>显式订单、成交、费用和持仓</td>
+</tr>
+<tr>
+<td>时间</td>
+<td>易出现 shift/close 泄漏</td>
+<td>仍需正确事件/时钟排序</td>
+</tr>
+<tr>
+<td>部分成交</td>
+<td>通常省略</td>
+<td>可模拟但需队列/流动性模型</td>
+</tr>
+<tr>
+<td>用途</td>
+<td>机制和大规模初筛</td>
+<td>执行语义与部署前重建</td>
+</tr>
+</tbody>
+</table></div>
+<p>两类结果不一致不应简单取“更好看”的一个；需要从信号时间、目标仓位、成交价、费用、公司行动、现金和估值逐项调和。</p>
+<h2 id="decay">成本、容量与衰减</h2>
+<p>净收益可写为：</p>
+<div class="formula" data-math-kind="display">\[r_t^{net}=w_{t-1}r_t-c_t(|\Delta w_t|,\sigma_t,ADV_t,venue_t).\]</div>
+<p>策略衰减可能来自拥挤、制度变化、数据定义变化、成本上升、执行恶化或纯样本噪声。诊断应按时间、资产、方向、波动、流动性、成交场所和模型版本分解，而不是只画累计收益。</p>
+<h2 id="math">研究与失败契约</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>闸门</th>
+<th>必须记录</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>数据</td>
+<td>source/hash、point-in-time、公司行动、universe</td>
+</tr>
+<tr>
+<td>信号</td>
+<td>feature/decision 时间、持有期、换仓规则</td>
+</tr>
+<tr>
+<td>订单</td>
+<td>类型、延迟、成交价、部分成交、费用/返佣</td>
+</tr>
+<tr>
+<td>P&amp;L</td>
+<td>现金、融资、借券、mark、汇率和税费</td>
+</tr>
+<tr>
+<td>统计</td>
+<td>所有尝试、基准、区间、子样本和多重检验</td>
+</tr>
+<tr>
+<td>衰减</td>
+<td>预设监控、触发器、归因、暂停/退役规则</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="pipeline">Pipeline 与伪代码（Pipeline &amp; Pseudocode）</h2>
+<pre><code class="language-python">vector_result = vectorized_backtest(signal.shift_to_next_tradable_period(), returns)
+event_result = event_backtest(
+    signal, orders, latency, partial_fill, spread, impact, fees, cash_and_positions
+)
+reconcile_daily_positions_turnover_fills_and_marks(vector_result, event_result)
+statistics = robust_performance_and_multiple_testing(all_experiments)
+decay = diagnose_by_regime_liquidity_direction_and_model_version(event_result)
+trigger_pause_if_cost_capacity_or_decay_limits_breach(decay)
+</code></pre>
+<p>实现见 <a href="../tools/m11_backtest_decay.py"><code>m11_backtest_decay.py</code></a>，结果见 <a href="../data/m11_backtest_decay_results.json"><code>m11_backtest_decay_results.json</code></a>。</p>
+<h2 id="implementation">实现证据与结果（Implementation &amp; Results）</h2>
+<pre><code class="language-powershell">python quant_finance/tools/m11_backtest_decay.py
+python quant_finance/data/test_m11_backtest_decay.py -v
+</code></pre>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>指标</th>
+<th style="text-align:right">向量化 gross</th>
+<th style="text-align:right">事件 gross</th>
+<th style="text-align:right">事件 net</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>日均收益</td>
+<td style="text-align:right">0.000780</td>
+<td style="text-align:right">0.000702</td>
+<td style="text-align:right">0.000461</td>
+</tr>
+<tr>
+<td>年化 Sharpe</td>
+<td style="text-align:right">1.5129</td>
+<td style="text-align:right">1.5129</td>
+<td style="text-align:right">0.9933</td>
+</tr>
+<tr>
+<td>最大回撤</td>
+<td style="text-align:right">-0.2635</td>
+<td style="text-align:right">-0.2400</td>
+<td style="text-align:right">-0.2875</td>
+</tr>
+</tbody>
+</table></div>
+<p>事件模型假设 90% 填单、4 bps 费用和 2 bps 滑点，每单位仓位变化扣费，总换手 360.97。早期事件净 Sharpe 为 2.8518，晚期为 -0.8194，对应 DGP 中信号系数从 0.0016 降至 0.0002。测试验证成本降低净收益、引擎差异为正且晚期衰减。</p>
+<h2 id="comparison">失效诊断与方法对比</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>症状</th>
+<th>可能原因</th>
+<th>区分证据</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>vector 好、event 差</td>
+<td>成交/成本/时间语义</td>
+<td>仓位、fill、turnover 日级对账</td>
+</tr>
+<tr>
+<td>gross 好、net 差</td>
+<td>高频换手或冲击</td>
+<td>成本按规模/流动性分解</td>
+</tr>
+<tr>
+<td>早期好、晚期差</td>
+<td>制度衰减或选择偏差</td>
+<td>预设滚动监控和外部制度事件</td>
+</tr>
+<tr>
+<td>少数资产贡献全部</td>
+<td>universe/集中风险</td>
+<td>资产和行业归因</td>
+</tr>
+<tr>
+<td>仅一种阈值好</td>
+<td>参数过拟合</td>
+<td>邻域敏感性和完整实验族</td>
+</tr>
+<tr>
+<td>回测好、纸面差</td>
+<td>延迟/数据/订单语义</td>
+<td>live shadow 与 replay 对账</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="exercises">练习与答案边界（Exercises）</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>ID</th>
+<th>题目</th>
+<th>达标标准</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>M11-Q01</td>
+<td>close 信号能否同 close 成交？</td>
+<td>通常不能，除非有更早可用证据。</td>
+</tr>
+<tr>
+<td>M11-Q02</td>
+<td>向量化和事件驱动核心差异？</td>
+<td>数组收益映射 vs 显式状态/订单/成交。</td>
+</tr>
+<tr>
+<td>M11-Q03</td>
+<td>为什么 gross Sharpe 不够？</td>
+<td>忽略成本、容量和成交。</td>
+</tr>
+<tr>
+<td>M11-Q04</td>
+<td>最大回撤如何定义？</td>
+<td>财富相对历史峰值的最小跌幅。</td>
+</tr>
+<tr>
+<td>M11-Q05</td>
+<td>Sharpe 年化需要什么假设？</td>
+<td>频率和依赖结构明确。</td>
+</tr>
+<tr>
+<td>M11-Q06</td>
+<td>数据窥探是什么？</td>
+<td>多次搜索后只报告最好结果。</td>
+</tr>
+<tr>
+<td>M11-Q07</td>
+<td>Reality Check 解决什么？</td>
+<td>数据窥探下的相对模型检验。</td>
+</tr>
+<tr>
+<td>M11-Q08</td>
+<td>部分成交如何影响回测？</td>
+<td>仓位、收益、风险和后续订单都变化。</td>
+</tr>
+<tr>
+<td>M11-Q09</td>
+<td>为什么现金账本重要？</td>
+<td>融资、费用和可用购买力影响仓位。</td>
+</tr>
+<tr>
+<td>M11-Q10</td>
+<td>公司行动如何影响事件引擎？</td>
+<td>价格、数量、现金和订单需一致调整。</td>
+</tr>
+<tr>
+<td>M11-Q11</td>
+<td>策略衰减可能来源？</td>
+<td>拥挤、制度、成本、执行、数据或噪声。</td>
+</tr>
+<tr>
+<td>M11-Q12</td>
+<td>如何区分衰减和坏运气？</td>
+<td>预设窗口、区间、归因和外部证据。</td>
+</tr>
+<tr>
+<td>M11-Q13</td>
+<td>引擎对账最小粒度？</td>
+<td>日级/事件级仓位、成交、现金和 mark。</td>
+</tr>
+<tr>
+<td>M11-Q14</td>
+<td>为什么未成交是成本？</td>
+<td>错失信号收益且改变风险路径。</td>
+</tr>
+<tr>
+<td>M11-Q15</td>
+<td>多重检验分母是什么？</td>
+<td>所有真实尝试而非最终保留策略。</td>
+</tr>
+<tr>
+<td>M11-Q16</td>
+<td>Qlib 与 LEAN 角色差异？</td>
+<td>研究工作流 vs 事件驱动执行重建。</td>
+</tr>
+<tr>
+<td>M11-Q17</td>
+<td>何时暂停策略？</td>
+<td>成本、容量、数据或衰减触发器突破。</td>
+</tr>
+<tr>
+<td>M11-Q18</td>
+<td>point-in-time 回测要求？</td>
+<td>决策只使用当时可见数据。</td>
+</tr>
+<tr>
+<td>M11-Q19</td>
+<td>合成实验支持什么？</td>
+<td>支持引擎差异和制度衰减诊断。</td>
+</tr>
+<tr>
+<td>M11-Q20</td>
+<td>何时禁止发布收益结论？</td>
+<td>数据、成交、成本、统计或对账失败。</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="answer-boundary">答案索引（Answer Boundary）</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>ID</th>
+<th>答案边界</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>M11-Q01</td>
+<td>close 后才完整可见时需在后续可交易价格成交。</td>
+</tr>
+<tr>
+<td>M11-Q02</td>
+<td>向量映射不维护完整订单生命周期。</td>
+</tr>
+<tr>
+<td>M11-Q03</td>
+<td>可实现收益必须扣成本并受容量限制。</td>
+</tr>
+<tr>
+<td>M11-Q04</td>
+<td><span class="math-inline" data-math-kind="inline">\(\min_t(W_t/\max_{s\le t}W_s-1)\)</span>。</td>
+</tr>
+<tr>
+<td>M11-Q05</td>
+<td>频率、独立/依赖和尺度必须说明。</td>
+</tr>
+<tr>
+<td>M11-Q06</td>
+<td>反复搜索同一历史并选择性报告。</td>
+</tr>
+<tr>
+<td>M11-Q07</td>
+<td>校正“最佳模型”在搜索分母下的显著性。</td>
+</tr>
+<tr>
+<td>M11-Q08</td>
+<td>实际持仓偏离目标并改变 P&amp;L。</td>
+</tr>
+<tr>
+<td>M11-Q09</td>
+<td>订单、融资、费用和保证金依赖现金。</td>
+</tr>
+<tr>
+<td>M11-Q10</td>
+<td>拆股/分红同步更新数量、现金、价格和订单。</td>
+</tr>
+<tr>
+<td>M11-Q11</td>
+<td>至少列拥挤、制度、成本、执行、数据、噪声。</td>
+</tr>
+<tr>
+<td>M11-Q12</td>
+<td>用预注册诊断而非事后故事。</td>
+</tr>
+<tr>
+<td>M11-Q13</td>
+<td>仓位、订单/fill、现金、成本、估值逐项。</td>
+</tr>
+<tr>
+<td>M11-Q14</td>
+<td>opportunity cost 属于 implementation shortfall。</td>
+</tr>
+<tr>
+<td>M11-Q15</td>
+<td>完整实验账本中的所有尝试。</td>
+</tr>
+<tr>
+<td>M11-Q16</td>
+<td>Qlib 偏研究流水线，LEAN 偏事件/订单语义。</td>
+</tr>
+<tr>
+<td>M11-Q17</td>
+<td>预先定义的 breach 触发暂停/复核。</td>
+</tr>
+<tr>
+<td>M11-Q18</td>
+<td><code>available_at &lt;= decision_at</code>。</td>
+</tr>
+<tr>
+<td>M11-Q19</td>
+<td>验证成本/填单导致的引擎差异和衰减。</td>
+</tr>
+<tr>
+<td>M11-Q20</td>
+<td>任一数据、订单、成本、统计或对账闸门失败。</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="risks">风险与后续建议（Risks &amp; Next）</h2>
+<ul>
+<li>固定 90% fill 和固定 bps 成本不是订单簿仿真；只用于语义对照。</li>
+<li>合成衰减由已知系数变化产生，现实衰减归因更难且可能不可识别。</li>
+<li>下一 slice G20/P6 将在事件驱动协议中重建一个已审查策略；若 LEAN CLI 不可用，将保留兼容接口和明确未运行边界，不伪造引擎执行。</li>
+</ul>
+<h2 id="references">参考文献（References）</h2>
+<ol>
+<li>[1] Halbert White, “A Reality Check for Data Snooping,” <em>Econometrica</em>, 2000. <a href="https://doi.org/10.1111/1468-0262.00152">链接</a></li>
+<li>[2] Peter Carr and Marcos López de Prado, “Determining Optimal Trading Rules without Backtesting,” 2014. <a href="https://arxiv.org/abs/1408.1159">链接</a></li>
+<li>[3] Microsoft, “Qlib,” official repository. <a href="https://github.com/microsoft/qlib">链接</a></li>
+<li>[4] QuantConnect, “LEAN,” official repository. <a href="https://github.com/QuantConnect/Lean">链接</a></li>
+</ol>
+
+        <nav class="next-chapter" aria-label="下一章节">
+          <span class="next-chapter-label">下一章节</span>
+          <a rel="next" href="12_reproducibility_model_governance_notes.html">M12 研究复现与模型治理 →</a>
+        </nav>
+
+        <a class="back-to-top" href="#top">返回页首 ↑</a>
+      </article>
+    </main>
+  </div>
+</body>
+</html>

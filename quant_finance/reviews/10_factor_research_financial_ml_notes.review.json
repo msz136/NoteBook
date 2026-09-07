@@ -1,0 +1,77 @@
+{
+  "artifact": "modules/10_factor_research_financial_ml_notes.html",
+  "canonical_source": "modules/10_factor_research_financial_ml_notes.md",
+  "source_revision": "030d4af8cc95ef0e977face6989778926313ff63cfe71d68996d8d2957774df0",
+  "verdict": "WARN",
+  "checks": [
+    {
+      "name": "source_sha",
+      "status": "PASS",
+      "evidence": "expected=030d4af8cc95ef0e977face6989778926313ff63cfe71d68996d8d2957774df0; embedded=030d4af8cc95ef0e977face6989778926313ff63cfe71d68996d8d2957774df0"
+    },
+    {
+      "name": "single_h1",
+      "status": "PASS",
+      "evidence": "h1_count=1"
+    },
+    {
+      "name": "heading_hierarchy",
+      "status": "PASS",
+      "evidence": "headings=[(1, '因子研究与金融机器学习：时序验证、概率预测与消融'), (2, '问题（Question）'), (2, '背景与动机（Background & Motivation）'), (2, '研究对象与特征契约'), (2, '时序切分、Purging 与 Embargo'), (2, '模型与概率预测'), (3, '正则化线性模型'), (3, '树模型与时序 ML'), (3, '概率评分与校准'), (2, '消融、多重检验与坏案例'), (2, '工程与数据契约'), (2, 'Pipeline 与伪代码（Pipeline & Pseudocode）'), (2, '实现证据与结果（Implementation & Results）'), (2, '方法对比与失败案例'), (2, '练习与答案边界（Exercises）'), (2, '答案索引（Answer Boundary）'), (2, '风险与后续建议（Risks & Next）'), (2, '参考文献（References）')]"
+    },
+    {
+      "name": "academic_template",
+      "status": "PASS",
+      "evidence": "palette/serif/1280-grid/260-sticky/900-breakpoint markers"
+    },
+    {
+      "name": "mathjax_config",
+      "status": "PASS",
+      "evidence": "MathJax 3 delimiters and skipHtmlTags markers"
+    },
+    {
+      "name": "formula_em_zero",
+      "status": "PASS",
+      "evidence": "formula_em_count=0"
+    },
+    {
+      "name": "latex_subscript_literal",
+      "status": "PASS",
+      "evidence": "source=['_{true}']; missing=[]"
+    },
+    {
+      "name": "internal_overflow",
+      "status": "PASS",
+      "evidence": "table/code/formula internal overflow CSS markers"
+    },
+    {
+      "name": "anchors",
+      "status": "PASS",
+      "evidence": "unresolved=[]"
+    },
+    {
+      "name": "local_links",
+      "status": "PASS",
+      "evidence": "unresolved=[]"
+    },
+    {
+      "name": "required_sections",
+      "status": "PASS",
+      "evidence": "required=['question', 'background', 'concepts', 'validation', 'models', 'regularization', 'trees', 'probability', 'multiple-testing', 'math', 'pipeline', 'implementation', 'comparison', 'exercises', 'risks', 'references']; missing=[]"
+    },
+    {
+      "name": "diagnostic_question_coverage",
+      "status": "PASS",
+      "evidence": "prefix=M10-Q; expected=20; counts={'M10-Q01': 2, 'M10-Q02': 2, 'M10-Q03': 2, 'M10-Q04': 2, 'M10-Q05': 2, 'M10-Q06': 2, 'M10-Q07': 2, 'M10-Q08': 2, 'M10-Q09': 2, 'M10-Q10': 2, 'M10-Q11': 2, 'M10-Q12': 2, 'M10-Q13': 2, 'M10-Q14': 2, 'M10-Q15': 2, 'M10-Q16': 2, 'M10-Q17': 2, 'M10-Q18': 2, 'M10-Q19': 2, 'M10-Q20': 2}"
+    },
+    {
+      "name": "browser_visual_qa",
+      "status": "PENDING",
+      "evidence": "环境安全策略禁止浏览器直接打开本地 file:// HTML；未绕行，待人工桌面与窄屏复核"
+    }
+  ],
+  "open_items": [
+    "browser_visual_qa"
+  ],
+  "next": "完成浏览器视觉 QA 后重新审查"
+}

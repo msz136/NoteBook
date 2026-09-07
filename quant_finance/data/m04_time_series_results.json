@@ -1,0 +1,23 @@
+{
+  "n": 260,
+  "train": 160,
+  "ar1_rolling_rmse": 0.3643340910042557,
+  "var1_coefficients": [
+    [
+      0.10918740258612096,
+      -0.04213711570870507
+    ],
+    [
+      0.739925555360939,
+      0.17247419886842758
+    ],
+    [
+      0.10204349809986397,
+      0.4869594005633464
+    ]
+  ],
+  "ewma_lambda": 0.94,
+  "ewma_last_variance": 0.1322730008911488,
+  "local_level_last": 0.36825595133806144,
+  "split_rule": "all observations before t train the forecast at t; no random shuffle"
+}

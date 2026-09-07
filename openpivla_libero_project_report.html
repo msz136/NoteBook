@@ -1,0 +1,1066 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OpenPI / OpenPiVLA LIBERO 训练评估与 Qwen-VL 适配项目恢复报告</title>
+    <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            font-size: 16px;
+            line-height: 1.8;
+            color: #18212f;
+            background: #ffffff;
+            padding: 2rem 1rem;
+        }
+        article { max-width: 900px; margin: 0 auto; }
+        h1 {
+            font-size: 2rem;
+            line-height: 1.25;
+            margin-bottom: 0.5rem;
+            border-bottom: 2px solid #26323f;
+            padding-bottom: 0.6rem;
+        }
+        h2 {
+            font-size: 1.48rem;
+            margin-top: 2.6rem;
+            margin-bottom: 1rem;
+            border-left: 4px solid #2563eb;
+            padding-left: 0.75rem;
+        }
+        h3 { font-size: 1.23rem; margin-top: 1.7rem; margin-bottom: 0.75rem; }
+        h4 { font-size: 1.08rem; margin-top: 1.2rem; margin-bottom: 0.45rem; }
+        p, ul, ol { margin-bottom: 1rem; }
+        ul, ol { padding-left: 1.5rem; }
+        li { margin-bottom: 0.25rem; }
+        pre {
+            background: #f8fafc;
+            border: 1px solid #dfe7ef;
+            border-radius: 6px;
+            padding: 1rem;
+            overflow-x: auto;
+            margin: 1rem 0 1.2rem;
+        }
+        code {
+            font-family: "Fira Code", "Consolas", "SFMono-Regular", monospace;
+            background: #f1f5f9;
+            padding: 0.12rem 0.35rem;
+            border-radius: 3px;
+            font-size: 0.9em;
+        }
+        pre code { background: none; padding: 0; border-radius: 0; }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1rem 0 1.5rem;
+            font-size: 0.92rem;
+        }
+        th, td {
+            border: 1px solid #d9e1ea;
+            padding: 0.58rem 0.72rem;
+            text-align: left;
+            vertical-align: top;
+        }
+        th { background: #f7fafc; font-weight: 650; }
+        tr:nth-child(even) { background: #fbfdff; }
+        a { color: #1d4ed8; text-decoration: none; }
+        a:hover { text-decoration: underline; }
+        .meta { color: #5c6775; font-size: 0.92rem; margin-bottom: 1.4rem; }
+        .toc {
+            background: #f8fbff;
+            border: 1px solid #d6e5ff;
+            border-left: 4px solid #2563eb;
+            padding: 1rem 1.2rem;
+            margin: 1.4rem 0 2rem;
+            border-radius: 6px;
+        }
+        .toc h2 {
+            border: none;
+            margin: 0 0 0.8rem;
+            padding: 0;
+            font-size: 1.15rem;
+        }
+        .toc ol { columns: 2; column-gap: 2rem; margin-bottom: 0; }
+        .note {
+            background: #eff6ff;
+            border-left: 4px solid #2563eb;
+            padding: 0.85rem 1rem;
+            margin: 1rem 0;
+            border-radius: 4px;
+        }
+        .warning {
+            background: #fff7ed;
+            border-left: 4px solid #f97316;
+            padding: 0.85rem 1rem;
+            margin: 1rem 0;
+            border-radius: 4px;
+        }
+        .evidence {
+            background: #f7f2ff;
+            border-left: 4px solid #7c3aed;
+            padding: 0.85rem 1rem;
+            margin: 1rem 0;
+            border-radius: 4px;
+        }
+        .ok {
+            background: #f0fdf4;
+            border-left: 4px solid #16a34a;
+            padding: 0.85rem 1rem;
+            margin: 1rem 0;
+            border-radius: 4px;
+        }
+        .small { font-size: 0.9rem; color: #526071; }
+        .svg-wrap {
+            overflow-x: auto;
+            border: 1px solid #d9e1ea;
+            border-radius: 6px;
+            padding: 0.6rem;
+            background: #fcfdff;
+            margin: 1rem 0 1.4rem;
+        }
+        svg text { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+        @media (max-width: 700px) {
+            body { padding: 1rem 0.5rem; }
+            h1 { font-size: 1.48rem; }
+            h2 { font-size: 1.24rem; }
+            table { display: block; overflow-x: auto; font-size: 0.86rem; }
+            .toc ol { columns: 1; }
+        }
+    </style>
+</head>
+<body>
+<article>
+    <h1>OpenPI / OpenPiVLA LIBERO 训练评估与 Qwen-VL 适配项目恢复报告</h1>
+    <p class="meta">报告日期：2026-07-02 | 证据截止：2026-07-02 | 工作区：<code>C:\Users\mousongzhe\pryer\project</code> | 输出位置：<code>C:\Users\mousongzhe\NoteBook</code></p>
+
+    <nav class="toc" aria-label="目录">
+        <h2>目录</h2>
+        <ol>
+            <li><a href="#question">问题</a></li>
+            <li><a href="#scope">范围与证据边界</a></li>
+            <li><a href="#executive">核心结论</a></li>
+            <li><a href="#background">背景与官方 baseline</a></li>
+            <li><a href="#concepts">基础概念</a></li>
+            <li><a href="#architecture">模型架构与输入输出头</a></li>
+            <li><a href="#data-prep">数据准备与 schema</a></li>
+            <li><a href="#losses">训练目标与 Loss</a></li>
+            <li><a href="#pipeline">Pipeline 与伪代码</a></li>
+            <li><a href="#implementation">实现证据映射</a></li>
+            <li><a href="#run-ledger">Run 总账</a></li>
+            <li><a href="#runs">逐阶段记录</a></li>
+            <li><a href="#curves">Loss 与结果图</a></li>
+            <li><a href="#eval">评估环境与结果分析</a></li>
+            <li><a href="#comparison">方法对比与建议</a></li>
+            <li><a href="#recovery">恢复清单</a></li>
+            <li><a href="#references">参考文献</a></li>
+        </ol>
+    </nav>
+
+    <section id="question">
+        <h2>问题（Question）</h2>
+        <p>本报告回答：<code>/mousongzhe/pryer/project</code> 工作区中 OpenPI / OpenPiVLA 相关项目如何在 LIBERO 上评估；官方 baseline 是多少；本地项目使用什么 base 模型和数据集；旧模型与最终模型的输入输出规范如何变化；Qwen-VL 接入后如何改造输入头、输出头、动作表示、训练和评估闭环；每个训练阶段做了什么、为什么这样做、结果如何；以及如何恢复 eval 环境、online rollout 与训练评估全流程。</p>
+        <p>这里的“OpenPiVLA / openpivla”不是本地一个单独同名目录。本地整理后的证据分散在 <code>01_openpi_ace_vla_pretraining</code>、<code>04_openpi_fast_zhi_training</code>、<code>07_openpi_eval_and_deployment_clients</code>、<code>22_openpi_mlu</code> 等支线中。报告把它们作为同一个 OpenPI/QwenVLA/LIBERO 项目簇来恢复。</p>
+    </section>
+
+    <section id="scope">
+        <h2>报告范围与证据边界</h2>
+        <table>
+            <thead>
+                <tr><th>类别</th><th>本报告采用的证据</th><th>边界说明</th></tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>公有设计 / 上游公开流程</td>
+                    <td>OpenPI GitHub、OpenPI LIBERO README、LIBERO 官方仓库与论文、OpenVLA modified LIBERO RLDS 数据集卡、Qwen3-VL 模型卡。</td>
+                    <td>用于确认官方 baseline、标准 LIBERO suite、公开数据来源、π0/π0.5/VLA/flow matching 的基本定位。</td>
+                </tr>
+                <tr>
+                    <td>本地证据</td>
+                    <td><code>04_openpi_fast_zhi_training</code> 的训练脚本、config、QwenVL fortrainer；<code>07_openpi_eval_and_deployment_clients</code> 的 LIBERO eval、policy、serve、success_rate；<code>00_workspace_review</code> 的派生 CSV；<code>22_openpi_mlu</code> 的 OpenPI snapshot。</td>
+                    <td>用于恢复本地输入输出 schema、训练参数、eval 环境、run 结果。路径和行号在相关段落中列出。</td>
+                </tr>
+                <tr>
+                    <td>本地推断</td>
+                    <td>由 run name、serve args、模型 config、loss 片段和 success rate 之间的关系推断设计思想。</td>
+                    <td>凡无法直接由单个日志证明的因果关系，均写为“由证据推断”。</td>
+                </tr>
+                <tr>
+                    <td>未核实项</td>
+                    <td>完整 W&B 历史曲线、部分候选 run 与 eval 目录的精确一一对应、远端 checkpoint 权重内容。</td>
+                    <td>本地只同步了轻量 evidence，没有 checkpoint、raw dataset、完整 wandb 二进制 run。报告不把 candidate 匹配说成 exact。</td>
+                </tr>
+            </tbody>
+        </table>
+        <div class="warning">⚠️ 本地训练脚本 evidence 中出现过 W&B API key 形态的敏感配置。本报告不会复述具体密钥值，只描述与复现相关的非敏感配置。</div>
+    </section>
+
+    <section id="executive">
+        <h2>核心结论</h2>
+        <div class="ok">
+            <p><strong>官方 baseline：</strong>OpenPI 官方 LIBERO README 给出的 π0.5 finetune baseline 为 <strong>Spatial 98.8、Object 98.2、Goal 98.0、LIBERO 10 92.4、平均 96.85</strong>，checkpoint 为 <code>gs://openpi-assets/checkpoints/pi05_libero/</code>，训练 config 为 <code>pi05_libero</code>。这是本报告中“官方 baseline”的主参照。</p>
+        </div>
+        <p><strong>项目主线：</strong>本地项目不是简单复现官方 π0.5-LIBERO，而是在 OpenPI/PiZero 框架中把 LIBERO 接入 Qwen-VL/Qwen3-VL 风格的 VLA backbone，并把 LIBERO 的 7 维末端执行器动作适配进本地更通用的 72 维统一动作空间。这样做的目的，是让同一套 QwenVLA/AGX/XE 模型接口能服务 LIBERO、AGILEX、Galaxea、DROID、Aloha 等多种 embodiment（具身形态），同时在 LIBERO eval 时只输出环境需要的 7 维动作。</p>
+        <p><strong>关键改造：</strong>官方路径是 <code>image + wrist_image + state(8) + prompt</code> 输入，输出 <code>actions[:, :7]</code>。本地最终路径是 <code>global_image / left_image / right_image + 72 维 state/action 结构 + prompt</code> 输入，Qwen-VL 处理文本和图像，fast vision / joint model / action expert 处理动作 token，输出 72 维 action chunk，再通过 <code>action_mask_step</code> 与 <code>XELiberoOutputs</code> 抽取 <code>ee_pos(3) + ee_rot(3) + gripper(1)</code> 给 LIBERO 执行。</p>
+        <p><strong>本地结果：</strong>2026-06-21 代表 run 中，<code>h4b_x_new_10000</code> 四套 suite 合计 <code>362/800 = 0.4525</code>，明显好于 image-only 与早期 8B 代表 run。2026-06-28/07-02 核对的最新 8B run <code>debug_224_8b...x_new/15000</code> 达到 LIBERO 10 <code>0.4750</code>、Goal <code>0.1300</code>、Object <code>0.8650</code>、Spatial <code>0.7550</code>，若每套 200 episodes 等权，约为 <code>445/800 = 0.55625</code>。它相比 4B x_new 在 Object、Spatial、LIBERO 10 和 Goal 上均有改善，但距离官方 π0.5 平均 <code>0.9685</code> 仍很远。</p>
+    </section>
+
+    <section id="background">
+        <h2>背景与动机（Background & Motivation）</h2>
+        <h3>LIBERO 任务模式</h3>
+        <p>LIBERO（Lifelong Robot Learning Benchmark，终身机器人学习基准）用于研究机器人在顺序任务、分布迁移和知识迁移中的表现。官方仓库描述其包含 130 个语言条件机器人操作任务，分为 LIBERO-Spatial、LIBERO-Object、LIBERO-Goal 和 LIBERO-100；其中 LIBERO-100 又拆为 LIBERO-90 与 LIBERO-10。LeRobot 文档把可用 suite 标成 <code>libero_spatial</code>、<code>libero_object</code>、<code>libero_goal</code>、<code>libero_90</code> 和 <code>libero_10</code>。这些任务用 MuJoCo/robosuite 风格环境执行，输入包括第三视角图像、腕部图像、机械臂状态和自然语言任务描述。</p>
+        <p>对本项目而言，LIBERO 的困难不是单步预测 loss，而是闭环控制：模型每隔若干步输出一段 action chunk（动作块），环境执行其中前几步，新的视觉和 proprioception（本体感知）再进入模型。一个很小的动作维度顺序错误、归一化错误、相机翻转错误或 gripper 方向错误，都可能让离线 loss 看起来不错但在线 success rate 很差。</p>
+
+        <h3>OpenPI 官方 baseline</h3>
+        <table>
+            <thead>
+                <tr><th>来源</th><th>模型</th><th>Checkpoint / config</th><th>Spatial</th><th>Object</th><th>Goal</th><th>LIBERO 10</th><th>Average</th></tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>OpenPI 官方 <code>examples/libero/README.md</code></td>
+                    <td>π0.5 @ 30k finetuned</td>
+                    <td><code>gs://openpi-assets/checkpoints/pi05_libero/</code>，<code>pi05_libero</code></td>
+                    <td>98.8</td>
+                    <td>98.2</td>
+                    <td>98.0</td>
+                    <td>92.4</td>
+                    <td>96.85</td>
+                </tr>
+            </tbody>
+        </table>
+        <p>OpenPI 主 README 还列出官方 base checkpoints：<code>pi0_base</code>、<code>pi0_fast_base</code>、<code>pi05_base</code>，并列出 <code>pi05_libero</code> 作为 LIBERO fine-tuned expert checkpoint。官方 OpenPI 文档说明 π0 是 flow-based Vision-Language-Action model（基于流匹配的视觉-语言-动作模型），π0-FAST 是 autoregressive VLA，π0.5 是面向 open-world generalization（开放世界泛化）的升级版。</p>
+    </section>
+
+    <section id="concepts">
+        <h2>基础概念与术语</h2>
+        <h3>VLA 与 action chunk</h3>
+        <p>视觉-语言-动作模型（Vision-Language-Action model, VLA）把图像、语言指令、机器人状态映射到动作。与只输出文本的视觉语言模型（Vision-Language Model, VLM）不同，VLA 的输出必须能被控制器直接执行，通常是连续动作向量或离散动作 token。π0 论文将 VLM 语义能力接入 flow matching action expert，使模型能输出连续机器人动作。</p>
+        <p>动作块（action chunk）表示模型一次预测未来 \(H\) 步动作：</p>
+        \[
+        A_{t:t+H-1} = \left[a_t, a_{t+1}, \ldots, a_{t+H-1}\right], \quad a_t \in \mathbb{R}^{D_a}.
+        \]
+        <p>变量解释：\(H\) 是 <code>action_horizon</code>，本地 LIBERO 常见值为 10；\(D_a\) 是动作维度，官方 LIBERO 为 7，本地 QwenVLA 统一空间为 72。实现映射：eval 端通过 <code>replan_steps</code> 只执行前若干步，然后重新向 policy server 查询新的 action chunk。</p>
+
+        <h3>末端执行器动作与本体状态</h3>
+        <p>LIBERO 环境使用末端执行器（end-effector, EE）动作，典型 7 维为位置增量 \(x,y,z\)、旋转增量或轴角/欧拉表示 \(r_x,r_y,r_z\)、夹爪 \(g\)。官方 eval 端从环境观测构造 8 维 state：EEF position 3 维、EEF quaternion 转 axis-angle 3 维、gripper qpos 2 维。本地 XE/AGX 表示则把双臂 joints、gripper、EE position、EE rotation 放进更大的通用空间。</p>
+
+        <h3>Flow matching</h3>
+        <p>流匹配（Flow Matching）学习一个向量场，把噪声样本连续推向数据样本。对机器人动作而言，它的直觉是：模型不直接一次性“回归动作”，而是在随机时间 \(t\) 看到一个被噪声污染的动作 \(x_t\)，预测应该朝真实动作 \(a\) 走的速度。</p>
+    </section>
+
+    <section id="architecture">
+        <h2>模型架构、输入头与输出头</h2>
+        <h3>官方 π0.5 LIBERO 输入输出规范</h3>
+        <p>官方/本地 OpenPI snapshot 的 <code>libero_policy.py</code> 显示，LIBERO policy 示例输入是 <code>observation/state</code> 8 维、<code>observation/image</code> 224x224x3、<code>observation/wrist_image</code> 224x224x3 和 <code>prompt</code>。<code>LiberoInputs</code> 将其改写成模型键：<code>state</code>、<code>image.base_0_rgb</code>、<code>image.left_wrist_0_rgb</code>、<code>image.right_wrist_0_rgb</code> 以及 <code>image_mask</code>。右腕图像不存在时用零图像 padding。<code>LiberoOutputs</code> 在 inference 中只返回前 7 维动作。</p>
+        <table>
+            <thead>
+                <tr><th>Head / Transform</th><th>输入</th><th>输出</th><th>Shape / 单位</th><th>证据</th></tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>官方图像输入头</td>
+                    <td><code>observation/image</code>、<code>observation/wrist_image</code></td>
+                    <td><code>base_0_rgb</code>、<code>left_wrist_0_rgb</code>、<code>right_wrist_0_rgb=zeros</code></td>
+                    <td>224x224x3 uint8</td>
+                    <td><code>22_openpi_mlu/.../libero_policy.py:10-59</code></td>
+                </tr>
+                <tr>
+                    <td>官方 proprio 输入头</td>
+                    <td><code>observation/state</code></td>
+                    <td><code>state</code></td>
+                    <td>8 维：EEF pos、axis-angle、gripper qpos</td>
+                    <td><code>examples/libero/main.py:147-202</code> 与 <code>libero_policy.py</code></td>
+                </tr>
+                <tr>
+                    <td>官方语言输入头</td>
+                    <td><code>prompt</code></td>
+                    <td>模型 prompt token</td>
+                    <td>自然语言任务描述</td>
+                    <td><code>LiberoInputs</code></td>
+                </tr>
+                <tr>
+                    <td>官方输出头</td>
+                    <td>模型内部 <code>actions</code></td>
+                    <td><code>{"actions": actions[:, :7]}</code></td>
+                    <td>7 维 LIBERO action chunk</td>
+                    <td><code>libero_policy.py:70-82</code></td>
+                </tr>
+            </tbody>
+        </table>
+
+        <h3>本地最终 QwenVLA / XE-LIBERO 输入输出规范</h3>
+        <p>本地项目的核心变化在 <code>LeRobotXELiberoDataConfig</code>、<code>XELiberoInputs</code>、<code>XELiberoOutputs</code> 和 QwenVL fortrainer。它把 LIBERO 从官方 7/8 维窄接口转成通用 XE/AGX 接口：相机字段是 <code>global_image</code>、<code>left_image</code>、<code>right_image</code>；状态和动作字段拆成 <code>state.joints</code>、<code>state.gripper_w</code>、<code>state.ee_pos</code>、<code>state.ee_rot</code>、<code>action.ee_pos</code>、<code>action.ee_rot</code>、<code>action.gripper_w</code>；模型配置为 <code>qwen_vl=True</code>、<code>proprio_dim=72</code>、<code>action_dim=72</code>、<code>action_horizon=10</code>。</p>
+        <table>
+            <thead>
+                <tr><th>Head / Transform</th><th>输入</th><th>模型侧表示</th><th>输出 / eval 表示</th><th>为什么这样改</th></tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Qwen-VL 图像/文本头</td>
+                    <td><code>cam_high</code>、<code>cam_left_wrist</code>、<code>cam_right_wrist</code>、<code>prompt</code></td>
+                    <td><code>QwenVLAProcessor</code> 处理 VLM image/text token；fast vision backend 可为 DINO/DA3 等。</td>
+                    <td>为 joint model 提供视觉和语言 token。</td>
+                    <td>复用 Qwen3-VL 的视觉语言理解，把任务语义和图像 grounding 接入动作 expert。</td>
+                </tr>
+                <tr>
+                    <td>Proprio 输入头</td>
+                    <td><code>state.joints</code>、<code>state.gripper_w</code>、<code>state.ee_pos</code>、<code>state.ee_rot</code></td>
+                    <td>padding 到 72 维；无效维用 <code>INVALID_MIN_ACTION_VALUE</code> 或 mask 区分。</td>
+                    <td>连续 proprio token / embedding。</td>
+                    <td>统一单臂 LIBERO 与双臂/多平台数据的状态布局。</td>
+                </tr>
+                <tr>
+                    <td>Action 输入流</td>
+                    <td>训练时的 <code>actions</code>，可被 <code>empty_action_inputs</code> 置为无效值。</td>
+                    <td>动作 token 进入 causal mask / bidirectional action attention 结构。</td>
+                    <td>训练时提供 flow matching target；推理时从噪声积分生成。</td>
+                    <td><code>empty_action_inputs</code> 防止模型直接读取真值动作作弊，使训练/推理一致。</td>
+                </tr>
+                <tr>
+                    <td>Action decoder 输出头</td>
+                    <td>action token embeddings</td>
+                    <td><code>action_decoder</code> 预测 flow velocity 或 action velocity。</td>
+                    <td>72 维 action chunk。</td>
+                    <td>支持统一动作空间，保留跨 embodiment 扩展能力。</td>
+                </tr>
+                <tr>
+                    <td>LIBERO 输出适配</td>
+                    <td>72 维模型动作</td>
+                    <td><code>action_mask_step</code> 只激活 left gripper、left EE pos、left EE rot。</td>
+                    <td><code>XELiberoOutputs</code> 抽取 7 维：EE pos 3、EE rot 3、gripper 1。</td>
+                    <td>LIBERO 只需要单臂 EEF action，mask 能避免无关维度污染 ODE 起点和输出。</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <h3>结构流图</h3>
+        <pre><code class="language-text">LIBERO env observation
+  agentview_image, wrist_image, eef state, task text
+        |
+        | eval/main.py rotates images, resizes/pads, builds state/prompt
+        v
+XELiberoInputs / data transforms
+  images: cam_high, cam_left_wrist, cam_right_wrist
+  state: joints, gripper_w, ee_pos, ee_rot
+        |
+        | pad/mask into unified QwenVLA layout
+        v
+QwenVLA policy
+  Qwen text/image tokens + fast vision tokens + proprio tokens + action tokens
+        |
+        | causal mask, optional bidirectional image/action and action/action attention
+        v
+Joint model + action expert
+        |
+        | action_decoder predicts flow velocity for 72-dim action chunk
+        v
+72-dim action chunk
+        |
+        | action_mask_step + XELiberoOutputs
+        v
+LIBERO 7-dim action: ee_pos(3), ee_rot(3), gripper(1)
+        |
+        | env.step(action), replan after several steps
+        v
+closed-loop rollout success / failure</code></pre>
+
+        <h3>为什么要做这些改造</h3>
+        <table>
+            <thead>
+                <tr><th>改造</th><th>直接效果</th><th>设计思想</th><th>风险</th></tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>从 7 维 LIBERO action 转到 72 维统一动作空间</td>
+                    <td>同一模型头可服务多平台、多机械臂、多状态字段。</td>
+                    <td>把 LIBERO 当作统一 VLA 系统中的一个 embodiment，而不是孤立 benchmark。</td>
+                    <td>维度顺序、mask、归一化任何一处错，都会在线崩掉。</td>
+                </tr>
+                <tr>
+                    <td>Qwen-VL 接入</td>
+                    <td>用 Qwen 处理图像和语言 token，替换或扩展 PaliGemma/原 OpenPI VLM 路径。</td>
+                    <td>借 Qwen3-VL 的视觉理解、空间推理和文本能力，支持更丰富任务语义。</td>
+                    <td>Qwen token 长度、图像 token、position id、causal mask 需要与动作流精确对齐。</td>
+                </tr>
+                <tr>
+                    <td>right wrist zero fix / mask_pad_image / drop_right_camera</td>
+                    <td>缺失相机用黑图和 mask 控制，不让 padding 图像被模型当作有效证据。</td>
+                    <td>训练和 eval 的相机存在性必须一致。LIBERO 常只有第三视角和左腕视角。</td>
+                    <td>若 mask 与图像 key 不一致，会造成 attention 读到假图像。</td>
+                </tr>
+                <tr>
+                    <td>no discrete state input</td>
+                    <td>关闭把连续状态离散化拼进文本 prompt 的路径。</td>
+                    <td>减少文本上下文膨胀和训练/推理不一致，逼迫连续 proprio head 承担状态信息。</td>
+                    <td>若 proprio 编码不足，Goal 类任务可能仍缺精确状态条件。</td>
+                </tr>
+                <tr>
+                    <td>bidirectional action attention / image-action attention</td>
+                    <td>放宽 action block 内部或 image-action 间的注意力方向。</td>
+                    <td>动作 chunk 是并行规划对象，完全因果可能限制 chunk 内一致性。</td>
+                    <td>若训练和 serve 不一致，action expert 会看到不同上下文图。</td>
+                </tr>
+                <tr>
+                    <td>action stream fp32 / action expert fp32</td>
+                    <td>关键动作路径用 FP32 保持数值稳定。</td>
+                    <td>连续控制对小数值误差敏感，flow ODE 多步积分会放大误差。</td>
+                    <td>显存压力更大，448 输入容易 OOM。</td>
+                </tr>
+            </tbody>
+        </table>
+    </section>
+
+    <section id="data-prep">
+        <h2>数据准备与数据版本</h2>
+        <h3>官方旧格式：OpenVLA modified LIBERO RLDS 到 LeRobot</h3>
+        <p>OpenPI 官方 LIBERO conversion 脚本使用 <code>openvla/modified_libero_rlds</code>，将 <code>libero_10_no_noops</code>、<code>libero_goal_no_noops</code>、<code>libero_object_no_noops</code>、<code>libero_spatial_no_noops</code> 合并到 LeRobot 数据集。其 LeRobot features 为 <code>image</code>、<code>wrist_image</code>、<code>state</code> 8 维、<code>actions</code> 7 维，并从 RLDS step 的 <code>language_instruction</code> 写入 task 文本。</p>
+        <table>
+            <thead>
+                <tr><th>字段</th><th>旧格式含义</th><th>Shape</th><th>训练/评估用途</th></tr>
+            </thead>
+            <tbody>
+                <tr><td><code>image</code></td><td>第三视角图像</td><td>256x256x3，训练 transform 到模型输入尺寸</td><td>主视觉输入</td></tr>
+                <tr><td><code>wrist_image</code></td><td>腕部相机图像</td><td>256x256x3</td><td>近场操作视觉输入</td></tr>
+                <tr><td><code>state</code></td><td>末端位姿和夹爪状态</td><td>8</td><td>proprio 输入</td></tr>
+                <tr><td><code>actions</code></td><td>LIBERO delta action</td><td>7</td><td>监督目标与 eval action</td></tr>
+                <tr><td><code>task/prompt</code></td><td>语言任务</td><td>字符串</td><td>条件输入</td></tr>
+            </tbody>
+        </table>
+
+        <h3>本地新格式：LeRobotXELiberoDataConfig</h3>
+        <p>本地 <code>LeRobotXELiberoDataConfig</code> 通过 repack transform 将数据重映射成 XE 字段：<code>cam_high &lt;- global_image</code>、<code>cam_left_wrist &lt;- left_image</code>、<code>cam_right_wrist &lt;- right_image</code>，并拆出 <code>state.joints</code>、<code>state.gripper_w</code>、<code>state.ee_pos</code>、<code>state.ee_rot</code>、<code>action.ee_pos</code>、<code>action.ee_rot</code>、<code>action.gripper_w</code>。模型 transform 再做 resize/pad 和 <code>PadStatesAndActions(model_action_dim=72)</code>。</p>
+        <table>
+            <thead>
+                <tr><th>字段组</th><th>本地字段</th><th>进入模型后的作用</th><th>证据</th></tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>图像</td>
+                    <td><code>global_image</code>、<code>left_image</code>、<code>right_image</code></td>
+                    <td>转成 <code>base_0_rgb</code>、<code>left_wrist_0_rgb</code>、<code>right_wrist_0_rgb</code>。</td>
+                    <td><code>config.py:2175-2193</code>、<code>XELiberoInputs:551-561</code></td>
+                </tr>
+                <tr>
+                    <td>状态</td>
+                    <td><code>state.joints</code>、<code>state.gripper_w</code>、<code>state.ee_pos</code>、<code>state.ee_rot</code></td>
+                    <td>构造统一 state/proprio，缺失右臂或无关维用 invalid sentinel。</td>
+                    <td><code>XELiberoInputs:540-567</code></td>
+                </tr>
+                <tr>
+                    <td>动作</td>
+                    <td><code>action.ee_pos</code>、<code>action.ee_rot</code>、<code>action.gripper_w</code></td>
+                    <td>训练时拼成 28 维基础 XE action，再 pad 到 72 维；关节维 placeholder 为 invalid。</td>
+                    <td><code>XELiberoInputs:570-616</code></td>
+                </tr>
+                <tr>
+                    <td>语言</td>
+                    <td><code>task</code> 或 <code>prompt</code></td>
+                    <td>传入 Qwen tokenizer / processor。</td>
+                    <td><code>XELiberoInputs:630-633</code></td>
+                </tr>
+            </tbody>
+        </table>
+    </section>
+
+    <section id="losses">
+        <h2>训练目标、Loss 与数学表达</h2>
+        <h3>动作 flow matching 目标</h3>
+        <p>令 \(a \in \mathbb{R}^{H \times D_a}\) 表示真实动作块（action chunk），\(\epsilon \sim \mathcal{N}(0, I)\) 表示噪声，\(t \in [0,1]\) 表示随机采样的 flow time，\(x_t\) 表示噪声与真实动作之间的插值：</p>
+        \[
+        x_t = (1-t)\epsilon + t a, \qquad u_t = a - \epsilon .
+        \]
+        <p>变量解释：\(x_t\) 是模型在训练时看到的 noisy action；\(u_t\) 是从噪声走向真实动作的目标速度。实现映射：<code>train_pytorch_qwen3_fast_zhi.py</code> 的 DataCollator 会采样 flow matching time；<code>pizero_qwenvl_fast_fortrainer.py</code> 中 <code>action_decoder</code> 解码 <code>v_t</code>，再与目标速度做平方差。</p>
+        <p>带 mask 的动作损失可写为：</p>
+        \[
+        \mathcal{L}_{action}
+        =
+        \frac{1}{H}
+        \sum_{h=1}^{H}
+        \frac{
+            \sum_{d=1}^{D_a} m_{h,d}\left\|\hat{u}_{\theta,h,d} - u_{h,d}\right\|_2^2
+        }{
+            \sum_{d=1}^{D_a} m_{h,d} + \varepsilon
+        } .
+        \]
+        <p>变量解释：\(m_{h,d}\) 是 action mask，决定第 \(h\) 步第 \(d\) 维是否计入 loss；\(\hat{u}_{\theta}\) 是模型预测 velocity；\(\varepsilon\) 防止分母为 0。实现映射：本地 fortrainer 中 <code>mask_f = action_mask.to(diff2.dtype)</code>，并对每步有效维做归一化；<code>action_mask_step</code> 在 serve/eval 时只保留 LIBERO 所需维度。</p>
+
+        <h3>总 loss 组合</h3>
+        <p>训练脚本支持动作 loss、VLM cross entropy（视觉语言 CE）和可选在线 distillation（蒸馏）：</p>
+        \[
+        \mathcal{L}
+        =
+        \mathcal{L}_{action}
+        +
+        \lambda_{ce}\mathcal{L}_{VLM}
+        +
+        \lambda_{kd}\mathcal{L}_{KD}.
+        \]
+        <p>变量解释：\(\lambda_{ce}\) 对应 <code>lambda_fast_ce</code>，\(\lambda_{kd}\) 对应 <code>ONLINE_DISTILL_PI05_LAMBDA</code>；\(\mathcal{L}_{KD}\) 是 student velocity 与 PI05 teacher velocity 的 MSE。实现映射：LIBERO shell 中 <code>--lambda_fast_ce 0</code>，因此这些 run 的主训练目标是 action flow matching；在线蒸馏代码存在，但本地 evidence 未发现已用于报告中列出的 LIBERO eval run。</p>
+
+        <h3>Success rate 指标</h3>
+        <p>LIBERO eval 的主指标是 success rate：</p>
+        \[
+        \mathrm{SR}
+        =
+        \frac{1}{N}
+        \sum_{i=1}^{N}
+        \mathbf{1}\left[\mathrm{done}_i = \mathrm{true}\right].
+        \]
+        <p>变量解释：\(N\) 是 episode 总数；\(\mathbf{1}[\cdot]\) 是指示函数；<code>done</code> 来自 LIBERO 环境是否完成任务。实现映射：<code>examples/libero/main.py</code> 在每个 episode 中执行 <code>env.step(action)</code>，若 <code>done</code> 为真则计一次 success；并将 suite 级 success 写入 <code>success_rate.txt</code>。</p>
+    </section>
+
+    <section id="pipeline">
+        <h2>Pipeline 与伪代码</h2>
+        <h3>训练 step</h3>
+        <pre><code class="language-python">def train_step(raw_batch):
+    # 1. Repack LIBERO/XE fields into model-facing keys.
+    batch = repack_transform(raw_batch)
+    # batch has images, state.*, action.*, and prompt/task.
+
+    # 2. Convert dataset fields to OpenPI/QwenVLA observation and action tensors.
+    obs = XELiberoInputs(batch)
+    # obs["image"] contains base_0_rgb / left_wrist_0_rgb / right_wrist_0_rgb.
+    # obs["state"] and obs["actions"] are padded/masked into the unified layout.
+
+    # 3. Build action input stream.
+    if config.model.empty_action_inputs:
+        # Prevent the action stream from seeing ground-truth actions as input.
+        obs["actions_for_input"] = INVALID_MIN_ACTION_VALUE
+
+    # 4. Encode image/text/proprio/action tokens with QwenVLA processor and joint model.
+    model_inputs = data_collator(obs, sample_fm_time=True, mask_pad_image=True)
+
+    # 5. Predict flow velocity for the action chunk and compute masked loss.
+    loss_action, loss_vlm = model(**model_inputs)
+    loss = loss_action + config.lambda_fast_ce * loss_vlm
+
+    # 6. Backpropagate and save/evaluate at configured intervals.
+    loss.backward()
+    optimizer.step()
+    optimizer.zero_grad()
+    return loss</code></pre>
+
+        <h3>LIBERO eval / online rollout</h3>
+        <pre><code class="language-python">def libero_rollout(env, policy_client, task_description, init_state):
+    # 1. Reset simulator and wait for objects to settle.
+    obs = env.set_init_state(init_state)
+    for _ in range(num_steps_wait):
+        obs, reward, done, info = env.step(LIBERO_DUMMY_ACTION)
+
+    action_plan = deque()
+    while t &lt; max_steps:
+        if len(action_plan) == 0:
+            # 2. Build model observation from current environment state.
+            image = rotate_180(obs["agentview_image"])
+            wrist = rotate_180(obs["robot0_eye_in_hand_image"])
+            state = concat(eef_pos, quat_to_axis_angle(eef_quat), gripper_qpos)
+
+            # 3. Send a single observation and task prompt to the websocket policy server.
+            element = {
+                "observation/image": image,
+                "observation/wrist_image": wrist,
+                "observation/state": state,
+                "prompt": task_description,
+            }
+            action_chunk = policy_client.infer(element)["actions"]
+
+            # 4. Execute only the first few actions, then replan from fresh images.
+            action_plan.extend(action_chunk[:replan_steps])
+
+        # 5. Step LIBERO with a 7-dim action.
+        action = action_plan.popleft()
+        obs, reward, done, info = env.step(action.tolist())
+        if done:
+            return True
+    return False</code></pre>
+
+        <h3>Bridge/Simpler 风格 online rollout</h3>
+        <pre><code class="language-python">def bridge_online_rollout(env, env_adapter, client, instruction):
+    # 1. Convert environment-specific observation to policy input.
+    inputs = env_adapter.preprocess(env, obs, instruction)
+
+    # 2. Query remote policy server for an action chunk.
+    action_chunk = client.infer(inputs)["actions"]
+
+    # 3. Convert policy action to environment controller action.
+    env_actions = env_adapter.postprocess(action_chunk)
+
+    # 4. Execute the first act_steps actions, record reward/success/video, then re-query.
+    for action in env_actions[:act_steps]:
+        obs, reward, done, info = env.step(action)
+        if done:
+            break</code></pre>
+        <p>第三段伪代码对应本地 <code>eval_client_bridge.py</code> 的在线闭环思路：环境 adapter 负责把不同平台观测转换成 policy 输入，policy server 只暴露 <code>client.infer(inputs)["actions"]</code>，postprocess 再把 action 转回控制器坐标。</p>
+    </section>
+
+    <section id="implementation">
+        <h2>实现证据与代码映射</h2>
+        <table>
+            <thead>
+                <tr><th>主题</th><th>关键文件 / 行号</th><th>恢复出的事实</th></tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>官方 LIBERO transform</td>
+                    <td><code>22_openpi_mlu/src_snapshot/src/openpi/policies/libero_policy.py:10-82</code></td>
+                    <td>旧模型输入 <code>state(8)</code>、两路有效图像、右腕零 padding；输出前 7 维动作。</td>
+                </tr>
+                <tr>
+                    <td>官方数据 conversion</td>
+                    <td><code>07_openpi_eval_and_deployment_clients/examples/libero/convert_libero_data_to_lerobot.py</code></td>
+                    <td>OpenVLA modified LIBERO RLDS 转 LeRobot，features 为 image/wrist/state/actions。</td>
+                </tr>
+                <tr>
+                    <td>本地官方兼容 config</td>
+                    <td><code>04.../config.py:1395-1474</code>、<code>2037-2108</code></td>
+                    <td><code>LeRobotLiberoDataConfig</code> 与 <code>pi05_libero</code>、<code>pi05_libero_qwen_vl</code>。</td>
+                </tr>
+                <tr>
+                    <td>本地 XE-LIBERO config</td>
+                    <td><code>04.../config.py:1294-1390</code>、<code>2110-2207</code></td>
+                    <td><code>LeRobotXELiberoDataConfig</code>、<code>pi05_agx_qwenvl_libero_ft</code>，72 维 proprio/action。</td>
+                </tr>
+                <tr>
+                    <td>XE transform</td>
+                    <td><code>07.../policies/xe_policy.py:1-45</code>、<code>514-663</code></td>
+                    <td>双臂 joint/gripper/EE 维度定义；LIBERO 输出抽取 <code>ee_pos+ee_rot+gripper</code>。</td>
+                </tr>
+                <tr>
+                    <td>训练 collator 与 loss</td>
+                    <td><code>04.../train_pytorch_qwen3_fast_zhi.py:139-256</code>、<code>3375-3436</code></td>
+                    <td>训练/推理 collator 区分、<code>empty_action_inputs</code>、<code>mask_pad_image</code>、总 loss 组合。</td>
+                </tr>
+                <tr>
+                    <td>QwenVL action expert</td>
+                    <td><code>04.../pizero_qwenvl_fast_fortrainer.py:40-49</code>、<code>166-225</code>、<code>4681-4716</code>、<code>4894-5107</code></td>
+                    <td>QwenVLA processor、DA3 fast vision backend、bidirectional mask、action decoder、sample_actions。</td>
+                </tr>
+                <tr>
+                    <td>Serve/eval action mask</td>
+                    <td><code>04.../policy_config.py:112-245</code>、<code>302-335</code></td>
+                    <td>4B/8B/DEBUG_NEW 导入；serve-time 覆盖；LIBERO 只激活 left gripper/EE pos/EE rot。</td>
+                </tr>
+                <tr>
+                    <td>LIBERO eval loop</td>
+                    <td><code>07.../examples/libero/main.py:80-150</code>、<code>201-285</code></td>
+                    <td>suite max steps、websocket client、图像翻转、action chunk replanning、success_rate 写入。</td>
+                </tr>
+                <tr>
+                    <td>并行 eval 脚本</td>
+                    <td><code>07.../evaluation_results/evidence/scripts/houzhi_openpi/test_libero_all_parallel.sh</code></td>
+                    <td>四套 suite，5 groups，每 suite 200 episodes；serve 参数包括 no discrete state、224 input、bidirectional action attention。</td>
+                </tr>
+            </tbody>
+        </table>
+    </section>
+
+    <section id="run-ledger">
+        <h2>Run 总账</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>Run / 阶段</th>
+                    <th>参考来源</th>
+                    <th>数据 / schema</th>
+                    <th>模型 / checkpoint</th>
+                    <th>关键配置</th>
+                    <th>Loss evidence</th>
+                    <th>评估结果</th>
+                    <th>结论</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>官方 π0.5 LIBERO baseline</td>
+                    <td>OpenPI 官方 README</td>
+                    <td>LeRobot LIBERO，8 维 state，7 维 action</td>
+                    <td><code>pi05_libero</code>，<code>gs://openpi-assets/checkpoints/pi05_libero/</code></td>
+                    <td>30k finetune</td>
+                    <td>未在本地同步</td>
+                    <td>Spatial 98.8、Object 98.2、Goal 98.0、LIBERO10 92.4、Avg 96.85</td>
+                    <td>官方上限参照。</td>
+                </tr>
+                <tr>
+                    <td>本地 <code>pi05_libero</code> 兼容阶段</td>
+                    <td><code>config.py:2037-2070</code></td>
+                    <td><code>openvla/modified_libero_rlds</code> LeRobot</td>
+                    <td><code>pi05=True</code>，<code>pytorch_weight_path=pi05_base_pytorch</code></td>
+                    <td><code>action_horizon=10</code>，<code>discrete_state_input=False</code>，30k</td>
+                    <td>未找到对应本地完整日志</td>
+                    <td>未找到本地 success_rate</td>
+                    <td>保留官方 recipe 的本地 PyTorch/Qwen 前置接口。</td>
+                </tr>
+                <tr>
+                    <td>Qwen-VL 2B 直接接入阶段</td>
+                    <td><code>config.py:2072-2108</code></td>
+                    <td>旧 LIBERO LeRobot schema</td>
+                    <td><code>vl_backbone="qwen"</code>，<code>Qwen/Qwen3-VL-2B-Instruct</code></td>
+                    <td><code>qwen_load_weights=True</code>，batch 256</td>
+                    <td>未找到对应本地完整日志</td>
+                    <td>未找到本地 success_rate</td>
+                    <td>证明尝试把 Qwen 作为 VLM backbone 接入官方式 7/8 维 LIBERO。</td>
+                </tr>
+                <tr>
+                    <td>XE/QwenVLA 72 维统一阶段</td>
+                    <td><code>pi05_agx_qwenvl_libero_ft</code></td>
+                    <td>XE-LIBERO schema，72 维 pad/mask</td>
+                    <td>QwenVLA / PiZero，<code>action_dim=72</code></td>
+                    <td><code>action_horizon=10</code>，<code>use_eef_pos_only</code> 可选</td>
+                    <td>见后续 run</td>
+                    <td>见 <code>h4b_x_new</code> 与 8B x_new</td>
+                    <td>本地项目的真正主线。</td>
+                </tr>
+                <tr>
+                    <td><code>448_wo_pretrain_15000_exact</code></td>
+                    <td>W&B requested summary</td>
+                    <td>XE-LIBERO，448 input</td>
+                    <td>QwenVLA no pretrain 448 run</td>
+                    <td>bidirectional、right wrist fix、no discrete state</td>
+                    <td>step 0 loss 1.3211；output max step 2；OOM</td>
+                    <td>eval 目录 exact；但训练基本未推进</td>
+                    <td>448 显存/稳定性风险高，不能作为有效训练。</td>
+                </tr>
+                <tr>
+                    <td><code>448_pretrain_15000_candidate</code></td>
+                    <td>W&B requested summary</td>
+                    <td>XE-LIBERO，448 input</td>
+                    <td>pretrain candidate</td>
+                    <td>候选匹配，不是 exact eval dir match</td>
+                    <td>step 55500 loss 0.0450；checkpoint 55000；traceback/has_output</td>
+                    <td>部分 eval logs 显示 448 pretrain LIBERO10 0.7600、spatial 0.9150 等，但本报告只作候选证据</td>
+                    <td>预训练有帮助的迹象，但 evidence 不能闭合为精确 run。</td>
+                </tr>
+                <tr>
+                    <td><code>224_h10_40000_candidate</code></td>
+                    <td>W&B requested summary + project README</td>
+                    <td>XE-LIBERO，224 input，h10</td>
+                    <td>QwenVLA with pretrain candidate</td>
+                    <td>mask pad image、bidirectional、right wrist fix、no discrete state</td>
+                    <td>step 10800 loss 0.0300；checkpoint 10000；OOM after 10000</td>
+                    <td>根 README 记录 224 h10/40k：Goal 0.99、Object 0.995、Spatial 0.98、LIBERO10 0.93</td>
+                    <td>可能是早期强结果；但 loss 与 eval 精确关联仍需完整远端证据。</td>
+                </tr>
+                <tr>
+                    <td><code>h4b_x_new_10000</code></td>
+                    <td>2026-06-21 evaluation alignment</td>
+                    <td>XE-LIBERO eval</td>
+                    <td>4B QwenVLA x_new</td>
+                    <td>并行 eval，4 suites x 200 episodes</td>
+                    <td>未找到对应完整 loss 曲线</td>
+                    <td>总计 362/800 = 0.4525；LIBERO10 0.395、Goal 0.06、Object 0.65、Spatial 0.705</td>
+                    <td>比 image-only / image-a5 / 早期 8B 代表 run 明显更强。</td>
+                </tr>
+                <tr>
+                    <td><code>debug_224_8b...x_new/15000</code></td>
+                    <td>2026-06-28 与 2026-07-02 核对</td>
+                    <td>XE-LIBERO eval</td>
+                    <td>8B QwenVLA x_new，pretrain，224</td>
+                    <td><code>1e-4 -> 2.5e-5</code>，slowfast2，bidirectional，zero right wrist fix</td>
+                    <td>未找到本地完整 loss 曲线</td>
+                    <td>LIBERO10 0.475、Goal 0.130、Object 0.865、Spatial 0.755，估计 445/800 = 0.55625</td>
+                    <td>当前最有代表性的本地最新结果；Object/Spatial 强，Goal 仍弱。</td>
+                </tr>
+            </tbody>
+        </table>
+    </section>
+
+    <section id="runs">
+        <h2>逐 Run 详细记录</h2>
+        <h3>阶段 0：官方 π0.5-LIBERO recipe</h3>
+        <p><strong>目标与参考来源：</strong>官方 OpenPI 将 LIBERO 作为 fine-tuning 教程，展示如何把 RLDS 数据转成 LeRobot，再用 <code>pi05_libero</code> config 微调 π0.5。官方 baseline 的意义是告诉我们，在标准 7/8 维 LIBERO 接口和官方 checkpoint 下，benchmark 可以达到约 96.85 平均 success rate。</p>
+        <p><strong>输入输出：</strong>旧模型吸收 <code>image</code>、<code>wrist_image</code>、<code>state(8)</code>、<code>prompt</code>；训练目标为 <code>actions(7)</code>；eval 时 policy server 返回 action chunk，<code>LiberoOutputs</code> 取前 7 维。</p>
+        <p><strong>设计结论：</strong>官方 recipe 的设计很窄但稳定：它完全围绕 LIBERO 单臂 EEF control 写输入输出。若目标只是 LIBERO 分数，它是强 baseline；若目标是统一多平台 QwenVLA，则需要本地后续改造。</p>
+
+        <h3>阶段 1：Qwen-VL 进入官方式 LIBERO</h3>
+        <p><strong>目标与参考来源：</strong><code>pi05_libero_qwen_vl</code> 将 <code>vl_backbone="qwen"</code>、<code>qwen_model_name="Qwen/Qwen3-VL-2B-Instruct"</code> 写入 config。这个阶段的核心是先替换 VLM backbone，而不是大改动作空间。</p>
+        <p><strong>为什么这样做：</strong>Qwen3-VL 模型卡强调文本理解、视觉感知、空间/视频动态理解和 agent interaction 能力。对 LIBERO 这种语言条件视觉操作任务，接入 Qwen 的动机是让模型从更强 VLM 获得语义 grounding。</p>
+        <p><strong>不足：</strong>本地 evidence 没有找到该 config 对应的完整训练 loss 和 success_rate，因此该阶段只能作为架构路线证据，不能作为结果结论。</p>
+
+        <h3>阶段 2：XE/QwenVLA 72 维统一接口</h3>
+        <p><strong>目标与参考来源：</strong><code>pi05_agx_qwenvl_libero_ft</code> 是本地最关键的项目 config。它将 <code>qwen_vl=True</code>、<code>proprio_dim=72</code>、<code>action_dim=72</code>、<code>action_horizon=10</code> 和 <code>LeRobotXELiberoDataConfig</code> 组合起来。</p>
+        <p><strong>改进内容：</strong>把 LIBERO 数据变成本地统一格式：三相机字段、状态拆分字段、动作拆分字段、task prompt。训练时通过 padding/mask 处理无关维，eval 时通过 <code>action_mask_step</code> 只让 left gripper、left EE pos、left EE rot 参与采样和输出。</p>
+        <p><strong>为什么这样做：</strong>这不是为了 LIBERO 本身最简化，而是为了让模型成为跨 embodiment 的 VLA。LIBERO 的 7 维动作只是统一 72 维空间中的一个投影：</p>
+        \[
+        a^{libero}
+        =
+        P_{libero} a^{72},
+        \quad
+        P_{libero} =
+        \left[
+        P_{ee\_pos};
+        P_{ee\_rot};
+        P_{gripper}
+        \right].
+        \]
+        <p>变量解释：\(a^{72}\) 是模型输出的统一动作向量，\(P_{libero}\) 是由 <code>XELiberoOutputs</code> 和 <code>action_mask_step</code> 实现的投影/抽取算子。实现映射：代码中并没有显式矩阵，而是通过 slice 抽取 EE pos、EE rot 和 gripper。</p>
+
+        <h3>阶段 3：448 输入与预训练对比</h3>
+        <p><strong>目标：</strong>尝试更高分辨率视觉输入和预训练 checkpoint，以提升细粒度视觉定位和长程任务表现。</p>
+        <p><strong>记录：</strong><code>448_wo_pretrain_15000_exact</code> 是 exact exp name match，但训练在 step 0/2 附近 OOM，loss 1.3211，不能说明模型有效学习。<code>448_pretrain_15000_candidate</code> 有 step 55500、loss 0.0450、checkpoint 55000 的 candidate evidence，但与 eval dir 不是 exact match。</p>
+        <p><strong>原因分析：</strong>448 输入会显著增加视觉 token 和显存压力；QwenVL、fast vision、action stream FP32、bidirectional attention 叠加后，OOM 是合理风险。预训练 candidate 的低 loss 暗示初始化重要，但本报告不把它当成精确可复现结论。</p>
+
+        <h3>阶段 4：224 h10 稳定化、right wrist fix、no discrete state</h3>
+        <p><strong>目标：</strong>从 448 回到 224，提高训练稳定性；同时修复缺失右腕图像、关闭离散 state prompt、使用 bidirectional action attention 和 action stream FP32。</p>
+        <p><strong>训练命令证据：</strong><code>train_sf_libero_cyx_bidirectional_fix_zero_right_wrist_no_discrete_state_vlm.sh</code> 使用 <code>torchrun --nproc_per_node=8</code>、<code>pi05_agx_qwenvl_libero_ft</code>、batch 512、<code>--mask_pad_image</code>、<code>--data.use_eef_pos_only</code>、<code>--model.action_horizon 10</code>、<code>--model.slowfast=2</code>、<code>--model.no_discrete_state_input</code>、<code>--model.bidirectional_action_attention</code>、<code>--lambda_fast_ce 0</code>、80k steps、224 input。</p>
+        <p><strong>结果证据：</strong>W&B requested summary 中 <code>224_h10_40000_candidate</code> 在 step 10800 summary loss / flow matching loss 为 0.0300，checkpoint 10000 后 OOM。项目根 README 记录 224 h10/40k 有强 LIBERO 成绩：Goal 0.99、Object 0.995、Spatial 0.98、LIBERO10 0.93。</p>
+        <div class="warning">⚠️ 该阶段的 loss summary 与 40k eval 成绩之间，本地 evidence 只能做到 candidate 级关联。报告把它写作“强结果记录存在，但完整对应关系待核实”。</div>
+
+        <h3>阶段 5：4B x_new 与 image-only 对照</h3>
+        <p><strong>目标：</strong>比较完整 XE/QwenVLA x_new 与 image-only、image-a5、早期 8B variant 的实际闭环效果。</p>
+        <p><strong>评估结果：</strong><code>h4b_x_new_10000</code> 四套 suite 合计 <code>362/800 = 0.4525</code>；而 <code>h4b_image_x_40000</code> 为 0.1613、<code>h4b_image_x_a5_40000</code> 为 0.0850、<code>h8b_x_10000</code> 为 0.0988。</p>
+        <p><strong>原因分析：</strong>image-only 结果显著差，说明在 LIBERO 闭环控制中，proprio/action schema、状态到动作的维度对齐、归一化 stats 和 action mask 比“只看图像”更关键。早期 8B 差于 4B x_new 也说明模型参数量不是主因，输入输出适配和训练稳定性更关键。</p>
+
+        <h3>阶段 6：最新 8B x_new / 15000 结果</h3>
+        <p><strong>目标：</strong>在 x_new 路线基础上引入 8B 路径、pretrain、224 input、slowfast2、bidirectional、zero right wrist fix，并用 2026-06-28/07-02 evidence 重新核对。</p>
+        <p><strong>结果：</strong><code>debug_224_8b_maskpadimage_libero_eefpose_1e-4_2.5e-5_sf2_pretrain_bidirectional_fix_zero_right_wrist_x_new/15000</code> 的 success rate 为：LIBERO10 0.4750、Goal 0.1300、Object 0.8650、Spatial 0.7550。假设四套 suite 各 200 episodes，则为 \(95+26+173+151=445\) successes，平均 0.55625。</p>
+        <p><strong>原因分析：</strong>Object 和 Spatial 高，说明视觉定位、物体操作和空间关系已有可用能力；Goal 仍低，说明长程目标条件、动作序列稳定性或任务语义到控制策略的绑定仍是瓶颈。它比 <code>h4b_x_new_10000</code> 的 Object 0.65、Spatial 0.705、LIBERO10 0.395、Goal 0.06 有整体提升，但尚未接近官方 π0.5-LIBERO。</p>
+    </section>
+
+    <section id="curves">
+        <h2>训练 Loss 曲线</h2>
+        <div class="warning">⚠️ 未找到完整可绘制的 W&B/TensorBoard loss 曲线日志。本地只同步了 summary CSV、stdout 片段和少量 run output，因此下图是“可用 scalar 点/片段点”，不是连续训练曲线。横轴是同步到本地的 global step，纵轴是 summary loss 或 stdout loss。</div>
+        <div class="svg-wrap">
+            <svg width="860" height="360" viewBox="0 0 860 360" role="img" aria-label="Loss evidence points">
+                <rect x="0" y="0" width="860" height="360" fill="#ffffff"/>
+                <line x1="70" y1="300" x2="800" y2="300" stroke="#94a3b8" stroke-width="1"/>
+                <line x1="70" y1="35" x2="70" y2="300" stroke="#94a3b8" stroke-width="1"/>
+                <text x="390" y="340" font-size="13" fill="#334155">step（同步到本地的片段点）</text>
+                <text x="12" y="34" font-size="13" fill="#334155">loss</text>
+                <text x="62" y="318" font-size="12" fill="#64748b">0</text>
+                <text x="190" y="318" font-size="12" fill="#64748b">10k</text>
+                <text x="455" y="318" font-size="12" fill="#64748b">30k</text>
+                <text x="735" y="318" font-size="12" fill="#64748b">55.5k</text>
+                <text x="36" y="303" font-size="12" fill="#64748b">0.0</text>
+                <text x="36" y="205" font-size="12" fill="#64748b">0.5</text>
+                <text x="36" y="107" font-size="12" fill="#64748b">1.0</text>
+                <text x="31" y="50" font-size="12" fill="#64748b">1.3</text>
+                <line x1="70" y1="202" x2="800" y2="202" stroke="#e2e8f0" stroke-dasharray="4 4"/>
+                <line x1="70" y1="104" x2="800" y2="104" stroke="#e2e8f0" stroke-dasharray="4 4"/>
+
+                <circle cx="70" cy="41" r="6" fill="#ef4444"/>
+                <text x="86" y="46" font-size="12" fill="#334155">448 wo pretrain exact: step 0, loss 1.3211, OOM</text>
+
+                <circle cx="201" cy="290" r="6" fill="#2563eb"/>
+                <text x="217" y="294" font-size="12" fill="#334155">224 h10 candidate: step 10800, loss 0.0300</text>
+
+                <circle cx="800" cy="291" r="6" fill="#16a34a"/>
+                <text x="500" y="276" font-size="12" fill="#334155">448 pretrain candidate: step 55500, loss 0.0450</text>
+
+                <path d="M70 41 L201 290 L800 291" fill="none" stroke="#cbd5e1" stroke-width="2" stroke-dasharray="6 6"/>
+                <text x="70" y="20" font-size="14" font-weight="650" fill="#18212f">可用训练 loss 片段，不代表同一条连续曲线</text>
+            </svg>
+        </div>
+
+        <h3>评估结果柱状图</h3>
+        <div class="svg-wrap">
+            <svg width="860" height="380" viewBox="0 0 860 380" role="img" aria-label="LIBERO average success bars">
+                <rect x="0" y="0" width="860" height="380" fill="#ffffff"/>
+                <text x="70" y="24" font-size="14" font-weight="650" fill="#18212f">LIBERO 四套 suite 等权平均或官方 average success rate</text>
+                <line x1="70" y1="325" x2="810" y2="325" stroke="#94a3b8"/>
+                <line x1="70" y1="45" x2="70" y2="325" stroke="#94a3b8"/>
+                <text x="30" y="329" font-size="12" fill="#64748b">0.0</text>
+                <text x="30" y="189" font-size="12" fill="#64748b">0.5</text>
+                <text x="30" y="52" font-size="12" fill="#64748b">1.0</text>
+                <line x1="70" y1="185" x2="810" y2="185" stroke="#e2e8f0" stroke-dasharray="4 4"/>
+
+                <rect x="95" y="280" width="75" height="45" fill="#94a3b8"/>
+                <text x="94" y="348" font-size="11" fill="#334155">image_x</text>
+                <text x="105" y="274" font-size="12" fill="#334155">0.1613</text>
+
+                <rect x="205" y="301" width="75" height="24" fill="#cbd5e1"/>
+                <text x="194" y="348" font-size="11" fill="#334155">image_a5</text>
+                <text x="216" y="295" font-size="12" fill="#334155">0.0850</text>
+
+                <rect x="315" y="198" width="75" height="127" fill="#2563eb"/>
+                <text x="309" y="348" font-size="11" fill="#334155">4B x_new</text>
+                <text x="325" y="192" font-size="12" fill="#334155">0.4525</text>
+
+                <rect x="425" y="297" width="75" height="28" fill="#64748b"/>
+                <text x="421" y="348" font-size="11" fill="#334155">8B x old</text>
+                <text x="436" y="291" font-size="12" fill="#334155">0.0988</text>
+
+                <rect x="535" y="169" width="75" height="156" fill="#16a34a"/>
+                <text x="526" y="348" font-size="11" fill="#334155">8B x_new</text>
+                <text x="545" y="163" font-size="12" fill="#334155">0.5563</text>
+
+                <rect x="665" y="54" width="75" height="271" fill="#f97316"/>
+                <text x="655" y="348" font-size="11" fill="#334155">official</text>
+                <text x="672" y="48" font-size="12" fill="#334155">0.9685</text>
+            </svg>
+        </div>
+    </section>
+
+    <section id="eval">
+        <h2>评估环境与结果分析</h2>
+        <h3>评估环境怎么搭</h3>
+        <p>官方 OpenPI LIBERO README 推荐 Docker：初始化 git submodules，给 X11 授权，使用 <code>SERVER_ARGS="--env LIBERO" docker compose -f examples/libero/compose.yml up --build</code>；若 EGL 有问题则使用 <code>MUJOCO_GL=glx</code>。非 Docker 路径使用 Python 3.8 venv、同步 <code>examples/libero/requirements.txt</code> 与 <code>third_party/libero/requirements.txt</code>、安装 <code>packages/openpi-client</code> 和 <code>third_party/libero</code>，一个 terminal 跑 <code>python examples/libero/main.py</code>，另一个 terminal 跑 <code>uv run scripts/serve_policy.py --env LIBERO</code>。</p>
+        <p>本地 Houzhi 并行 eval 脚本进一步做了批量化：四个 suite（<code>libero_spatial</code>、<code>libero_object</code>、<code>libero_goal</code>、<code>libero_10</code>）每套 10 tasks x 20 trials = 200 episodes，并拆成 5 个 group 并行；policy server 通过 <code>serve_policy.py</code> / <code>serve_policy_4b.py</code> / <code>serve_policy_8b.py</code> 启动，传入 <code>--mask_pad_image</code>、<code>--action_horizon</code>、<code>--model-fast-input-size</code>、<code>--no_discrete_state_input</code>、<code>--bidirectional_action_attention</code> 等参数。</p>
+
+        <h3>本地评估结果</h3>
+        <table>
+            <thead>
+                <tr><th>Variant</th><th>LIBERO10</th><th>Goal</th><th>Object</th><th>Spatial</th><th>合计 / 平均</th><th>分析</th></tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><code>h4b_image_x_40000</code></td>
+                    <td>0.000</td><td>0.120</td><td>0.045</td><td>0.480</td><td>129/800 = 0.1613</td>
+                    <td>空间任务尚有一些视觉定位能力，但 Object/Long-horizon 几乎失败，说明 image-only 不够。</td>
+                </tr>
+                <tr>
+                    <td><code>h4b_image_x_a5_40000</code></td>
+                    <td>0.000</td><td>0.110</td><td>0.010</td><td>0.220</td><td>68/800 = 0.0850</td>
+                    <td>a5 变体更弱，说明该方向没有解决状态/动作适配瓶颈。</td>
+                </tr>
+                <tr>
+                    <td><code>h8b_x_10000</code></td>
+                    <td>0.010</td><td>0.080</td><td>0.045</td><td>0.260</td><td>79/800 = 0.0988</td>
+                    <td>早期 8B 并不自动更强，模型大小被 schema、mask、训练稳定性压过。</td>
+                </tr>
+                <tr>
+                    <td><code>h4b_x_new_10000</code></td>
+                    <td>0.395</td><td>0.060</td><td>0.650</td><td>0.705</td><td>362/800 = 0.4525</td>
+                    <td>x_new 的输入输出适配显著改善，Object/Spatial 变成主要强项，Goal 是短板。</td>
+                </tr>
+                <tr>
+                    <td><code>8B x_new / 15000</code></td>
+                    <td>0.475</td><td>0.130</td><td>0.865</td><td>0.755</td><td>估计 445/800 = 0.55625</td>
+                    <td>最新代表结果。Object 很强，Spatial 良好，LIBERO10 可用但不高，Goal 仍弱。</td>
+                </tr>
+                <tr>
+                    <td>官方 π0.5 @ 30k</td>
+                    <td>0.924</td><td>0.980</td><td>0.982</td><td>0.988</td><td>0.9685</td>
+                    <td>官方窄接口 baseline 仍远高于本地 QwenVLA 统一接口。</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <h3>0 / 低 success 的候选原因分析</h3>
+        <table>
+            <thead>
+                <tr><th>假设</th><th>证据</th><th>修复动作 / 改进</th><th>再评估结果</th><th>状态</th></tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>只看图像，proprio/action schema 不足</td>
+                    <td>image-only 0.1613，image-a5 0.0850，x_new 0.4525。</td>
+                    <td>引入 XE state/action 拆分、72 维 pad/mask、action_mask_step。</td>
+                    <td>4B x_new 明显提升，8B x_new 进一步到约 0.5563。</td>
+                    <td>基本确认。</td>
+                </tr>
+                <tr>
+                    <td>右腕缺失或 padding 图像被误当有效图像</td>
+                    <td>训练和 README 多次出现 right wrist zero fix、mask_pad_image。</td>
+                    <td>右腕置零、mask false、serve-time <code>drop_right_camera</code> / <code>mask_pad_image</code>。</td>
+                    <td>x_new 结果明显优于早期 image/x 变体。</td>
+                    <td>部分确认。</td>
+                </tr>
+                <tr>
+                    <td>448 输入导致显存不稳</td>
+                    <td>448 exact run step 0/2 OOM，loss 1.3211。</td>
+                    <td>回到 224 输入，控制 max seq len，保留 slowfast/fast vision。</td>
+                    <td>224 candidate loss 0.0300；最新 8B 224 能完成全套 eval。</td>
+                    <td>确认。</td>
+                </tr>
+                <tr>
+                    <td>Goal suite 需要更强语言目标与长程动作绑定</td>
+                    <td>4B x_new Goal 0.06；8B x_new Goal 0.13，远低于 Object/Spatial。</td>
+                    <td>当前改造主要提升视觉/动作接口，还缺专门 goal-conditioned long-horizon 调优。</td>
+                    <td>Goal 有提升但仍弱。</td>
+                    <td>开放问题。</td>
+                </tr>
+                <tr>
+                    <td>离线 loss 低不等价于闭环成功</td>
+                    <td>candidate loss 可低至 0.0300/0.0450，但完整官方级 success 未闭合。</td>
+                    <td>需要每个 checkpoint 固定 norm stats、serve args、eval group、视频和 success_rate 绑定。</td>
+                    <td>目前 evidence 仍有 candidate 匹配。</td>
+                    <td>开放问题。</td>
+                </tr>
+            </tbody>
+        </table>
+    </section>
+
+    <section id="comparison">
+        <h2>方法对比与选择建议</h2>
+        <table>
+            <thead>
+                <tr><th>路线</th><th>优点</th><th>缺点</th><th>适合目标</th></tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>官方 π0.5-LIBERO 窄接口</td>
+                    <td>baseline 极高，输入输出简单，最适合刷 LIBERO 分数。</td>
+                    <td>只服务 LIBERO 单臂 EEF schema，不直接解决本地多 embodiment 统一。</td>
+                    <td>复现官方 benchmark、建立 sanity upper bound。</td>
+                </tr>
+                <tr>
+                    <td>Qwen-VL + 旧 7/8 维 LIBERO</td>
+                    <td>改造少，方便验证 Qwen VLM backbone。</td>
+                    <td>无法充分复用本地 72 维统一动作系统。</td>
+                    <td>做 Qwen backbone ablation。</td>
+                </tr>
+                <tr>
+                    <td>QwenVLA + XE 72 维统一接口</td>
+                    <td>跨平台扩展性强，能把 LIBERO 接入本地 AGX/XE/QwenVLA 主线。</td>
+                    <td>适配链长，action mask、padding、norm、camera key 易错，当前分数低于官方。</td>
+                    <td>本地项目长期主线。</td>
+                </tr>
+                <tr>
+                    <td>448 高分辨率</td>
+                    <td>潜在视觉细节更强。</td>
+                    <td>OOM 和 token 长度压力显著。</td>
+                    <td>在显存和完整日志可控后再做。</td>
+                </tr>
+                <tr>
+                    <td>224 稳定训练 + x_new</td>
+                    <td>当前 evidence 最稳，8B x_new 有最好本地代表结果。</td>
+                    <td>Goal suite 仍弱，离官方差距大。</td>
+                    <td>继续做 ablation 和可复现 eval 的首选。</td>
+                </tr>
+            </tbody>
+        </table>
+        <p>下一步建议按“先闭合证据，再调模型”的顺序推进：固定一个 8B x_new checkpoint，导出完整训练 scalar、serve args、norm stats hash、eval split、每 suite success_rate 和 rollout 视频索引；随后只做单变量 ablation，例如 <code>bidirectional_image_action_attention</code>、<code>drop_right_camera</code>、<code>no_discrete_state_input</code>、<code>action_horizon</code>、<code>fast_vision_backend</code>。</p>
+    </section>
+
+    <section id="recovery">
+        <h2>恢复工作所需清单</h2>
+        <ol>
+            <li>确认工作区支线：训练证据在 <code>04_openpi_fast_zhi_training</code>，eval/serve 在 <code>07_openpi_eval_and_deployment_clients</code>，官方 snapshot 在 <code>22_openpi_mlu</code>。</li>
+            <li>确认官方 upper bound：用 OpenPI <code>pi05_libero</code> 和 <code>gs://openpi-assets/checkpoints/pi05_libero/</code> 作为 sanity baseline。</li>
+            <li>确认数据：旧格式为 <code>openvla/modified_libero_rlds</code> 四个 no_noops RLDS；本地训练通过 <code>LeRobotXELiberoDataConfig</code> 转成 XE schema。</li>
+            <li>确认模型：最终代表路线为 <code>pi05_agx_qwenvl_libero_ft</code>，<code>qwen_vl=True</code>，<code>proprio_dim=72</code>，<code>action_dim=72</code>，<code>action_horizon=10</code>。</li>
+            <li>确认输出：LIBERO eval 不能直接消费 72 维动作，必须通过 <code>action_mask_step</code> 和 <code>XELiberoOutputs</code> 抽成 7 维。</li>
+            <li>确认 eval：policy server 与 LIBERO client 通过 websocket 交互；每套 suite 200 episodes；每次记录 serve args、norm stats 路径、checkpoint path、group split。</li>
+            <li>补齐证据：同步完整 W&B/TensorBoard scalar、checkpoint metadata、success_rate、videos、stderr/stdout，避免 candidate 匹配。</li>
+        </ol>
+    </section>
+
+    <section id="references">
+        <h2>参考文献（References）</h2>
+        <ol>
+            <li>[1] Physical Intelligence, "openpi official repository", 2025-2026. <a href="https://github.com/Physical-Intelligence/openpi">链接</a></li>
+            <li>[2] Physical Intelligence, "OpenPI LIBERO example README", 2026. <a href="https://github.com/Physical-Intelligence/openpi/blob/main/examples/libero/README.md">链接</a></li>
+            <li>[3] Kevin Black et al., "\(\pi_0\): A Vision-Language-Action Flow Model for General Robot Control", 2024. <a href="https://arxiv.org/abs/2410.24164">链接</a></li>
+            <li>[4] Physical Intelligence et al., "\(\pi_{0.5}\): a Vision-Language-Action Model with Open-World Generalization", 2025. <a href="https://arxiv.org/abs/2504.16054">链接</a></li>
+            <li>[5] Bo Liu et al., "LIBERO: Benchmarking Knowledge Transfer for Lifelong Robot Learning", NeurIPS 2023. <a href="https://arxiv.org/abs/2306.03310">链接</a></li>
+            <li>[6] Lifelong-Robot-Learning, "LIBERO official GitHub repository", 2023-2026. <a href="https://github.com/Lifelong-Robot-Learning/LIBERO">链接</a></li>
+            <li>[7] OpenVLA Collaboration, "openvla/modified_libero_rlds dataset card", 2024. <a href="https://huggingface.co/datasets/openvla/modified_libero_rlds">链接</a></li>
+            <li>[8] Moo Jin Kim et al., "OpenVLA: An Open-Source Vision-Language-Action Model", 2024. <a href="https://arxiv.org/abs/2406.09246">链接</a></li>
+            <li>[9] Qwen Team, "Qwen/Qwen3-VL-2B-Instruct model card", 2025-2026. <a href="https://huggingface.co/Qwen/Qwen3-VL-2B-Instruct">链接</a></li>
+            <li>[10] Yaron Lipman et al., "Flow Matching for Generative Modeling", ICLR 2023. <a href="https://arxiv.org/abs/2210.02747">链接</a></li>
+            <li>[11] 本地证据：<code>C:\Users\mousongzhe\pryer\project\04_openpi_fast_zhi_training\remote_evidence\fast_zhi_training_20260702_cycle\evidence\code\houzhi_openpi\config.py</code>。</li>
+            <li>[12] 本地证据：<code>C:\Users\mousongzhe\pryer\project\04_openpi_fast_zhi_training\remote_evidence\fast_zhi_training_20260702_cycle\evidence\code\houzhi_openpi\train_pytorch_qwen3_fast_zhi.py</code>。</li>
+            <li>[13] 本地证据：<code>C:\Users\mousongzhe\pryer\project\04_openpi_fast_zhi_training\remote_evidence\fast_zhi_training_20260702_cycle\evidence\code\houzhi_openpi\pizero_qwenvl_fast_fortrainer.py</code>。</li>
+            <li>[14] 本地证据：<code>C:\Users\mousongzhe\pryer\project\04_openpi_fast_zhi_training\remote_evidence\fast_zhi_training_20260702_cycle\evidence\code\houzhi_openpi\policy_config.py</code>。</li>
+            <li>[15] 本地证据：<code>C:\Users\mousongzhe\pryer\project\07_openpi_eval_and_deployment_clients\remote_evidence\eval_deploy_baseline\evidence\code\houzhi_eval_deploy\policies\xe_policy.py</code>。</li>
+            <li>[16] 本地证据：<code>C:\Users\mousongzhe\pryer\project\07_openpi_eval_and_deployment_clients\examples\libero\main.py</code> 与 <code>test_libero_all_parallel.sh</code>。</li>
+            <li>[17] 本地证据：<code>C:\Users\mousongzhe\pryer\project\00_workspace_review\alignment_records\evaluation_alignment\derived\houzhi_libero_variant_summary.csv</code> 与 <code>houzhi_libero_success_rates.csv</code>。</li>
+            <li>[18] 本地证据：<code>C:\Users\mousongzhe\pryer\project\04_openpi_fast_zhi_training\remote_evidence\fast_zhi_training_current\evidence\logs\houzhi_openpi\wandb_training_requested\summary.csv</code>。</li>
+            <li>[19] 本地证据：<code>C:\Users\mousongzhe\pryer\project\07_openpi_eval_and_deployment_clients\remote_evidence\evaluation_20260628_cycle\README.md</code> 与项目根 <code>README.md</code> 的 2026-07-02 核对记录。</li>
+        </ol>
+    </section>
+</article>
+</body>
+</html>

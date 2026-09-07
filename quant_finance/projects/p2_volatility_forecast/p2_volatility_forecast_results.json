@@ -1,0 +1,17 @@
+{
+  "n": 520,
+  "train": 360,
+  "test": 160,
+  "ewma_lambda": 0.94,
+  "garch_params": {
+    "omega": 0.0054884908385980135,
+    "alpha": 0.2,
+    "beta": 0.7799999999999999
+  },
+  "qlike": {
+    "ewma": 1.3581167034543593,
+    "garch": 1.4049469067277396
+  },
+  "forecast_positive": true,
+  "split_rule": "fit parameters using returns strictly before test; evaluate one-step variance forecasts"
+}

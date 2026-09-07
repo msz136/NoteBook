@@ -1,0 +1,14 @@
+{
+  "backtest": {
+    "cost_bps_per_turnover": 5,
+    "mean_daily": 0.0001430661659306615,
+    "model_sha256": "06208613033ba8423725c43b2efd4f92531afb23c10f57f5ae5aee36b42629b3",
+    "sharpe_annualized": 0.23956731074768528,
+    "test_end_exclusive": 499,
+    "test_start": 350,
+    "total_turnover": 23.0,
+    "vol_daily": 0.009480028679172104
+  },
+  "boundary": "Qlib not installed; no real alpha or production deployment",
+  "verdict": "PIPELINE_EXECUTED_SYNTHETIC"
+}

@@ -1,0 +1,548 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="generator" content="quant_finance ARIS render-html (academic, v1)">
+  <meta name="source-file" content="p5_leakage_free_alpha_report.md">
+  <meta name="source-sha256" content="03415539e4e4ebc3bf38afe673d8dc4d1662cc59ffc4328cd3c837d9f36baa37">
+  <title>P5 无泄漏 Alpha 研究：冻结切分、实验账本与成本后测试</title>
+  <script>
+    window.MathJax = {
+      tex: {inlineMath: [['\\(', '\\)'], ['$', '$']], displayMath: [['\\[', '\\]'], ['$$', '$$']]},
+      options: {skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']}
+    };
+  </script>
+  <script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+  <style>
+/* ARIS academic v1 — quant_finance canonical inline stylesheet. */
+:root {
+  --paper: #fdfcf7;
+  --paper-soft: #f4f1ea;
+  --ink: #1a1a1a;
+  --muted: #625f58;
+  --blue: #1a4a8c;
+  --blue-soft: #dce7f4;
+  --rust: #b8390e;
+  --rule: #b9b2a6;
+  --serif: "Source Serif Pro", "Source Serif 4", "Crimson Pro", Georgia, "Songti SC", STSong, serif;
+  --mono: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  margin: 0;
+  color: var(--ink);
+  background: var(--paper);
+  font-family: var(--serif);
+  font-size: 16px;
+  line-height: 1.8;
+}
+a { color: var(--blue); text-underline-offset: 0.16em; }
+a:hover { color: var(--rust); }
+
+.page-shell {
+  width: min(1280px, calc(100% - 40px));
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: 260px minmax(0, 1fr);
+  gap: 42px;
+  align-items: start;
+}
+.toc {
+  position: sticky;
+  top: 24px;
+  max-height: calc(100vh - 48px);
+  overflow-y: auto;
+  padding: 28px 18px 24px 0;
+  color: var(--muted);
+}
+.toc-title {
+  margin: 0 0 0.65rem;
+  color: var(--blue);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+.toc ol { margin: 0; padding: 0; list-style: none; }
+.toc li { margin: 0.24rem 0; line-height: 1.35; }
+.toc a { color: inherit; text-decoration: none; }
+.toc a:hover { color: var(--rust); }
+.toc .depth-3 { padding-left: 0.85rem; font-size: 0.92rem; }
+.toc .depth-4 { padding-left: 1.55rem; font-size: 0.86rem; }
+
+main {
+  min-width: 0;
+  margin: 24px 0 64px;
+  padding: 48px clamp(32px, 5vw, 72px) 64px;
+  background: var(--paper-soft);
+  border: 1px solid #ded8cd;
+  box-shadow: 0 16px 44px rgba(55, 47, 36, 0.08);
+}
+article { min-width: 0; }
+.eyebrow {
+  margin: 0 0 0.45rem;
+  color: var(--rust);
+  font-family: var(--serif);
+  font-size: 0.76rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+.subtitle { margin: 0 0 0.5rem; color: var(--muted); font-size: 1.05rem; }
+.meta {
+  margin: 0 0 2.2rem;
+  color: var(--muted);
+  font-size: 0.86rem;
+}
+h1 {
+  margin: 0 0 0.7rem;
+  padding: 0 0 0.8rem;
+  color: var(--ink);
+  border-bottom: 5px double var(--blue);
+  font-size: clamp(2rem, 5vw, 3.1rem);
+  line-height: 1.14;
+  letter-spacing: -0.025em;
+}
+h2 {
+  margin: 3.2rem 0 1.15rem;
+  padding-bottom: 0.42rem;
+  border-bottom: 1px solid var(--rule);
+  color: var(--ink);
+  font-size: 1.62rem;
+  line-height: 1.35;
+}
+h3 { margin: 2.15rem 0 0.8rem; color: var(--blue); font-size: 1.28rem; line-height: 1.4; }
+h4 { margin: 1.55rem 0 0.6rem; color: var(--ink); font-size: 1.06rem; line-height: 1.45; }
+p, ul, ol, blockquote { margin: 0 0 1rem; }
+ul, ol { padding-left: 1.5rem; }
+li + li { margin-top: 0.24rem; }
+strong { color: #111; }
+
+code {
+  font-family: var(--mono);
+  font-size: 0.9em;
+  background: #e9e5dc;
+  border-radius: 3px;
+  padding: 0.1em 0.32em;
+}
+pre {
+  max-width: 100%;
+  margin: 1.2rem 0 1.5rem;
+  padding: 1rem 1.1rem;
+  overflow-x: auto;
+  background: #faf9f5;
+  border: 1px solid #d8d2c7;
+  border-left: 4px solid var(--blue);
+  border-radius: 2px;
+  line-height: 1.55;
+}
+pre code {
+  display: block;
+  min-width: max-content;
+  padding: 0;
+  color: #383a42;
+  background: transparent;
+}
+/* Highlight.js atom-one-light-compatible colors for portable, inline styling. */
+.hljs-comment, .hljs-quote { color: #a0a1a7; font-style: italic; }
+.hljs-keyword, .hljs-selector-tag, .hljs-literal { color: #a626a4; }
+.hljs-string, .hljs-regexp { color: #50a14f; }
+.hljs-number, .hljs-symbol { color: #986801; }
+.hljs-title, .hljs-section, .hljs-function { color: #4078f2; }
+
+.formula {
+  max-width: 100%;
+  margin: 1.25rem 0 1.5rem;
+  padding: 1rem 1.15rem;
+  overflow-x: auto;
+  background: #faf9f5;
+  border: 1px solid #d8d2c7;
+  border-left: 4px solid var(--blue);
+}
+.formula mjx-container { min-width: max-content; }
+
+.table-wrap { max-width: 100%; margin: 1.25rem 0 1.6rem; overflow-x: auto; }
+table { width: 100%; min-width: 640px; border-collapse: collapse; font-size: 0.93rem; line-height: 1.55; }
+th, td { padding: 0.68rem 0.78rem; border: 1px solid #aaa398; text-align: left; vertical-align: top; }
+thead th { color: #fff; background: var(--blue); font-weight: 700; }
+tbody tr:nth-child(even) { background: #ebe6dc; }
+tbody tr:nth-child(odd) { background: #f8f5ee; }
+
+.note, .warning, .evidence, blockquote {
+  margin: 1.2rem 0 1.45rem;
+  padding: 0.85rem 1rem;
+  background: #f8f5ee;
+  border: 1px solid #d2cbc0;
+  border-left: 4px solid var(--blue);
+}
+.warning { border-left-color: var(--rust); background: #fff2e9; }
+.evidence { border-left-color: #6b5b8e; background: #f2eef8; }
+.note > :last-child, .warning > :last-child, .evidence > :last-child, blockquote > :last-child { margin-bottom: 0; }
+.back-to-top { display: inline-block; margin-top: 2rem; font-size: 0.88rem; }
+
+@media (max-width: 900px) {
+  .page-shell { width: min(100% - 24px, 820px); grid-template-columns: 1fr; gap: 0; }
+  .toc { position: static; max-height: none; padding: 20px 8px 4px; columns: 2; column-gap: 1.5rem; }
+  .toc-title { column-span: all; }
+  main { margin-top: 16px; padding: 34px clamp(18px, 5vw, 40px) 48px; }
+  h1 { font-size: clamp(1.8rem, 8vw, 2.55rem); }
+  table { min-width: 600px; }
+  pre, .formula, .table-wrap { overflow-x: auto; }
+}
+
+@media (max-width: 560px) {
+  .toc { columns: 1; }
+  .page-shell { width: calc(100% - 12px); }
+  main { padding-left: 15px; padding-right: 15px; }
+}
+
+@media print {
+  body { background: #fff; }
+  .page-shell { display: block; width: 100%; }
+  .toc, .back-to-top { display: none !important; }
+  main { margin: 0; padding: 0; background: #fff; border: 0; box-shadow: none; }
+  a { color: inherit; text-decoration: none; }
+  pre, .formula, table { break-inside: avoid; }
+}
+
+    .next-chapter { margin: 2.5rem 0 1rem; padding: 1rem 1.2rem; border: 1px solid #b9c9df; border-left: 4px solid #1a4a8c; background: #f4f1ea; display: flex; gap: .75rem; align-items: baseline; justify-content: space-between; }
+    .next-chapter-label { color: #1a4a8c; font-weight: 700; white-space: nowrap; }
+    .next-chapter a { color: #1a4a8c; font-weight: 700; text-decoration: none; }
+    .next-chapter a:hover, .next-chapter a:focus { color: #b8390e; text-decoration: underline; }
+    @media (max-width: 900px) { .next-chapter { display: block; } .next-chapter-label { display: block; margin-bottom: .35rem; } }
+  </style>
+</head>
+<body id="top">
+  <div class="page-shell">
+    <nav class="toc" aria-label="目录">
+      <p class="toc-title">Contents</p>
+      <ol>
+<li class="depth-2"><a href="#question">问题（Question）</a></li>
+<li class="depth-2"><a href="#background">背景与动机（Background &amp; Motivation）</a></li>
+<li class="depth-2"><a href="#concepts">冻结协议</a></li>
+<li class="depth-2"><a href="#methods">方法与数学形式（Methods &amp; Mathematical Form）</a></li>
+<li class="depth-2"><a href="#ledger">实验账本</a></li>
+<li class="depth-2"><a href="#pipeline">Pipeline 与伪代码（Pipeline &amp; Pseudocode）</a></li>
+<li class="depth-2"><a href="#implementation">实现证据与结果（Implementation &amp; Results）</a></li>
+<li class="depth-2"><a href="#comparison">失败案例与审计边界</a></li>
+<li class="depth-2"><a href="#exercises">练习与答案边界（Exercises）</a></li>
+<li class="depth-2"><a href="#answer-boundary">答案索引（Answer Boundary）</a></li>
+<li class="depth-2"><a href="#risks">风险与后续建议（Risks &amp; Next）</a></li>
+<li class="depth-2"><a href="#references">参考文献（References）</a></li>
+      </ol>
+    </nav>
+    <main>
+      <article>
+        <header>
+          <p class="eyebrow">Quant Finance · Leakage-Free Alpha Research</p>
+          <p class="subtitle">六个候选只在 validation 排名，失败策略保留，最终 test 只打开一次</p>
+          <h1>P5 无泄漏 Alpha 研究：冻结切分、实验账本与成本后测试</h1>
+          <p class="meta">发布日期：2026-07-22 · 证据截止：2026-07-22 · 源文件 SHA-256：<code>03415539e4e4ebc3bf38afe673d8dc4d1662cc59ffc4328cd3c837d9f36baa37</code></p>
+        </header>
+<h2 id="question">问题（Question）</h2>
+<p>如何把“我找到一个表现好的信号”改写成可审计研究？本项目在合成序列上预先冻结 train/validation/test、20 日 embargo、六个候选和 5 bps 换手成本；只用 validation 净 Sharpe 选择候选，保留所有失败记录，最后只打开一次 test。</p>
+<h2 id="background">背景与动机（Background &amp; Motivation）</h2>
+<p>回测过拟合往往来自反复查看同一测试集、删除失败策略和不断调整阈值。White Reality Check 与 Carr–López de Prado 的工作分别强调数据窥探和规则搜索边界。[1][2] P5 的目标不是证明 alpha，而是建立一个能显示失败、选择次数和测试隔离的最小研究账本。</p>
+<div class="evidence"><strong>证据边界：</strong>所有信号、收益和成本均为合成。validation 与 test Sharpe 只是协议运行结果；朴素 p 值未修正序列相关，Bonferroni 只对登记的六个候选作保守调整。结果不构成真实 alpha、投资建议或统计发现。</div>
+<h2 id="concepts">冻结协议</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>项目</th>
+<th>冻结值</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>原始时点</td>
+<td>820</td>
+</tr>
+<tr>
+<td>Train</td>
+<td>[0, 400)</td>
+</tr>
+<tr>
+<td>Embargo 1</td>
+<td>[400, 420)</td>
+</tr>
+<tr>
+<td>Validation</td>
+<td>[420, 560)</td>
+</tr>
+<tr>
+<td>Embargo 2</td>
+<td>[560, 580)</td>
+</tr>
+<tr>
+<td>Test</td>
+<td>[580, 819)</td>
+</tr>
+<tr>
+<td>标签 horizon</td>
+<td>1 日</td>
+</tr>
+<tr>
+<td>候选数</td>
+<td>6</td>
+</tr>
+<tr>
+<td>成本</td>
+<td>每单位 L1 仓位变化 5 bps</td>
+</tr>
+<tr>
+<td>选择规则</td>
+<td>最大 validation net annualized Sharpe</td>
+</tr>
+</tbody>
+</table></div>
+<p>Train 在本最小实验中用于冻结特征生成机制；候选规则没有根据 test 调整。真实 ML 项目还需在 train 内拟合参数、validation 调参，并对 test 完全封存。</p>
+<h2 id="methods">方法与数学形式（Methods &amp; Mathematical Form）</h2>
+<p>候选 <span class="math-inline" data-math-kind="inline">\(j\)</span> 的净收益：</p>
+<div class="formula" data-math-kind="display">\[r_{j,t}^{net}=p_{j,t}r_{t+1}-c|p_{j,t}-p_{j,t-1}|.\]</div>
+<p>只在 validation 计算：</p>
+<div class="formula" data-math-kind="display">\[j^*=\arg\max_j\frac{\bar r_{j,val}}{s_{j,val}}\sqrt{252}.\]</div>
+<p>选定 <span class="math-inline" data-math-kind="inline">\(j^*\)</span> 后只对它计算 test 指标。六个候选的 validation 朴素双侧 p 值使用 Bonferroni：</p>
+<div class="formula" data-math-kind="display">\[p_{adj}=\min(1,6p_{naive}).\]</div>
+<p>Bonferroni 不修复策略依赖、非正态、序列相关或未登记的人工试验；它只是实验家族规模被记录后的最小校正。</p>
+<h2 id="ledger">实验账本</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>candidate</th>
+<th style="text-align:right">Validation net Sharpe</th>
+<th>状态</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>signal</td>
+<td style="text-align:right">1.8585</td>
+<td>failed_validation</td>
+</tr>
+<tr>
+<td>lagged</td>
+<td style="text-align:right">-0.5182</td>
+<td>failed_validation</td>
+</tr>
+<tr>
+<td>blend</td>
+<td style="text-align:right">2.1998</td>
+<td>selected</td>
+</tr>
+<tr>
+<td>high_threshold</td>
+<td style="text-align:right">1.5401</td>
+<td>failed_validation</td>
+</tr>
+<tr>
+<td>noise</td>
+<td style="text-align:right">1.0135</td>
+<td>failed_validation</td>
+</tr>
+<tr>
+<td>reversed</td>
+<td style="text-align:right">-2.5899</td>
+<td>failed_validation</td>
+</tr>
+</tbody>
+</table></div>
+<p>即使 noise 候选在有限 validation 中得到正 Sharpe，也没有被删除；这正是多重搜索可能产生偶然高分的可见证据。</p>
+<h2 id="pipeline">Pipeline 与伪代码（Pipeline &amp; Pseudocode）</h2>
+<pre><code class="language-python">freeze_splits(train=(0,400), validation=(420,560), test=(580,819), embargo=20)
+freeze_candidates_and_cost_model(candidate_ids, cost_bps=5)
+ledger = []
+for candidate in candidates:
+    validation_net = evaluate_after_cost(candidate, validation_only)
+    ledger.append(candidate_id, validation_net, status=&quot;evaluated_validation&quot;)
+selected = argmax_validation_net_sharpe(ledger)
+mark_all_others_failed_but_preserve_records(ledger)
+test_result = evaluate_once_after_cost(selected, frozen_test)
+apply_multiple_testing_disclosure(ledger)
+</code></pre>
+<p>实现见 <a href="p5_leakage_free_alpha.py"><code>p5_leakage_free_alpha.py</code></a>，结果见 <a href="p5_leakage_free_alpha_results.json"><code>p5_leakage_free_alpha_results.json</code></a>。</p>
+<h2 id="implementation">实现证据与结果（Implementation &amp; Results）</h2>
+<pre><code class="language-powershell">python quant_finance/projects/p5_leakage_free_alpha/p5_leakage_free_alpha.py
+python quant_finance/projects/p5_leakage_free_alpha/test_p5_leakage_free_alpha.py -v
+</code></pre>
+<p><code>blend</code> 由 validation 选中：validation net Sharpe 2.1998，朴素 p=0.1011，Bonferroni p=0.6065，因此没有统计发现可宣称。冻结 test 的成本后结果：日均收益 0.000506、日波动 0.007299、年化 Sharpe 1.1003、朴素 p=0.2839。test 明显低于 validation，展示选择与有限样本乐观偏差。</p>
+<h2 id="comparison">失败案例与审计边界</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>失败</th>
+<th>本项目防护</th>
+<th>仍未解决</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>反复看 test</td>
+<td>只对选中候选输出 test</td>
+<td>人工运行历史仍需外部账本/权限控制</td>
+</tr>
+<tr>
+<td>删除失败候选</td>
+<td>六个候选全部保存</td>
+<td>未登记的灵感仍可能遗漏</td>
+</tr>
+<tr>
+<td>忽略成本</td>
+<td>5 bps×仓位变化</td>
+<td>非线性冲击和容量未建模</td>
+</tr>
+<tr>
+<td>只报 Sharpe</td>
+<td>同时报均值、波动、p 值</td>
+<td>p 值未作 HAC/Bootstrap</td>
+</tr>
+<tr>
+<td>多重检验</td>
+<td>对六候选 Bonferroni</td>
+<td>策略相关与更广实验族</td>
+</tr>
+<tr>
+<td>单一 DGP</td>
+<td>明确合成边界</td>
+<td>不支持真实市场外推</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="exercises">练习与答案边界（Exercises）</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>ID</th>
+<th>题目</th>
+<th>达标标准</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>P5-Q01</td>
+<td>为什么需要 validation？</td>
+<td>调参与选择不能使用 test。</td>
+</tr>
+<tr>
+<td>P5-Q02</td>
+<td>test 应打开几次？</td>
+<td>协议上一次，之后不再调模型。</td>
+</tr>
+<tr>
+<td>P5-Q03</td>
+<td>embargo 在哪里？</td>
+<td>train/validation 和 validation/test 之间。</td>
+</tr>
+<tr>
+<td>P5-Q04</td>
+<td>失败候选为何保留？</td>
+<td>反映真实搜索空间和选择偏差。</td>
+</tr>
+<tr>
+<td>P5-Q05</td>
+<td>选择规则是什么？</td>
+<td>最大 validation 成本后年化 Sharpe。</td>
+</tr>
+<tr>
+<td>P5-Q06</td>
+<td>Bonferroni p 如何计算？</td>
+<td>min(1, 候选数×朴素 p)。</td>
+</tr>
+<tr>
+<td>P5-Q07</td>
+<td>Bonferroni 能修复序列相关吗？</td>
+<td>不能，需 HAC/Bootstrap。</td>
+</tr>
+<tr>
+<td>P5-Q08</td>
+<td>noise 正 Sharpe 说明什么？</td>
+<td>有限样本和多重搜索会产生偶然高分。</td>
+</tr>
+<tr>
+<td>P5-Q09</td>
+<td>test Sharpe 1.10 能证明 alpha 吗？</td>
+<td>不能，合成数据且 p 值不显著。</td>
+</tr>
+<tr>
+<td>P5-Q10</td>
+<td>真实研究还需什么？</td>
+<td>point-in-time 数据、容量、完整实验系统和独立复核。</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="answer-boundary">答案索引（Answer Boundary）</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>ID</th>
+<th>答案边界</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>P5-Q01</td>
+<td>validation 承担模型选择，保护 test。</td>
+</tr>
+<tr>
+<td>P5-Q02</td>
+<td>选型冻结后一次。</td>
+</tr>
+<tr>
+<td>P5-Q03</td>
+<td>[400,420) 和 [560,580)。</td>
+</tr>
+<tr>
+<td>P5-Q04</td>
+<td>让分母和失败搜索可审计。</td>
+</tr>
+<tr>
+<td>P5-Q05</td>
+<td>validation net Sharpe 最大。</td>
+</tr>
+<tr>
+<td>P5-Q06</td>
+<td>本项目为 <span class="math-inline" data-math-kind="inline">\(\min(1,6p)\)</span>。</td>
+</tr>
+<tr>
+<td>P5-Q07</td>
+<td>不能；需依赖稳健推断。</td>
+</tr>
+<tr>
+<td>P5-Q08</td>
+<td>无信号候选也可偶然表现良好。</td>
+</tr>
+<tr>
+<td>P5-Q09</td>
+<td>不能；无真实数据且朴素 p=0.2839。</td>
+</tr>
+<tr>
+<td>P5-Q10</td>
+<td>真实点时数据、成本冲击、容量、权限和独立复核。</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="risks">风险与后续建议（Risks &amp; Next）</h2>
+<ul>
+<li>本地 JSON 账本不能阻止研究者删除文件或重跑 seed；生产系统需 append-only 记录、test 访问控制和审查人。</li>
+<li>标签 horizon 为 1，未展示复杂重叠标签的 fold-level purging；M10 已提供相应基础。</li>
+<li>下一 slice G19/M11 将系统化回测统计、数据窥探、策略衰减和两种回测引擎差异。</li>
+</ul>
+<h2 id="references">参考文献（References）</h2>
+<ol>
+<li>[1] Halbert White, “A Reality Check for Data Snooping,” <em>Econometrica</em>, 2000. <a href="https://doi.org/10.1111/1468-0262.00152">链接</a></li>
+<li>[2] Peter Carr and Marcos López de Prado, “Determining Optimal Trading Rules without Backtesting,” 2014. <a href="https://arxiv.org/abs/1408.1159">链接</a></li>
+</ol>
+
+        <nav class="next-chapter" aria-label="下一章节">
+          <span class="next-chapter-label">下一章节</span>
+          <a rel="next" href="../p6_lean_event_backtest/p6_lean_event_backtest_report.html">P6 LEAN 事件驱动回测 →</a>
+        </nav>
+
+        <a class="back-to-top" href="#top">返回页首 ↑</a>
+      </article>
+    </main>
+  </div>
+</body>
+</html>

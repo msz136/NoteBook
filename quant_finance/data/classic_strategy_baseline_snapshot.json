@@ -1,0 +1,91 @@
+{
+  "snapshot_date_utc": "2026-07-27",
+  "source": "Yahoo Finance chart API",
+  "source_type": "secondary_data_proxy",
+  "source_url_template": "https://query1.finance.yahoo.com/v8/finance/chart/{symbol}?period1=1072915200&period2={snapshot_end_unix}&interval=1mo&events=div%2Csplits&includeAdjustedClose=true",
+  "retrieval_window": {
+    "start_unix": 1072915200,
+    "end_unix": 1785118518,
+    "frequency": "monthly",
+    "last_included_month": "2026-06",
+    "exclude_current_partial_month": true
+  },
+  "method": {
+    "price_field": "adjusted close",
+    "return": "simple monthly return",
+    "annualization_factor": 12,
+    "risk_free_rate": 0.0,
+    "transaction_cost": 0.0,
+    "rebalance": "monthly at month-end using fixed target weights",
+    "note": "Illustrative ETF-proxy calculation; not a long-run asset-class estimate or investment recommendation."
+  },
+  "single_assets": {
+    "SPY": {
+      "proxy": "SPDR S&P 500 ETF Trust",
+      "start": "2004-01",
+      "end": "2026-06",
+      "months": 269,
+      "annualized_arithmetic_return": 0.1136623288,
+      "cagr": 0.1078768687,
+      "annualized_volatility": 0.1464208664,
+      "sharpe_rf0": 0.7762713851,
+      "max_drawdown": -0.5078482433,
+      "max_drawdown_trough": "2009-02",
+      "final_wealth_multiple": 9.9391903837
+    },
+    "GLD": {
+      "proxy": "SPDR Gold Shares",
+      "start": "2004-11",
+      "end": "2026-06",
+      "months": 259,
+      "annualized_arithmetic_return": 0.1123579799,
+      "cagr": 0.1021772501,
+      "annualized_volatility": 0.1721523322,
+      "sharpe_rf0": 0.6526660338,
+      "max_drawdown": -0.4291019672,
+      "max_drawdown_trough": "2015-12",
+      "final_wealth_multiple": 8.1644506561
+    }
+  },
+  "fixed_weight_portfolios": {
+    "60_SPY_40_GLD": {
+      "start": "2004-12",
+      "end": "2026-06",
+      "months": 259,
+      "annualized_arithmetic_return": 0.1142534908,
+      "cagr": 0.1128365511,
+      "annualized_volatility": 0.1170468998,
+      "sharpe_rf0": 0.9761342755,
+      "max_drawdown": -0.2884462701,
+      "max_drawdown_trough": "2009-02"
+    },
+    "50_SPY_50_GLD": {
+      "start": "2004-12",
+      "end": "2026-06",
+      "months": 259,
+      "annualized_arithmetic_return": 0.1139375723,
+      "cagr": 0.1123443646,
+      "annualized_volatility": 0.1182497097,
+      "sharpe_rf0": 0.9635336324,
+      "max_drawdown": -0.2560498526,
+      "max_drawdown_trough": "2008-10"
+    },
+    "80_SPY_20_GLD": {
+      "start": "2004-12",
+      "end": "2026-06",
+      "months": 259,
+      "annualized_arithmetic_return": 0.1148853277,
+      "cagr": 0.1122551285,
+      "annualized_volatility": 0.1264186199,
+      "sharpe_rf0": 0.9087706199,
+      "max_drawdown": -0.4054592398,
+      "max_drawdown_trough": "2009-02"
+    }
+  },
+  "evidence_boundary": [
+    "Yahoo adjusted close is a secondary proxy and may embed provider-specific corporate-action adjustments.",
+    "SPY and GLD are ETFs with inception dates and fees; they are not the same as a frictionless equity index or spot gold.",
+    "The snapshot excludes the incomplete current month and does not include taxes, bid-ask spread, market impact, financing, FX conversion, or a nonzero risk-free rate.",
+    "Numbers are local-evidence for protocol plumbing only; they do not establish expected future returns."
+  ]
+}

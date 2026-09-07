@@ -1,0 +1,745 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="generator" content="quant_finance ARIS render-html (academic, v1)">
+  <meta name="source-file" content="02_financial_data_contract_notes.md">
+  <meta name="source-sha256" content="d4f49dc41052aee71396f80e836f16ccbc2f04f5abfe2cc48a732f240a01d655">
+  <title>金融数据契约：收益口径、公司行动、交易日历与 Point-in-Time</title>
+  <script>
+    window.MathJax = {
+      tex: {inlineMath: [['\\(', '\\)'], ['$', '$']], displayMath: [['\\[', '\\]'], ['$$', '$$']]},
+      options: {skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']}
+    };
+  </script>
+  <script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+  <style>
+/* ARIS academic v1 — quant_finance canonical inline stylesheet. */
+:root {
+  --paper: #fdfcf7;
+  --paper-soft: #f4f1ea;
+  --ink: #1a1a1a;
+  --muted: #625f58;
+  --blue: #1a4a8c;
+  --blue-soft: #dce7f4;
+  --rust: #b8390e;
+  --rule: #b9b2a6;
+  --serif: "Source Serif Pro", "Source Serif 4", "Crimson Pro", Georgia, "Songti SC", STSong, serif;
+  --mono: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  margin: 0;
+  color: var(--ink);
+  background: var(--paper);
+  font-family: var(--serif);
+  font-size: 16px;
+  line-height: 1.8;
+}
+a { color: var(--blue); text-underline-offset: 0.16em; }
+a:hover { color: var(--rust); }
+
+.page-shell {
+  width: min(1280px, calc(100% - 40px));
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: 260px minmax(0, 1fr);
+  gap: 42px;
+  align-items: start;
+}
+.toc {
+  position: sticky;
+  top: 24px;
+  max-height: calc(100vh - 48px);
+  overflow-y: auto;
+  padding: 28px 18px 24px 0;
+  color: var(--muted);
+}
+.toc-title {
+  margin: 0 0 0.65rem;
+  color: var(--blue);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+.toc ol { margin: 0; padding: 0; list-style: none; }
+.toc li { margin: 0.24rem 0; line-height: 1.35; }
+.toc a { color: inherit; text-decoration: none; }
+.toc a:hover { color: var(--rust); }
+.toc .depth-3 { padding-left: 0.85rem; font-size: 0.92rem; }
+.toc .depth-4 { padding-left: 1.55rem; font-size: 0.86rem; }
+
+main {
+  min-width: 0;
+  margin: 24px 0 64px;
+  padding: 48px clamp(32px, 5vw, 72px) 64px;
+  background: var(--paper-soft);
+  border: 1px solid #ded8cd;
+  box-shadow: 0 16px 44px rgba(55, 47, 36, 0.08);
+}
+article { min-width: 0; }
+.eyebrow {
+  margin: 0 0 0.45rem;
+  color: var(--rust);
+  font-family: var(--serif);
+  font-size: 0.76rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+.subtitle { margin: 0 0 0.5rem; color: var(--muted); font-size: 1.05rem; }
+.meta {
+  margin: 0 0 2.2rem;
+  color: var(--muted);
+  font-size: 0.86rem;
+}
+h1 {
+  margin: 0 0 0.7rem;
+  padding: 0 0 0.8rem;
+  color: var(--ink);
+  border-bottom: 5px double var(--blue);
+  font-size: clamp(2rem, 5vw, 3.1rem);
+  line-height: 1.14;
+  letter-spacing: -0.025em;
+}
+h2 {
+  margin: 3.2rem 0 1.15rem;
+  padding-bottom: 0.42rem;
+  border-bottom: 1px solid var(--rule);
+  color: var(--ink);
+  font-size: 1.62rem;
+  line-height: 1.35;
+}
+h3 { margin: 2.15rem 0 0.8rem; color: var(--blue); font-size: 1.28rem; line-height: 1.4; }
+h4 { margin: 1.55rem 0 0.6rem; color: var(--ink); font-size: 1.06rem; line-height: 1.45; }
+p, ul, ol, blockquote { margin: 0 0 1rem; }
+ul, ol { padding-left: 1.5rem; }
+li + li { margin-top: 0.24rem; }
+strong { color: #111; }
+
+code {
+  font-family: var(--mono);
+  font-size: 0.9em;
+  background: #e9e5dc;
+  border-radius: 3px;
+  padding: 0.1em 0.32em;
+}
+pre {
+  max-width: 100%;
+  margin: 1.2rem 0 1.5rem;
+  padding: 1rem 1.1rem;
+  overflow-x: auto;
+  background: #faf9f5;
+  border: 1px solid #d8d2c7;
+  border-left: 4px solid var(--blue);
+  border-radius: 2px;
+  line-height: 1.55;
+}
+pre code {
+  display: block;
+  min-width: max-content;
+  padding: 0;
+  color: #383a42;
+  background: transparent;
+}
+/* Highlight.js atom-one-light-compatible colors for portable, inline styling. */
+.hljs-comment, .hljs-quote { color: #a0a1a7; font-style: italic; }
+.hljs-keyword, .hljs-selector-tag, .hljs-literal { color: #a626a4; }
+.hljs-string, .hljs-regexp { color: #50a14f; }
+.hljs-number, .hljs-symbol { color: #986801; }
+.hljs-title, .hljs-section, .hljs-function { color: #4078f2; }
+
+.formula {
+  max-width: 100%;
+  margin: 1.25rem 0 1.5rem;
+  padding: 1rem 1.15rem;
+  overflow-x: auto;
+  background: #faf9f5;
+  border: 1px solid #d8d2c7;
+  border-left: 4px solid var(--blue);
+}
+.formula mjx-container { min-width: max-content; }
+
+.table-wrap { max-width: 100%; margin: 1.25rem 0 1.6rem; overflow-x: auto; }
+table { width: 100%; min-width: 640px; border-collapse: collapse; font-size: 0.93rem; line-height: 1.55; }
+th, td { padding: 0.68rem 0.78rem; border: 1px solid #aaa398; text-align: left; vertical-align: top; }
+thead th { color: #fff; background: var(--blue); font-weight: 700; }
+tbody tr:nth-child(even) { background: #ebe6dc; }
+tbody tr:nth-child(odd) { background: #f8f5ee; }
+
+.note, .warning, .evidence, blockquote {
+  margin: 1.2rem 0 1.45rem;
+  padding: 0.85rem 1rem;
+  background: #f8f5ee;
+  border: 1px solid #d2cbc0;
+  border-left: 4px solid var(--blue);
+}
+.warning { border-left-color: var(--rust); background: #fff2e9; }
+.evidence { border-left-color: #6b5b8e; background: #f2eef8; }
+.note > :last-child, .warning > :last-child, .evidence > :last-child, blockquote > :last-child { margin-bottom: 0; }
+.back-to-top { display: inline-block; margin-top: 2rem; font-size: 0.88rem; }
+
+@media (max-width: 900px) {
+  .page-shell { width: min(100% - 24px, 820px); grid-template-columns: 1fr; gap: 0; }
+  .toc { position: static; max-height: none; padding: 20px 8px 4px; columns: 2; column-gap: 1.5rem; }
+  .toc-title { column-span: all; }
+  main { margin-top: 16px; padding: 34px clamp(18px, 5vw, 40px) 48px; }
+  h1 { font-size: clamp(1.8rem, 8vw, 2.55rem); }
+  table { min-width: 600px; }
+  pre, .formula, .table-wrap { overflow-x: auto; }
+}
+
+@media (max-width: 560px) {
+  .toc { columns: 1; }
+  .page-shell { width: calc(100% - 12px); }
+  main { padding-left: 15px; padding-right: 15px; }
+}
+
+@media print {
+  body { background: #fff; }
+  .page-shell { display: block; width: 100%; }
+  .toc, .back-to-top { display: none !important; }
+  main { margin: 0; padding: 0; background: #fff; border: 0; box-shadow: none; }
+  a { color: inherit; text-decoration: none; }
+  pre, .formula, table { break-inside: avoid; }
+}
+
+    .next-chapter { margin: 2.5rem 0 1rem; padding: 1rem 1.2rem; border: 1px solid #b9c9df; border-left: 4px solid #1a4a8c; background: #f4f1ea; display: flex; gap: .75rem; align-items: baseline; justify-content: space-between; }
+    .next-chapter-label { color: #1a4a8c; font-weight: 700; white-space: nowrap; }
+    .next-chapter a { color: #1a4a8c; font-weight: 700; text-decoration: none; }
+    .next-chapter a:hover, .next-chapter a:focus { color: #b8390e; text-decoration: underline; }
+    @media (max-width: 900px) { .next-chapter { display: block; } .next-chapter-label { display: block; margin-bottom: .35rem; } }
+  </style>
+</head>
+<body id="top">
+  <div class="page-shell">
+    <nav class="toc" aria-label="目录">
+      <p class="toc-title">Contents</p>
+      <ol>
+<li class="depth-2"><a href="#question">问题（Question）</a></li>
+<li class="depth-2"><a href="#background">背景与动机（Background &amp; Motivation）</a></li>
+<li class="depth-2"><a href="#concepts">基础概念与术语</a></li>
+<li class="depth-2"><a href="#methods">方法与项目拆解（Methods）</a></li>
+<li class="depth-3"><a href="#source-tiers">数据来源分层</a></li>
+<li class="depth-3"><a href="#panel-schema">最小可审计面板</a></li>
+<li class="depth-2"><a href="#math">数学形式与训练目标（Mathematical Form）</a></li>
+<li class="depth-3"><a href="#returns">价格收益与总收益</a></li>
+<li class="depth-3"><a href="#adjustment">复权序列的边界</a></li>
+<li class="depth-3"><a href="#pit">Point-in-time 连接</a></li>
+<li class="depth-3"><a href="#calendar">交易会话与年化</a></li>
+<li class="depth-2"><a href="#pipeline">Pipeline 与伪代码（Pipeline &amp; Pseudocode）</a></li>
+<li class="depth-2"><a href="#implementation">实现证据与结果（Implementation &amp; Results）</a></li>
+<li class="depth-3"><a href="#fixture-results">Fixture 审计结果</a></li>
+<li class="depth-2"><a href="#boundary">公源/本地设计边界（Evidence Boundary）</a></li>
+<li class="depth-2"><a href="#comparison">方法对比与选择建议（Comparison）</a></li>
+<li class="depth-2"><a href="#exercises">练习与答案边界（Exercises）</a></li>
+<li class="depth-2"><a href="#answer-boundary">答案索引（Answer Boundary）</a></li>
+<li class="depth-2"><a href="#risks">风险与后续建议（Risks &amp; Next）</a></li>
+<li class="depth-2"><a href="#references">参考文献（References）</a></li>
+      </ol>
+    </nav>
+    <main>
+      <article>
+        <header>
+          <p class="eyebrow">Quant Finance · Financial Data Contract</p>
+          <p class="subtitle">M02 · 在任何回归或回测前，先证明数据在当时可得且字段含义一致</p>
+          <h1>金融数据契约：收益口径、公司行动、交易日历与 Point-in-Time</h1>
+          <p class="meta">发布日期：2026-07-22 · 证据截止：2026-07-22 · 源文件 SHA-256：<code>d4f49dc41052aee71396f80e836f16ccbc2f04f5abfe2cc48a732f240a01d655</code></p>
+        </header>
+<h2 id="question">问题（Question）</h2>
+<p>为什么同一只资产会有价格收益、总收益、复权价格和不同版本的因子数据？为什么一个看似合理的 join 可能把未来分类、修订财报或退市信息泄漏到过去？本模块建立一个可执行的数据契约，并用不含受限市场数据的合成 fixture 验证字段、时间和收益计算。</p>
+<h2 id="background">背景与动机（Background &amp; Motivation）</h2>
+<p>FRED 提供公开宏观序列与 API 入口，Kenneth French Data Library 提供因子与投资组合数据及历史档案；它们适合教学和研究原型，但字段频率、修订、许可和点时属性仍需逐项确认。[1][2] Princeton 金融课程把金融会计、金融数据统计、资产定价和金融计量并列为核心内容，说明数据定义不是编程前的附属工作，而是金融分析对象本身的一部分。[3]</p>
+<p>Wilson 等人强调组织数据、记录步骤、版本跟踪和项目结构是可复现计算的基本实践。[4] 本仓库因此把数据字典、获取时间、版本、哈希、许可和转换规则写入数据契约；<code>data/</code> 不提交受限大数据。</p>
+<div class="evidence"><strong>证据边界：</strong>FRED/French 官方入口支撑公开数据来源的存在和使用方向；本模块的字段 schema、合成 fixture、审计器和示例收益是本地设计/本地证据。ALFRED、SEC、CRSP/Compustat/TAQ 的具体字段与许可不在本切片中假定已核验。</div>
+<h2 id="concepts">基础概念与术语</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>术语</th>
+<th>首次定义</th>
+<th>研究影响</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>交易会话（trading session）</td>
+<td>按交易所日历定义的可交易日期/时段</td>
+<td>缺失周末不能直接填 0 收益；跨时区会改变排序</td>
+</tr>
+<tr>
+<td>观测时间（observed_at）</td>
+<td>价格或事件实际记录发生的时间</td>
+<td>不等于数据发布/可见时间</td>
+</tr>
+<tr>
+<td>可用时间（available_at）</td>
+<td>研究管线最早能看到该记录的时间</td>
+<td>控制信息泄漏的关键字段</td>
+</tr>
+<tr>
+<td>研究快照（asof_at）</td>
+<td>本次特征或回测重放所模拟的时间</td>
+<td>必须满足 <code>available_at &lt;= asof_at</code></td>
+</tr>
+<tr>
+<td>价格收益（price return）</td>
+<td>只使用价格变化的回报</td>
+<td>不包含现金分红</td>
+</tr>
+<tr>
+<td>总收益（total return）</td>
+<td>价格变化加现金分配的回报</td>
+<td>需要统一每股、除息和复权口径</td>
+</tr>
+<tr>
+<td>点时（point-in-time）</td>
+<td>只使用当时已发布且当时有效的数据</td>
+<td>防止修订、重分类、未来成分股泄漏</td>
+</tr>
+<tr>
+<td>幸存者偏差（survivorship bias）</td>
+<td>只保留今天仍存在的资产/公司</td>
+<td>历史资产池和收益被系统性筛选</td>
+</tr>
+<tr>
+<td>许可（license）</td>
+<td>数据使用和再分发的法律边界</td>
+<td>能下载不等于能提交到 Git 或发布</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="methods">方法与项目拆解（Methods）</h2>
+<h3 id="source-tiers">数据来源分层</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>层级</th>
+<th>例子</th>
+<th>适合做什么</th>
+<th>必须补充的证据</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>官方宏观/因子</td>
+<td>FRED、French Data Library</td>
+<td>教学、公开因子复现、宏观研究原型</td>
+<td>频率、修订、下载日期、许可证</td>
+</tr>
+<tr>
+<td>公司披露</td>
+<td>SEC EDGAR/XBRL（本切片待复核）</td>
+<td>财报和事件研究</td>
+<td>发布时点、修订、字段映射、速率限制</td>
+</tr>
+<tr>
+<td>学术数据库</td>
+<td>CRSP、Compustat、TAQ（通常机构许可）</td>
+<td>退市收益、公司事件、微观结构</td>
+<td>订阅、再分发、点时字段和版本</td>
+</tr>
+<tr>
+<td>交易/供应商</td>
+<td>交易所授权源、券商/API</td>
+<td>实时/生产执行</td>
+<td>SLA、时钟、公司行动、成本和权限</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="panel-schema">最小可审计面板</h3>
+<p>本模块的合成样本见 <a href="../data/m02_price_panel_fixture.csv"><code>m02_price_panel_fixture.csv</code></a>，字段契约见 <a href="../data/m02_data_contract.md"><code>m02_data_contract.md</code></a>。真实数据应至少保留：</p>
+<ol>
+<li>标识：稳定 <code>symbol</code>、供应商标识、必要时的实体/证券映射版本；</li>
+<li>时间：<code>session_date</code>、<code>observed_at</code>、<code>available_at</code>、研究 <code>asof_at</code>、时区和交易日历；</li>
+<li>价格与行动：raw close、adjusted close、现金分红、拆股因子、币种和单位；</li>
+<li>质量：缺失、重复、异常值、停牌/退市标记和处理日志；</li>
+<li>来源：source id、获取日期、版本/哈希、许可证、转换脚本和参数。</li>
+</ol>
+<h2 id="math">数学形式与训练目标（Mathematical Form）</h2>
+<h3 id="returns">价格收益与总收益</h3>
+<p>令 <span class="math-inline" data-math-kind="inline">\(P_t^{raw}\)</span> 是未经公司行动调整的每股价格，<span class="math-inline" data-math-kind="inline">\(D_t\)</span> 是同一每股口径下的现金分红。价格收益与总收益分别为：</p>
+<div class="formula" data-math-kind="display">\[R_t^{price}=\frac{P_t^{raw}}{P_{t-1}^{raw}}-1,
+\qquad
+R_t^{total}=\frac{P_t^{raw}+D_t}{P_{t-1}^{raw}}-1.\]</div>
+<div class="note"><strong>变量、直觉与实现映射：</strong>价格收益回答“报价本身怎么变”，总收益回答“持有资产并收到现金分配后的回报”。fixture 审计器同时输出两列；若有拆股，raw price 的跳变不能直接当经济损失/收益，应使用明确的 adjusted close 或公司行动转换。</div>
+<h3 id="adjustment">复权序列的边界</h3>
+<p>若供应商给出同口径的调整价格 <span class="math-inline" data-math-kind="inline">\(P_t^{adj}\)</span>，可计算：</p>
+<div class="formula" data-math-kind="display">\[R_t^{adj}=\frac{P_t^{adj}}{P_{t-1}^{adj}}-1.\]</div>
+<div class="note"><strong>变量、直觉与实现映射：</strong><span class="math-inline" data-math-kind="inline">\(P^{adj}\)</span> 的调整因子方向、除息/除权日期和回溯范围必须有文档与样例。`close_adjusted` 不是一个可以无条件信任的列名；审计器保留 raw、adjusted、分红和 split_factor 让差异可追踪。</div>
+<h3 id="pit">Point-in-time 连接</h3>
+<p>对研究快照 <span class="math-inline" data-math-kind="inline">\(a\)</span>，一条记录只有在：</p>
+<div class="formula" data-math-kind="display">\[\operatorname{usable}(x,a)=\mathbf 1\{\operatorname{available\_at}(x)\le a\}=1\]</div>
+<p>时才可以进入特征或回测状态。</p>
+<div class="note"><strong>变量、直觉与实现映射：</strong>这里的比较对象是可见时间和研究快照，不是事件发生日。fixture 专门放入“观测后发布”的记录，并用 `asof_at` 判定可用；真实数据若只有 `event_date` 而没有发布/版本时间，必须标注未验证。</div>
+<h3 id="calendar">交易会话与年化</h3>
+<p>若一年内有效交易会话数为 <span class="math-inline" data-math-kind="inline">\(N_{year}\)</span>，日收益序列的年化波动率常写为：</p>
+<div class="formula" data-math-kind="display">\[\hat\sigma_{annual}=\operatorname{sd}(r_{daily})\sqrt{N_{year}}.\]</div>
+<div class="note"><strong>变量、直觉与实现映射：</strong>年化因子依赖频率、交易日历和独立/弱依赖近似；不能把 252 当成跨市场、跨时期、跨资产的无条件常数。数据契约要记录日历和缺失会话处理。</div>
+<h2 id="pipeline">Pipeline 与伪代码（Pipeline &amp; Pseudocode）</h2>
+<pre><code class="language-python">def build_point_in_time_panel(raw_rows, asof_at):
+    # 1. Parse UTC timestamps and sort within each stable security identifier.
+    rows = parse_and_sort(raw_rows, keys=[&quot;symbol&quot;, &quot;session_date&quot;])
+
+    # 2. Reject missing/duplicate sessions, non-positive prices, and unknown license class.
+    validate_schema(rows)
+
+    # 3. Keep only fields available by the research snapshot; do not substitute event_date.
+    visible = [row for row in rows if row[&quot;available_at&quot;] &lt;= asof_at]
+
+    # 4. Compute price/total/adjusted returns only within an entity and adjacent sessions.
+    returns = compute_returns(visible, fields=[&quot;close_raw&quot;, &quot;close_adjusted&quot;, &quot;cash_dividend&quot;])
+
+    # 5. Persist source version, calendar, transformation, hashes, and dropped-row reasons.
+    return attach_provenance(returns, asof_at=asof_at)
+</code></pre>
+<p>真实 fixture 审计实现见 <a href="../tools/audit_price_panel.py"><code>audit_price_panel.py</code></a>，其输出保存于 <a href="../data/m02_price_panel_audit.json"><code>m02_price_panel_audit.json</code></a>。</p>
+<h2 id="implementation">实现证据与结果（Implementation &amp; Results）</h2>
+<h3 id="fixture-results">Fixture 审计结果</h3>
+<p>命令：</p>
+<pre><code class="language-powershell"># Run the schema, timestamp, value, ordering, and return-field audit.
+python quant_finance/tools/audit_price_panel.py
+
+# Run positive and future-availability negative tests.
+python quant_finance/data/test_audit_price_panel.py -v
+</code></pre>
+<p>本地结果为 <code>PASS</code>：7 行合成记录、5 条相邻收益记录；包括现金分红和拆股的 raw/total/adjusted 差异。负向测试把一行 <code>available_at</code> 改到 <code>asof_at</code> 之后，审计器拒绝该数据。</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>symbol</th>
+<th>session</th>
+<th style="text-align:right">raw price return</th>
+<th style="text-align:right">raw total return</th>
+<th style="text-align:right">adjusted-close return</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>AAA</td>
+<td>2024-01-04</td>
+<td style="text-align:right">-0.009804</td>
+<td style="text-align:right">0.000000</td>
+<td style="text-align:right">0.000000</td>
+<td>现金分红抵消价格下降</td>
+</tr>
+<tr>
+<td>AAA</td>
+<td>2024-01-05</td>
+<td style="text-align:right">-0.500000</td>
+<td style="text-align:right">-0.500000</td>
+<td style="text-align:right">-0.009804</td>
+<td>2:1 split 下 raw 跳变不能直接解释</td>
+</tr>
+<tr>
+<td>BBB</td>
+<td>2024-01-04</td>
+<td style="text-align:right">0.018987</td>
+<td style="text-align:right">0.025316</td>
+<td style="text-align:right">0.018987</td>
+<td>分红使 total return 高于 price return</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="boundary">公源/本地设计边界（Evidence Boundary）</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>类别</th>
+<th>证据</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>公有来源</td>
+<td>FRED API、French Data Library、Princeton 金融课程、Wilson 可复现计算规范。[1–4]</td>
+</tr>
+<tr>
+<td>本地证据</td>
+<td><code>m02_price_panel_fixture.csv</code>、<code>m02_data_contract.md</code>、<code>audit_price_panel.py</code>、<code>m02_price_panel_audit.json</code>、测试输出。</td>
+</tr>
+<tr>
+<td>本地推断</td>
+<td>以 <code>available_at &lt;= asof_at</code> 作为通用数据管线接口，并把 raw/total/adjusted 三种回报并列保存。</td>
+</tr>
+<tr>
+<td>尚未核实</td>
+<td>ALFRED 页面字段、SEC EDGAR/XBRL 当前接口、CRSP/Compustat/TAQ 的具体许可和点时字段。</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="comparison">方法对比与选择建议（Comparison）</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>研究目标</th>
+<th>起步数据</th>
+<th>必须补充</th>
+<th>不应做的事</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>宏观时间序列</td>
+<td>FRED；修订问题进入 ALFRED 复核</td>
+<td>频率、发布日期、vintage、缺失和日历</td>
+<td>直接把最新修订值当历史实时值</td>
+</tr>
+<tr>
+<td>公开因子复现</td>
+<td>French Data Library</td>
+<td>档案版本、构造定义、样本期和因子单位</td>
+<td>把因子文件当作点时个股数据库</td>
+</tr>
+<tr>
+<td>公司事件</td>
+<td>SEC/供应商/学术数据库（需重新核验）</td>
+<td>发布时点、重述、实体映射和许可</td>
+<td>用当前字段回填历史并称无泄漏</td>
+</tr>
+<tr>
+<td>高频/执行</td>
+<td>授权订单/成交源</td>
+<td>时钟、队列、撤单、成本和容量</td>
+<td>用收盘价替代成交协议</td>
+</tr>
+</tbody>
+</table></div>
+<p>建议顺序：先用合成 fixture 和公开数据学会契约，再进入 M03 估计器；只有当研究问题需要退市、公司事件或微观结构时，才申请相应的受限数据权限。</p>
+<h2 id="exercises">练习与答案边界（Exercises）</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>ID</th>
+<th>题目</th>
+<th>通过边界</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>M02-Q01</td>
+<td>区分 observed_at、available_at、asof_at。</td>
+<td>能说明观测可以先于发布，且只比较 available_at 与 asof_at。</td>
+</tr>
+<tr>
+<td>M02-Q02</td>
+<td>写出价格收益和总收益公式。</td>
+<td>分母、现金分红每股口径和不含分红差异正确。</td>
+</tr>
+<tr>
+<td>M02-Q03</td>
+<td>为什么拆股日不能直接比较 raw close？</td>
+<td>能指出名义价格变化与经济持仓变化不同。</td>
+</tr>
+<tr>
+<td>M02-Q04</td>
+<td>adjusted close 进入生产前需登记什么？</td>
+<td>因子方向、除息/除权规则、版本、样例和来源。</td>
+</tr>
+<tr>
+<td>M02-Q05</td>
+<td>交易日历为什么影响年化波动率？</td>
+<td>能说明有效会话数和缺失会话不能随意填充。</td>
+</tr>
+<tr>
+<td>M02-Q06</td>
+<td>什么是 point-in-time join？</td>
+<td>join 条件含 available_at &lt;= asof_at，而非只看 event_date。</td>
+</tr>
+<tr>
+<td>M02-Q07</td>
+<td>给出一个幸存者偏差例子。</td>
+<td>历史资产池只保留今天仍存续证券。</td>
+</tr>
+<tr>
+<td>M02-Q08</td>
+<td>为什么“能下载”不等于“能再分发”？</td>
+<td>能区分访问权、使用权和许可/版权边界。</td>
+</tr>
+<tr>
+<td>M02-Q09</td>
+<td>如何处理重复 session_date？</td>
+<td>拒绝或按可追溯规则去重，不能静默覆盖。</td>
+</tr>
+<tr>
+<td>M02-Q10</td>
+<td>现金分红应落在哪个时间字段？</td>
+<td>明确 ex-date/pay-date/record-date 选择和每股口径。</td>
+</tr>
+<tr>
+<td>M02-Q11</td>
+<td>为什么需要稳定证券标识而不只用 ticker？</td>
+<td>ticker 会重用、变更，实体与证券映射需版本化。</td>
+</tr>
+<tr>
+<td>M02-Q12</td>
+<td>如何审计 UTC 与本地时区？</td>
+<td>解析时区、转换规则、交易所日历和跨日边界都有记录。</td>
+</tr>
+<tr>
+<td>M02-Q13</td>
+<td>最新修订宏观值能否用于十年前回测？</td>
+<td>只有在模拟当时 vintage 或明确研究目标时才可用。</td>
+</tr>
+<tr>
+<td>M02-Q14</td>
+<td>为什么要保存 dropped-row reasons？</td>
+<td>可解释缺失、异常、许可过滤并恢复同一面板。</td>
+</tr>
+<tr>
+<td>M02-Q15</td>
+<td>raw return 与 adjusted return 差异大时先查什么？</td>
+<td>公司行动、因子方向、除息规则、币种和供应商文档。</td>
+</tr>
+<tr>
+<td>M02-Q16</td>
+<td>何时可以计算相邻收益？</td>
+<td>同实体、相邻有效会话、价格单位和口径一致。</td>
+</tr>
+<tr>
+<td>M02-Q17</td>
+<td>设计一个未来可用时间的负向测试。</td>
+<td>把 available_at 设置晚于 asof_at，审计器必须 FAIL。</td>
+</tr>
+<tr>
+<td>M02-Q18</td>
+<td>为什么 point-in-time 不只是 SQL 技巧？</td>
+<td>它约束研究可获得信息和结论解释，而不只是 join 语法。</td>
+</tr>
+<tr>
+<td>M02-Q19</td>
+<td>数据字典至少应包含哪五类信息？</td>
+<td>字段、类型、时间语义、来源/许可、转换/质量规则。</td>
+</tr>
+<tr>
+<td>M02-Q20</td>
+<td>M02 fixture 能否支持真实 alpha 结论？</td>
+<td>不能；它只支持契约和计算路径的本地验证。</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="answer-boundary">答案索引（Answer Boundary）</h2>
+<p>为便于自动审查和复习定位，以下索引把每道题的达标边界单独列出；题目表仍保留完整题干。</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>ID</th>
+<th>答案边界</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>M02-Q01</td>
+<td>观测可早于发布；研究快照只比较 <code>available_at &lt;= asof_at</code>。</td>
+</tr>
+<tr>
+<td>M02-Q02</td>
+<td>正确区分价格收益、总收益、分母和每股分红口径。</td>
+</tr>
+<tr>
+<td>M02-Q03</td>
+<td>拆股改变名义价格，不等于持仓经济损失。</td>
+</tr>
+<tr>
+<td>M02-Q04</td>
+<td>记录调整因子方向、公司行动规则、版本、样例和来源。</td>
+</tr>
+<tr>
+<td>M02-Q05</td>
+<td>年化因子依赖有效交易会话数，缺失会话不能任意填充。</td>
+</tr>
+<tr>
+<td>M02-Q06</td>
+<td>Point-in-time join 必须含 <code>available_at &lt;= asof_at</code>。</td>
+</tr>
+<tr>
+<td>M02-Q07</td>
+<td>能构造只保留存续证券而遗漏退市证券的例子。</td>
+</tr>
+<tr>
+<td>M02-Q08</td>
+<td>区分下载访问权、研究使用权与再分发许可。</td>
+</tr>
+<tr>
+<td>M02-Q09</td>
+<td>重复会话要拒绝或按可追溯规则去重，不能静默覆盖。</td>
+</tr>
+<tr>
+<td>M02-Q10</td>
+<td>明确 ex-date/pay-date/record-date 与每股口径的选择。</td>
+</tr>
+<tr>
+<td>M02-Q11</td>
+<td>ticker 会变更或重用，需稳定证券标识和映射版本。</td>
+</tr>
+<tr>
+<td>M02-Q12</td>
+<td>记录时区解析、UTC 转换、交易所日历和跨日边界。</td>
+</tr>
+<tr>
+<td>M02-Q13</td>
+<td>回测需模拟当时 vintage，不能直接使用最新修订值。</td>
+</tr>
+<tr>
+<td>M02-Q14</td>
+<td>保存 dropped-row reasons 以解释过滤并重建面板。</td>
+</tr>
+<tr>
+<td>M02-Q15</td>
+<td>先查公司行动、因子方向、除息、币种和供应商文档。</td>
+</tr>
+<tr>
+<td>M02-Q16</td>
+<td>只有同实体、相邻有效会话且单位口径一致时计算。</td>
+</tr>
+<tr>
+<td>M02-Q17</td>
+<td>将 <code>available_at</code> 设晚于 <code>asof_at</code>，审计器应拒绝。</td>
+</tr>
+<tr>
+<td>M02-Q18</td>
+<td>Point-in-time 是信息集约束，不只是 SQL 写法。</td>
+</tr>
+<tr>
+<td>M02-Q19</td>
+<td>至少覆盖字段、类型、时间语义、来源/许可、转换/质量规则。</td>
+</tr>
+<tr>
+<td>M02-Q20</td>
+<td>合成 fixture 只能验证契约和路径，不能支持真实 alpha 结论。</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="risks">风险与后续建议（Risks &amp; Next）</h2>
+<ul>
+<li>合成 fixture 不代表真实数据分布、供应商行为或市场可交易性。</li>
+<li>FRED/French 的公开入口不自动解决修订、点时、公司行动和许可问题；ALFRED/SEC/学术数据库仍需在具体项目中重新冻结。</li>
+<li>adjusted close 的语义因供应商而异，不能只依赖列名。</li>
+<li>下一 slice G06/M03 将把这些数据字段接入 OLS/MLE/GMM/Bootstrap 估计器，并记录估计假设和标准误，而不是重新定义数据契约。</li>
+</ul>
+<h2 id="references">参考文献（References）</h2>
+<ol>
+<li>[1] Federal Reserve Bank of St. Louis, “FRED API.” <a href="https://fred.stlouisfed.org/docs/api/fred/">链接</a></li>
+<li>[2] Kenneth R. French, “Data Library.” <a href="https://mba.tuck.dartmouth.edu/pages/faculty/ken.french/data_library.html">链接</a></li>
+<li>[3] Princeton University Bendheim Center for Finance, “Requirements and Core Courses.” <a href="https://bcf.princeton.edu/academic-programs/master-in-finance/requirements-core-courses/">链接</a></li>
+<li>[4] Greg Wilson et al., “Good Enough Practices in Scientific Computing,” <em>PLOS Computational Biology</em>, 2017. <a href="https://journals.plos.org/ploscompbiol/article?id=10.1371/journal.pcbi.1005510">链接</a></li>
+<li>[5] ALFRED official entry；本切片核验警告：浏览器访问失败，具体字段和 vintage API 待后续复核。 <a href="https://alfred.stlouisfed.org/alfred-graph">链接</a></li>
+<li>[6] SEC EDGAR API Documentation；本切片核验警告：浏览器访问被阻断，具体字段待后续复核。 <a href="https://www.sec.gov/edgar/sec-api-documentation">链接</a></li>
+</ol>
+
+        <nav class="next-chapter" aria-label="下一章节">
+          <span class="next-chapter-label">下一章节</span>
+          <a rel="next" href="03_core_econometrics_notes.html">M03 核心计量 →</a>
+        </nav>
+
+        <a class="back-to-top" href="#top">返回页首 ↑</a>
+      </article>
+    </main>
+  </div>
+</body>
+</html>

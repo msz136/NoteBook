@@ -1,0 +1,19 @@
+{
+  "asof": "2024-02-28T00:00:00",
+  "visible_rows": 1,
+  "final_rows": 3,
+  "realtime_values": {
+    "2024-01-01": 100.0
+  },
+  "final_values": {
+    "2024-01-01": 100.8,
+    "2024-04-01": 102.4,
+    "2024-07-01": 102.6
+  },
+  "common_revision_deltas": [
+    0.7999999999999972
+  ],
+  "mean_abs_revision_delta": 0.7999999999999972,
+  "leakage_detected": true,
+  "contract": "select latest release_at <= asof for each series_id, observation_date"
+}

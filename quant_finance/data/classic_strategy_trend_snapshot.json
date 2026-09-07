@@ -1,0 +1,74 @@
+{
+  "snapshot_date_utc": "2026-07-27",
+  "source": "Yahoo Finance chart API",
+  "source_type": "secondary_data_proxy",
+  "symbols": ["SPY", "GLD"],
+  "data_window": {"start": "2004-11", "end": "2026-06", "frequency": "monthly", "exclude_current_partial_month": true},
+  "signal_contract": {
+    "SMA10": "At month t close, compare adjusted close with trailing 10-month SMA; shifted position applies to month t+1 return.",
+    "SMA12": "At month t close, compare adjusted close with trailing 12-month SMA; shifted position applies to month t+1 return.",
+    "position": "1 when price is above SMA, otherwise 0 in cash",
+    "cash_return": 0.0,
+    "transaction_cost": "10 bps per one-way absolute position change",
+    "current_month": "excluded"
+  },
+  "SMA10": {
+    "sample": {"start": "2005-09", "end": "2026-06", "months": 250},
+    "SPY": {
+      "gross": {"annualized_arithmetic_return": 0.0875349549, "cagr": 0.0851207381, "annualized_volatility": 0.1055885900, "sharpe_rf0": 0.8290190726, "max_drawdown": -0.2295850164, "max_drawdown_trough": "2023-02"},
+      "net_10bps": {"annualized_arithmetic_return": 0.0859509549, "cagr": 0.0834039265, "annualized_volatility": 0.1056735212, "sharpe_rf0": 0.8133632153, "max_drawdown": -0.2343363604, "max_drawdown_trough": "2023-02"},
+      "invested_fraction": 0.804,
+      "annual_turnover": 1.584,
+      "position_changes": 33
+    },
+    "GLD": {
+      "gross": {"annualized_arithmetic_return": 0.0884535345, "cagr": 0.0811240962, "annualized_volatility": 0.1440880589, "sharpe_rf0": 0.6138852534, "max_drawdown": -0.3883611911, "max_drawdown_trough": "2017-10"},
+      "net_10bps": {"annualized_arithmetic_return": 0.0866775345, "cagr": 0.0792051697, "annualized_volatility": 0.1441715204, "sharpe_rf0": 0.6012112124, "max_drawdown": -0.3981275411, "max_drawdown_trough": "2017-10"},
+      "invested_fraction": 0.700,
+      "annual_turnover": 1.776,
+      "position_changes": 37
+    },
+    "50_50_independent_signals": {
+      "gross": {"annualized_arithmetic_return": 0.0879942447, "cagr": 0.0871136653, "annualized_volatility": 0.0918942867, "sharpe_rf0": 0.9575594733, "max_drawdown": -0.1454396285, "max_drawdown_trough": "2023-02"},
+      "net_10bps": {"annualized_arithmetic_return": 0.0863142447, "cagr": 0.0852979744, "annualized_volatility": 0.0919255443, "sharpe_rf0": 0.9389582126, "max_drawdown": -0.1501823777, "max_drawdown_trough": "2023-02"},
+      "invested_fraction_mean": 0.752,
+      "annual_turnover": 1.680,
+      "position_changes_asset_legs": 70
+    }
+  },
+  "SMA12": {
+    "sample": {"start": "2005-11", "end": "2026-06", "months": 248},
+    "SPY": {
+      "gross": {"annualized_arithmetic_return": 0.0977032603, "cagr": 0.0959249633, "annualized_volatility": 0.1075551793, "sharpe_rf0": 0.9084012588, "max_drawdown": -0.1663488894, "max_drawdown_trough": "2010-08"},
+      "net_10bps": {"annualized_arithmetic_return": 0.0963968086, "cagr": 0.0944991847, "annualized_volatility": 0.1076010734, "sharpe_rf0": 0.8958721839, "max_drawdown": -0.1688865284, "max_drawdown_trough": "2010-09"},
+      "invested_fraction": 0.8024193548,
+      "annual_turnover": 1.3064516129,
+      "position_changes": 27
+    },
+    "GLD": {
+      "gross": {"annualized_arithmetic_return": 0.0896896440, "cagr": 0.0820840179, "annualized_volatility": 0.1464283629, "sharpe_rf0": 0.6125155139, "max_drawdown": -0.4086663878, "max_drawdown_trough": "2017-10"},
+      "net_10bps": {"annualized_arithmetic_return": 0.0882864182, "cagr": 0.0805638600, "annualized_volatility": 0.1465083548, "sharpe_rf0": 0.6026033005, "max_drawdown": -0.4181279628, "max_drawdown_trough": "2017-10"},
+      "invested_fraction": 0.7056451613,
+      "annual_turnover": 1.4032258065,
+      "position_changes": 29
+    },
+    "50_50_independent_signals": {
+      "gross": {"annualized_arithmetic_return": 0.0936964521, "cagr": 0.0931649954, "annualized_volatility": 0.0930830538, "sharpe_rf0": 1.0065897959, "max_drawdown": -0.1183453823, "max_drawdown_trough": "2012-05"},
+      "net_10bps": {"annualized_arithmetic_return": 0.0923416134, "cagr": 0.0916956953, "annualized_volatility": 0.0930804933, "sharpe_rf0": 0.9920619254, "max_drawdown": -0.1201273454, "max_drawdown_trough": "2012-05"},
+      "invested_fraction_mean": 0.7540322581,
+      "annual_turnover": 1.3548387097,
+      "position_changes_asset_legs": 56
+    },
+    "same_sample_buy_hold": {
+      "SPY": {"annualized_arithmetic_return": 0.1187742801, "cagr": 0.1127748467, "annualized_volatility": 0.1508275025, "sharpe_rf0": 0.7874842325, "max_drawdown": -0.5078482797},
+      "GLD": {"annualized_arithmetic_return": 0.1156764394, "cagr": 0.1054462933, "annualized_volatility": 0.1740738666, "sharpe_rf0": 0.6645250181, "max_drawdown": -0.4291019672},
+      "50_50_monthly_rebalanced": {"annualized_arithmetic_return": 0.1172253597, "cagr": 0.1157578525, "annualized_volatility": 0.1198845227, "sharpe_rf0": 0.9778189635, "max_drawdown": -0.2560495638}
+    }
+  },
+  "evidence_boundary": [
+    "SPY and GLD are ETF proxies from a secondary provider, not frictionless equity-index and spot/futures gold returns.",
+    "Cash earns zero and no financing, tax, FX conversion, spread, market impact, ETF fee adjustment beyond provider adjusted close, or signal-model selection penalty is included.",
+    "Only 10- and 12-month SMA rules were evaluated; the comparison is descriptive and not an untouched out-of-sample test.",
+    "The cross-asset example contains only two assets and cannot establish the performance of diversified futures trend-following programs."
+  ]
+}

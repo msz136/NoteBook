@@ -1,0 +1,46 @@
+{
+  "n_days": 900,
+  "decision": "signal available at close t; synthetic next-period return aligned to t decision",
+  "vectorized_gross": {
+    "mean_daily": 0.0007796995525711065,
+    "vol_daily": 0.008181186699753793,
+    "sharpe_annualized": 1.5129035841562406,
+    "max_drawdown": -0.26354320477987214
+  },
+  "event_gross_partial_fill": {
+    "mean_daily": 0.000701729597313996,
+    "vol_daily": 0.007363068029778414,
+    "sharpe_annualized": 1.512903584156241,
+    "max_drawdown": -0.24003166947467636
+  },
+  "event_net": {
+    "mean_daily": 0.0004610801169821331,
+    "vol_daily": 0.0073687007067288505,
+    "sharpe_annualized": 0.9933121503203289,
+    "max_drawdown": -0.2874724411306868
+  },
+  "event_cost": {
+    "commission_bps": 4,
+    "slippage_bps": 2,
+    "fill_fraction": 0.9,
+    "total_turnover": 360.9742204977944
+  },
+  "decay": {
+    "early_event_net": {
+      "mean_daily": 0.0013036891233422312,
+      "vol_daily": 0.007256908799805814,
+      "sharpe_annualized": 2.8518235263441527,
+      "max_drawdown": -0.05579210380873323
+    },
+    "late_event_net": {
+      "mean_daily": -0.00038152888937796495,
+      "vol_daily": 0.007391249073683225,
+      "sharpe_annualized": -0.8194262289508364,
+      "max_drawdown": -0.2874724411306858
+    },
+    "true_signal_coefficient_early": 0.0016,
+    "true_signal_coefficient_late": 0.0002
+  },
+  "engine_difference_mean_daily": 0.0003186194355889734,
+  "evidence_boundary": "synthetic regime change and simplified fill/cost model; no engine benchmark or real strategy claim"
+}

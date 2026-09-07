@@ -1,0 +1,96 @@
+{
+  "splits": {
+    "train": [
+      0,
+      400
+    ],
+    "validation": [
+      420,
+      560
+    ],
+    "test": [
+      580,
+      819
+    ]
+  },
+  "embargo": 20,
+  "label_horizon": 1,
+  "cost_bps_per_unit_turnover": 5,
+  "candidate_count": 6,
+  "selected_candidate": "blend",
+  "selection_rule": "maximum validation net annualized Sharpe; test unopened until selection",
+  "ledger": [
+    {
+      "candidate_id": "signal",
+      "validation": {
+        "mean_daily": 0.000950515293908941,
+        "vol_daily": 0.008118815565295152,
+        "sharpe_annualized": 1.8585177097480483,
+        "naive_two_sided_p": 0.1659738016194221
+      },
+      "status": "failed_validation"
+    },
+    {
+      "candidate_id": "lagged",
+      "validation": {
+        "mean_daily": -0.00029129298082256636,
+        "vol_daily": 0.008922761791363332,
+        "sharpe_annualized": -0.5182400722573557,
+        "naive_two_sided_p": 0.6992942402926816
+      },
+      "status": "failed_validation"
+    },
+    {
+      "candidate_id": "blend",
+      "validation": {
+        "mean_daily": 0.0010087509620438397,
+        "vol_daily": 0.007279610161788752,
+        "sharpe_annualized": 2.1997640981170483,
+        "naive_two_sided_p": 0.10108683334135993,
+        "bonferroni_p": 0.6065210000481596
+      },
+      "status": "selected"
+    },
+    {
+      "candidate_id": "high_threshold",
+      "validation": {
+        "mean_daily": 0.0007903934568229114,
+        "vol_daily": 0.008146799660893662,
+        "sharpe_annualized": 1.5401271260057225,
+        "naive_two_sided_p": 0.2509921025404527
+      },
+      "status": "failed_validation"
+    },
+    {
+      "candidate_id": "noise",
+      "validation": {
+        "mean_daily": 0.000479076163438325,
+        "vol_daily": 0.007503580007880339,
+        "sharpe_annualized": 1.0135293176208555,
+        "naive_two_sided_p": 0.4499849300774239
+      },
+      "status": "failed_validation"
+    },
+    {
+      "candidate_id": "reversed",
+      "validation": {
+        "mean_daily": -0.0013245962266185383,
+        "vol_daily": 0.008119008047985652,
+        "sharpe_annualized": -2.589886978183274,
+        "naive_two_sided_p": 0.05355880802135937
+      },
+      "status": "failed_validation"
+    }
+  ],
+  "selected_test_net": {
+    "mean_daily": 0.0005059218091842068,
+    "vol_daily": 0.007298978605872311,
+    "sharpe_annualized": 1.1003265214683942,
+    "naive_two_sided_p": 0.28391353047048606
+  },
+  "split_invariants": {
+    "train_end_plus_embargo_le_validation_start": true,
+    "validation_end_plus_embargo_le_test_start": true
+  },
+  "evidence_boundary": "synthetic candidate ledger; test result is not real alpha or statistical proof"
+}

@@ -1,0 +1,152 @@
+{
+  "snapshot_date_utc": "2026-07-27",
+  "source": "Yahoo Finance chart API adjusted close",
+  "source_type": "secondary_data_proxy/local-evidence",
+  "symbols": [
+    "SPY",
+    "GLD"
+  ],
+  "sample": {
+    "start": "2007-02",
+    "end": "2026-06",
+    "frequency": "monthly",
+    "months": 232
+  },
+  "protocol": {
+    "lookback_months": 12,
+    "signal_timing": "all signals use data through month t and apply to t+1 return",
+    "transaction_cost": "10 bps times one-way absolute target-weight turnover for each constituent",
+    "cash_return": 0.0,
+    "ensemble_overlay": "equal-weight constituent net returns; no additional overlay turnover",
+    "constituents": [
+      "buy_hold_50_50",
+      "trend_sma12",
+      "inverse_vol_risk_parity",
+      "vol_target_10pct"
+    ]
+  },
+  "strategy_stats_net_10bps": {
+    "buy_hold_50_50": {
+      "months": 232,
+      "annualized_arithmetic_return": 0.11058367226499968,
+      "cagr": 0.10823940424146516,
+      "annualized_volatility": 0.12133562507303729,
+      "sharpe_rf0": 0.9113866780546477,
+      "max_drawdown": -0.25604984623926685,
+      "final_wealth_multiple": 7.293164843444183,
+      "annual_turnover": 0.05172413793103448,
+      "total_cost": 0.001
+    },
+    "trend_sma12": {
+      "months": 232,
+      "annualized_arithmetic_return": 0.08403556251106388,
+      "cagr": 0.0827635792026884,
+      "annualized_volatility": 0.09268101423832466,
+      "sharpe_rf0": 0.9067182011514306,
+      "max_drawdown": -0.12012737659979589,
+      "final_wealth_multiple": 4.652114064249532,
+      "annual_turnover": 1.4482758620689655,
+      "total_cost": 0.028
+    },
+    "inverse_vol_risk_parity": {
+      "months": 232,
+      "annualized_arithmetic_return": 0.11271075671582273,
+      "cagr": 0.11078192157360611,
+      "annualized_volatility": 0.11988847141289768,
+      "sharpe_rf0": 0.9401300674494812,
+      "max_drawdown": -0.285141898476693,
+      "final_wealth_multiple": 7.623543003756987,
+      "annual_turnover": 0.6408366084285907,
+      "total_cost": 0.012389507762952754
+    },
+    "vol_target_10pct": {
+      "months": 232,
+      "annualized_arithmetic_return": 0.0989339604557218,
+      "cagr": 0.09671277369435383,
+      "annualized_volatility": 0.11208245212185428,
+      "sharpe_rf0": 0.8826891148684215,
+      "max_drawdown": -0.21387565846740142,
+      "final_wealth_multiple": 5.958396989558404,
+      "annual_turnover": 0.6416285832307831,
+      "total_cost": 0.012404819275795138
+    },
+    "equal_strategy_ensemble": {
+      "months": 232,
+      "annualized_arithmetic_return": 0.101565987986902,
+      "cagr": 0.10028009725605003,
+      "annualized_volatility": 0.10629685864506525,
+      "sharpe_rf0": 0.9554937867546957,
+      "max_drawdown": -0.20438940848356268,
+      "final_wealth_multiple": 6.344483981218485,
+      "annual_turnover": 0.0,
+      "total_cost": 0.0
+    },
+    "defensive_trend_vol_ensemble": {
+      "months": 232,
+      "annualized_arithmetic_return": 0.09148476148339282,
+      "cagr": 0.09042134597684948,
+      "annualized_volatility": 0.09642172211539157,
+      "sharpe_rf0": 0.9487982528865175,
+      "max_drawdown": -0.1457690808683425,
+      "final_wealth_multiple": 5.331187975930426,
+      "annual_turnover": 0.0,
+      "total_cost": 0.0
+    }
+  },
+  "return_correlation": {
+    "buy_hold_50_50": {
+      "buy_hold_50_50": 1.0,
+      "trend_sma12": 0.7663053781239808,
+      "inverse_vol_risk_parity": 0.9825115779665978,
+      "vol_target_10pct": 0.9695867841186008,
+      "equal_strategy_ensemble": 0.9850316030250332,
+      "defensive_trend_vol_ensemble": 0.9318212744360679
+    },
+    "trend_sma12": {
+      "buy_hold_50_50": 0.7663053781239808,
+      "trend_sma12": 1.0,
+      "inverse_vol_risk_parity": 0.7606120944535943,
+      "vol_target_10pct": 0.7718751540864253,
+      "equal_strategy_ensemble": 0.8545958983775707,
+      "defensive_trend_vol_ensemble": 0.9292235728055975
+    },
+    "inverse_vol_risk_parity": {
+      "buy_hold_50_50": 0.9825115779665978,
+      "trend_sma12": 0.7606120944535942,
+      "inverse_vol_risk_parity": 0.9999999999999998,
+      "vol_target_10pct": 0.9453330643799216,
+      "equal_strategy_ensemble": 0.9773376218435561,
+      "defensive_trend_vol_ensemble": 0.9149885752522647
+    },
+    "vol_target_10pct": {
+      "buy_hold_50_50": 0.9695867841186008,
+      "trend_sma12": 0.7718751540864252,
+      "inverse_vol_risk_parity": 0.9453330643799217,
+      "vol_target_10pct": 0.9999999999999999,
+      "equal_strategy_ensemble": 0.9751007323520762,
+      "defensive_trend_vol_ensemble": 0.952174573527122
+    },
+    "equal_strategy_ensemble": {
+      "buy_hold_50_50": 0.9850316030250331,
+      "trend_sma12": 0.8545958983775706,
+      "inverse_vol_risk_parity": 0.9773376218435561,
+      "vol_target_10pct": 0.9751007323520761,
+      "equal_strategy_ensemble": 1.0,
+      "defensive_trend_vol_ensemble": 0.9774586661489051
+    },
+    "defensive_trend_vol_ensemble": {
+      "buy_hold_50_50": 0.9318212744360678,
+      "trend_sma12": 0.9292235728055974,
+      "inverse_vol_risk_parity": 0.9149885752522647,
+      "vol_target_10pct": 0.952174573527122,
+      "equal_strategy_ensemble": 0.9774586661489051,
+      "defensive_trend_vol_ensemble": 0.9999999999999999
+    }
+  },
+  "evidence_boundary": [
+    "SPY and GLD are ETF proxies; no taxes, FX conversion, financing, bid-ask spread or market impact are modeled.",
+    "The integration uses a common two-asset monthly panel, but the sample is descriptive and not an untouched out-of-sample selection test.",
+    "Ensemble returns average constituent net returns; a production implementation must model overlay turnover and capital allocation explicitly.",
+    "Inverse-volatility is only an approximation to exact equal risk contribution when correlation differs from zero."
+  ]
+}

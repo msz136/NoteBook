@@ -1,0 +1,17 @@
+{
+  "factor_url": "https://mba.tuck.dartmouth.edu/pages/faculty/ken.french/ftp/F-F_Research_Data_Factors_CSV.zip",
+  "portfolio_url": "https://mba.tuck.dartmouth.edu/pages/faculty/ken.french/ftp/25_Portfolios_5x5_CSV.zip",
+  "factor_sha256": "80b88699a18ac408e2456d25b1004e340f3f7f8d41d5b476a0285bc53c6f0436",
+  "portfolio_sha256": "afc2f6c40237d07b99ab84ab9375a08bc301e3801e3ad8d91aa90d5aa9ec6295",
+  "factor_source_note": "This file was created using the 202605 CRSP database.",
+  "portfolio_source_note": "This file was created using the 202605 CRSP database.",
+  "sample_start": "192607",
+  "sample_end": "202605",
+  "n_months": 1199,
+  "n_portfolios": 25,
+  "units": "source percent converted to decimal; portfolio excess return subtracts RF",
+  "capm_mean_abs_monthly_alpha": 0.0015352246828843944,
+  "ff3_mean_abs_monthly_alpha": 0.0011229945930322264,
+  "ff3_max_abs_monthly_alpha": 0.006685045566490864,
+  "evidence_boundary": "official public files downloaded and hashed; no raw redistribution, causal, or tradability claim"
+}

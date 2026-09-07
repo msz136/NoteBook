@@ -1,0 +1,634 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="generator" content="quant_finance ARIS render-html (academic, v1)">
+  <meta name="source-file" content="05_panel_and_causal_identification_notes.md">
+  <meta name="source-sha256" content="0a785c202cc66c828707a86f3735c8d853a17524963cb6f657d556e0840b9bc8">
+  <title>面板与因果识别：FE/RE、IV、DiD、RDD 与合成控制</title>
+  <script>
+    window.MathJax = {
+      tex: {inlineMath: [['\\(', '\\)'], ['$', '$']], displayMath: [['\\[', '\\]'], ['$$', '$$']]},
+      options: {skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']}
+    };
+  </script>
+  <script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+  <style>
+/* ARIS academic v1 — quant_finance canonical inline stylesheet. */
+:root {
+  --paper: #fdfcf7;
+  --paper-soft: #f4f1ea;
+  --ink: #1a1a1a;
+  --muted: #625f58;
+  --blue: #1a4a8c;
+  --blue-soft: #dce7f4;
+  --rust: #b8390e;
+  --rule: #b9b2a6;
+  --serif: "Source Serif Pro", "Source Serif 4", "Crimson Pro", Georgia, "Songti SC", STSong, serif;
+  --mono: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  margin: 0;
+  color: var(--ink);
+  background: var(--paper);
+  font-family: var(--serif);
+  font-size: 16px;
+  line-height: 1.8;
+}
+a { color: var(--blue); text-underline-offset: 0.16em; }
+a:hover { color: var(--rust); }
+
+.page-shell {
+  width: min(1280px, calc(100% - 40px));
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: 260px minmax(0, 1fr);
+  gap: 42px;
+  align-items: start;
+}
+.toc {
+  position: sticky;
+  top: 24px;
+  max-height: calc(100vh - 48px);
+  overflow-y: auto;
+  padding: 28px 18px 24px 0;
+  color: var(--muted);
+}
+.toc-title {
+  margin: 0 0 0.65rem;
+  color: var(--blue);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+.toc ol { margin: 0; padding: 0; list-style: none; }
+.toc li { margin: 0.24rem 0; line-height: 1.35; }
+.toc a { color: inherit; text-decoration: none; }
+.toc a:hover { color: var(--rust); }
+.toc .depth-3 { padding-left: 0.85rem; font-size: 0.92rem; }
+.toc .depth-4 { padding-left: 1.55rem; font-size: 0.86rem; }
+
+main {
+  min-width: 0;
+  margin: 24px 0 64px;
+  padding: 48px clamp(32px, 5vw, 72px) 64px;
+  background: var(--paper-soft);
+  border: 1px solid #ded8cd;
+  box-shadow: 0 16px 44px rgba(55, 47, 36, 0.08);
+}
+article { min-width: 0; }
+.eyebrow {
+  margin: 0 0 0.45rem;
+  color: var(--rust);
+  font-family: var(--serif);
+  font-size: 0.76rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+.subtitle { margin: 0 0 0.5rem; color: var(--muted); font-size: 1.05rem; }
+.meta {
+  margin: 0 0 2.2rem;
+  color: var(--muted);
+  font-size: 0.86rem;
+}
+h1 {
+  margin: 0 0 0.7rem;
+  padding: 0 0 0.8rem;
+  color: var(--ink);
+  border-bottom: 5px double var(--blue);
+  font-size: clamp(2rem, 5vw, 3.1rem);
+  line-height: 1.14;
+  letter-spacing: -0.025em;
+}
+h2 {
+  margin: 3.2rem 0 1.15rem;
+  padding-bottom: 0.42rem;
+  border-bottom: 1px solid var(--rule);
+  color: var(--ink);
+  font-size: 1.62rem;
+  line-height: 1.35;
+}
+h3 { margin: 2.15rem 0 0.8rem; color: var(--blue); font-size: 1.28rem; line-height: 1.4; }
+h4 { margin: 1.55rem 0 0.6rem; color: var(--ink); font-size: 1.06rem; line-height: 1.45; }
+p, ul, ol, blockquote { margin: 0 0 1rem; }
+ul, ol { padding-left: 1.5rem; }
+li + li { margin-top: 0.24rem; }
+strong { color: #111; }
+
+code {
+  font-family: var(--mono);
+  font-size: 0.9em;
+  background: #e9e5dc;
+  border-radius: 3px;
+  padding: 0.1em 0.32em;
+}
+pre {
+  max-width: 100%;
+  margin: 1.2rem 0 1.5rem;
+  padding: 1rem 1.1rem;
+  overflow-x: auto;
+  background: #faf9f5;
+  border: 1px solid #d8d2c7;
+  border-left: 4px solid var(--blue);
+  border-radius: 2px;
+  line-height: 1.55;
+}
+pre code {
+  display: block;
+  min-width: max-content;
+  padding: 0;
+  color: #383a42;
+  background: transparent;
+}
+/* Highlight.js atom-one-light-compatible colors for portable, inline styling. */
+.hljs-comment, .hljs-quote { color: #a0a1a7; font-style: italic; }
+.hljs-keyword, .hljs-selector-tag, .hljs-literal { color: #a626a4; }
+.hljs-string, .hljs-regexp { color: #50a14f; }
+.hljs-number, .hljs-symbol { color: #986801; }
+.hljs-title, .hljs-section, .hljs-function { color: #4078f2; }
+
+.formula {
+  max-width: 100%;
+  margin: 1.25rem 0 1.5rem;
+  padding: 1rem 1.15rem;
+  overflow-x: auto;
+  background: #faf9f5;
+  border: 1px solid #d8d2c7;
+  border-left: 4px solid var(--blue);
+}
+.formula mjx-container { min-width: max-content; }
+
+.table-wrap { max-width: 100%; margin: 1.25rem 0 1.6rem; overflow-x: auto; }
+table { width: 100%; min-width: 640px; border-collapse: collapse; font-size: 0.93rem; line-height: 1.55; }
+th, td { padding: 0.68rem 0.78rem; border: 1px solid #aaa398; text-align: left; vertical-align: top; }
+thead th { color: #fff; background: var(--blue); font-weight: 700; }
+tbody tr:nth-child(even) { background: #ebe6dc; }
+tbody tr:nth-child(odd) { background: #f8f5ee; }
+
+.note, .warning, .evidence, blockquote {
+  margin: 1.2rem 0 1.45rem;
+  padding: 0.85rem 1rem;
+  background: #f8f5ee;
+  border: 1px solid #d2cbc0;
+  border-left: 4px solid var(--blue);
+}
+.warning { border-left-color: var(--rust); background: #fff2e9; }
+.evidence { border-left-color: #6b5b8e; background: #f2eef8; }
+.note > :last-child, .warning > :last-child, .evidence > :last-child, blockquote > :last-child { margin-bottom: 0; }
+.back-to-top { display: inline-block; margin-top: 2rem; font-size: 0.88rem; }
+
+@media (max-width: 900px) {
+  .page-shell { width: min(100% - 24px, 820px); grid-template-columns: 1fr; gap: 0; }
+  .toc { position: static; max-height: none; padding: 20px 8px 4px; columns: 2; column-gap: 1.5rem; }
+  .toc-title { column-span: all; }
+  main { margin-top: 16px; padding: 34px clamp(18px, 5vw, 40px) 48px; }
+  h1 { font-size: clamp(1.8rem, 8vw, 2.55rem); }
+  table { min-width: 600px; }
+  pre, .formula, .table-wrap { overflow-x: auto; }
+}
+
+@media (max-width: 560px) {
+  .toc { columns: 1; }
+  .page-shell { width: calc(100% - 12px); }
+  main { padding-left: 15px; padding-right: 15px; }
+}
+
+@media print {
+  body { background: #fff; }
+  .page-shell { display: block; width: 100%; }
+  .toc, .back-to-top { display: none !important; }
+  main { margin: 0; padding: 0; background: #fff; border: 0; box-shadow: none; }
+  a { color: inherit; text-decoration: none; }
+  pre, .formula, table { break-inside: avoid; }
+}
+
+    .next-chapter { margin: 2.5rem 0 1rem; padding: 1rem 1.2rem; border: 1px solid #b9c9df; border-left: 4px solid #1a4a8c; background: #f4f1ea; display: flex; gap: .75rem; align-items: baseline; justify-content: space-between; }
+    .next-chapter-label { color: #1a4a8c; font-weight: 700; white-space: nowrap; }
+    .next-chapter a { color: #1a4a8c; font-weight: 700; text-decoration: none; }
+    .next-chapter a:hover, .next-chapter a:focus { color: #b8390e; text-decoration: underline; }
+    @media (max-width: 900px) { .next-chapter { display: block; } .next-chapter-label { display: block; margin-bottom: .35rem; } }
+  </style>
+</head>
+<body id="top">
+  <div class="page-shell">
+    <nav class="toc" aria-label="目录">
+      <p class="toc-title">Contents</p>
+      <ol>
+<li class="depth-2"><a href="#question">问题（Question）</a></li>
+<li class="depth-2"><a href="#background">背景与动机（Background &amp; Motivation）</a></li>
+<li class="depth-2"><a href="#concepts">基础概念与术语</a></li>
+<li class="depth-2"><a href="#methods">方法与数学形式（Methods &amp; Mathematical Form）</a></li>
+<li class="depth-3"><a href="#panel">FE 与 RE</a></li>
+<li class="depth-3"><a href="#iv">IV / 2SLS</a></li>
+<li class="depth-3"><a href="#did">DiD 与事件研究</a></li>
+<li class="depth-3"><a href="#rdd-scm">RDD 与合成控制</a></li>
+<li class="depth-2"><a href="#math">识别与推断契约</a></li>
+<li class="depth-2"><a href="#pipeline">Pipeline 与伪代码（Pipeline &amp; Pseudocode）</a></li>
+<li class="depth-2"><a href="#implementation">实现证据与结果（Implementation &amp; Results）</a></li>
+<li class="depth-2"><a href="#comparison">失败案例与方法选择</a></li>
+<li class="depth-2"><a href="#exercises">练习与答案边界（Exercises）</a></li>
+<li class="depth-2"><a href="#answer-boundary">答案索引（Answer Boundary）</a></li>
+<li class="depth-2"><a href="#risks">风险与后续建议（Risks &amp; Next）</a></li>
+<li class="depth-2"><a href="#references">参考文献（References）</a></li>
+      </ol>
+    </nav>
+    <main>
+      <article>
+        <header>
+          <p class="eyebrow">Quant Finance · Panel and Causal Identification</p>
+          <p class="subtitle">M05 · 先写识别假设，再运行估计器与安慰剂检验</p>
+          <h1>面板与因果识别：FE/RE、IV、DiD、RDD 与合成控制</h1>
+          <p class="meta">发布日期：2026-07-22 · 证据截止：2026-07-22 · 源文件 SHA-256：<code>0a785c202cc66c828707a86f3735c8d853a17524963cb6f657d556e0840b9bc8</code></p>
+        </header>
+<h2 id="question">问题（Question）</h2>
+<p>面板回归为什么不能只看固定效应系数？工具变量、双重差分、断点回归和合成控制分别依赖什么不可由软件输出自动证明的假设？本模块用合成数据验证 within-FE、2SLS 和两期 DiD 的实现，同时把 RE、RDD 和合成控制作为完整识别地图的一部分。</p>
+<h2 id="background">背景与动机（Background &amp; Motivation）</h2>
+<p>Hansen 的计量教材和 MIT 14.382 提供面板、内生性和渐近推断框架；<code>linearmodels</code> 官方文档提供 Panel、IV/2SLS、GMM 与相关模型的实现入口。[1–3] Card 与 Krueger 的政策比较、Imbens 与 Lemieux 的 RDD 指南、Abadie 等人的合成控制工作分别代表准实验设计的重要入口。[4–6] 这些方法依赖研究设计，不能由显著性或拟合优度替代。</p>
+<div class="evidence"><strong>证据边界：</strong>公式和识别边界由教材、课程、官方文档和原始文献支持；本地 FE/IV/DiD 数值来自已知真值的合成数据，只验证实现和失败方向。RDD、RE、合成控制未在本 slice 声称完成真实估计。</div>
+<h2 id="concepts">基础概念与术语</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>方法</th>
+<th>识别对象</th>
+<th>核心假设</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>固定效应（FE）</td>
+<td>控制个体不随时间变化的不可观测异质性</td>
+<td>严格/序列外生性、足够的组内变动</td>
+</tr>
+<tr>
+<td>随机效应（RE）</td>
+<td>合并组间与组内信息</td>
+<td>个体效应与解释变量不相关</td>
+</tr>
+<tr>
+<td>工具变量（IV/2SLS）</td>
+<td>内生解释变量的局部结构效应</td>
+<td>相关性、排除限制、独立性及解释所需条件</td>
+</tr>
+<tr>
+<td>双重差分（DiD）</td>
+<td>处理组相对对照组的变化</td>
+<td>平行趋势、无预期、无同时冲击</td>
+</tr>
+<tr>
+<td>断点回归（RDD）</td>
+<td>阈值附近的局部处理效应</td>
+<td>阈值附近连续性、不能精确操纵 running variable</td>
+</tr>
+<tr>
+<td>合成控制</td>
+<td>单一/少数处理单元的反事实路径</td>
+<td>处理前拟合、供体池可比、无污染</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="methods">方法与数学形式（Methods &amp; Mathematical Form）</h2>
+<h3 id="panel">FE 与 RE</h3>
+<p>面板模型：</p>
+<div class="formula" data-math-kind="display">\[y_{it}=x_{it}'\beta+\alpha_i+\lambda_t+u_{it}.\]</div>
+<p>within 变换从每个实体减去时间均值，消去 <span class="math-inline" data-math-kind="inline">\(\alpha_i\)</span>。若 <span class="math-inline" data-math-kind="inline">\(x_{it}\)</span> 几乎没有组内变化，FE 无法识别相应系数。RE 只有在 <span class="math-inline" data-math-kind="inline">\(E[\alpha_i\mid X_i]=0\)</span> 时更有效；Hausman 检验只是辅助证据，不会证明外生性。</p>
+<h3 id="iv">IV / 2SLS</h3>
+<p>第一阶段与第二阶段：</p>
+<div class="formula" data-math-kind="display">\[x_i=\pi_0+z_i'\pi+v_i,\qquad y_i=\beta\hat x_i+w_i'\gamma+u_i.\]</div>
+<p>工具 <span class="math-inline" data-math-kind="inline">\(z\)</span> 必须与内生变量相关，并满足 <span class="math-inline" data-math-kind="inline">\(E[z_iu_i]=0\)</span>。第一阶段强不等于排除限制成立；弱工具会使常规 2SLS 推断严重失真。</p>
+<h3 id="did">DiD 与事件研究</h3>
+<p>两组两期 DiD：</p>
+<div class="formula" data-math-kind="display">\[\hat\tau_{DiD}=(\bar Y_{T,post}-\bar Y_{T,pre})-(\bar Y_{C,post}-\bar Y_{C,pre}).\]</div>
+<p>多期事件研究应画出处理前系数及置信区间，检查预趋势；错位采用处理下，简单 TWFE 可能混合异质处理效应，需要适当分组/队列估计器。</p>
+<h3 id="rdd-scm">RDD 与合成控制</h3>
+<p>Sharp RDD 估计阈值 <span class="math-inline" data-math-kind="inline">\(c\)</span> 两侧条件均值极限之差：</p>
+<div class="formula" data-math-kind="display">\[\tau_{RDD}=\lim_{x\downarrow c}E[Y\mid X=x]-\lim_{x\uparrow c}E[Y\mid X=x].\]</div>
+<p>应报告带宽、核函数、多项式阶数、密度操纵和协变量平衡。合成控制选择非负、和为一的供体权重，使处理前特征/结果路径逼近处理单元；处理后缺口需用空间/时间安慰剂判断是否异常。</p>
+<h2 id="math">识别与推断契约</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>闸门</th>
+<th>必须回答</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>时间与样本</td>
+<td>处理何时发生？数据当时是否可见？是否选择性进入面板？</td>
+</tr>
+<tr>
+<td>估计对象</td>
+<td>ATE、ATT、LATE、局部阈值效应还是预测相关？</td>
+</tr>
+<tr>
+<td>反事实</td>
+<td>哪些单位/时期构成未处理路径？为何可比？</td>
+</tr>
+<tr>
+<td>标准误</td>
+<td>是否按处理分配层级聚类？聚类数是否足够？</td>
+</tr>
+<tr>
+<td>安慰剂</td>
+<td>假处理时间、假阈值、伪结果、伪供体是否无效？</td>
+</tr>
+<tr>
+<td>外推</td>
+<td>局部或样本内效应能否推广到其他市场/时期？</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="pipeline">Pipeline 与伪代码（Pipeline &amp; Pseudocode）</h2>
+<pre><code class="language-python">panel = load_point_in_time_panel(asof_at)  # 继承 M02/P1
+estimand = freeze_estimand(population, treatment, outcome, horizon)
+design = choose_design(FE_or_IV_or_DiD_or_RDD_or_SCM)
+assert_identification_assumptions_are_testable_or_explicit(design)
+estimate = fit_with_clustered_or_robust_inference(panel, design)
+placebos = run_pretrend_fake_date_fake_cutoff_and_donor_tests(panel, design)
+report(estimate, placebos, failures, external_validity_boundary)
+</code></pre>
+<p>可执行 FE/2SLS/DiD 实验见 <a href="../tools/m05_causal_panel.py"><code>m05_causal_panel.py</code></a>，结果见 <a href="../data/m05_causal_panel_results.json"><code>m05_causal_panel_results.json</code></a>。</p>
+<h2 id="implementation">实现证据与结果（Implementation &amp; Results）</h2>
+<pre><code class="language-powershell">python quant_finance/tools/m05_causal_panel.py
+python quant_finance/data/test_m05_causal_panel.py -v
+</code></pre>
+<p>合成 FE 面板让解释变量与个体效应相关：pooled OLS 明显偏离真值，而 within-FE 接近真值。IV 实验让 <span class="math-inline" data-math-kind="inline">\(x\)</span> 与结构误差相关，OLS 偏误大于 2SLS；DiD 在平行趋势生成机制下接近注入的 1.5 处理效应。测试只验证这些已知机制，不证明现实研究的排除限制或平行趋势。</p>
+<h2 id="comparison">失败案例与方法选择</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>失败</th>
+<th>错误结论</th>
+<th>修复/边界</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>FE 后仍有时间变化混杂</td>
+<td>把遗漏冲击当处理效应</td>
+<td>时间 FE、趋势、设计与安慰剂</td>
+</tr>
+<tr>
+<td>RE 与 <span class="math-inline" data-math-kind="inline">\(x\)</span> 相关</td>
+<td>RE 不一致</td>
+<td>FE/相关随机效应并解释假设</td>
+</tr>
+<tr>
+<td>弱或无效工具</td>
+<td>2SLS 失真</td>
+<td>第一阶段、弱 IV 稳健推断、排除限制论证</td>
+</tr>
+<tr>
+<td>DiD 预趋势不平行</td>
+<td>反事实不可信</td>
+<td>事件研究、替代对照、重新定义设计</td>
+</tr>
+<tr>
+<td>RDD 带宽挑选</td>
+<td>阈值结果不稳</td>
+<td>数据驱动带宽、偏差校正、敏感性图</td>
+</tr>
+<tr>
+<td>SCM 供体污染</td>
+<td>合成反事实被处理影响</td>
+<td>清理供体池、空间/时间安慰剂</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="exercises">练习与答案边界（Exercises）</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>ID</th>
+<th>题目</th>
+<th>达标标准</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>M05-Q01</td>
+<td>FE 消去什么？</td>
+<td>不随时间变化的个体效应。</td>
+</tr>
+<tr>
+<td>M05-Q02</td>
+<td>FE 不能解决什么？</td>
+<td>时间变化混杂、反向因果和测量误差。</td>
+</tr>
+<tr>
+<td>M05-Q03</td>
+<td>RE 的关键附加假设？</td>
+<td>个体效应与解释变量不相关。</td>
+</tr>
+<tr>
+<td>M05-Q04</td>
+<td>2SLS 两阶段是什么？</td>
+<td>用工具预测内生变量，再用预测值估计结果。</td>
+</tr>
+<tr>
+<td>M05-Q05</td>
+<td>第一阶段强是否证明工具有效？</td>
+<td>否，还需排除限制与独立性。</td>
+</tr>
+<tr>
+<td>M05-Q06</td>
+<td>LATE 的含义？</td>
+<td>对工具影响处理的服从者局部平均效应。</td>
+</tr>
+<tr>
+<td>M05-Q07</td>
+<td>DiD 平行趋势是什么？</td>
+<td>无处理时两组平均结果变化相同。</td>
+</tr>
+<tr>
+<td>M05-Q08</td>
+<td>如何查预趋势？</td>
+<td>事件研究处理前系数及联合检验。</td>
+</tr>
+<tr>
+<td>M05-Q09</td>
+<td>错位处理 TWFE 有何风险？</td>
+<td>异质效应下出现不当比较和权重。</td>
+</tr>
+<tr>
+<td>M05-Q10</td>
+<td>RDD 识别何种效应？</td>
+<td>阈值附近的局部效应。</td>
+</tr>
+<tr>
+<td>M05-Q11</td>
+<td>RDD 如何检查操纵？</td>
+<td>running variable 密度和协变量平衡。</td>
+</tr>
+<tr>
+<td>M05-Q12</td>
+<td>合成控制权重约束？</td>
+<td>通常非负且和为一。</td>
+</tr>
+<tr>
+<td>M05-Q13</td>
+<td>SCM 如何做安慰剂？</td>
+<td>轮流把未处理单位/时间当处理。</td>
+</tr>
+<tr>
+<td>M05-Q14</td>
+<td>标准误为何按处理层级聚类？</td>
+<td>处理分配与误差依赖在该层级。</td>
+</tr>
+<tr>
+<td>M05-Q15</td>
+<td>pooled OLS 与 FE 为什么不同？</td>
+<td>个体效应和 x 相关时 pooled 有遗漏偏误。</td>
+</tr>
+<tr>
+<td>M05-Q16</td>
+<td>point-in-time 与因果有何关系？</td>
+<td>未来信息会破坏处理/协变量的历史信息集。</td>
+</tr>
+<tr>
+<td>M05-Q17</td>
+<td>安慰剂通过能证明识别吗？</td>
+<td>不能，只排除特定失败模式。</td>
+</tr>
+<tr>
+<td>M05-Q18</td>
+<td>局部效应能否外推？</td>
+<td>需要额外可迁移性证据。</td>
+</tr>
+<tr>
+<td>M05-Q19</td>
+<td>合成实验支持什么？</td>
+<td>支持实现路径，不支持现实因果结论。</td>
+</tr>
+<tr>
+<td>M05-Q20</td>
+<td>何时暂停因果语言？</td>
+<td>反事实、时间、工具或趋势假设无法辩护时。</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="answer-boundary">答案索引（Answer Boundary）</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>ID</th>
+<th>答案边界</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>M05-Q01</td>
+<td>消去时间不变的 <span class="math-inline" data-math-kind="inline">\(\alpha_i\)</span>。</td>
+</tr>
+<tr>
+<td>M05-Q02</td>
+<td>不消除时间变化混杂和内生性。</td>
+</tr>
+<tr>
+<td>M05-Q03</td>
+<td><span class="math-inline" data-math-kind="inline">\(E[\alpha_i\mid X_i]=0\)</span>。</td>
+</tr>
+<tr>
+<td>M05-Q04</td>
+<td>第一阶段投影 x，第二阶段用 x-hat。</td>
+</tr>
+<tr>
+<td>M05-Q05</td>
+<td>相关性不等于排除限制。</td>
+</tr>
+<tr>
+<td>M05-Q06</td>
+<td>工具诱导处理变化者的局部平均效应。</td>
+</tr>
+<tr>
+<td>M05-Q07</td>
+<td>无处理反事实中两组趋势相同。</td>
+</tr>
+<tr>
+<td>M05-Q08</td>
+<td>检查处理前 lead 系数和联合显著性。</td>
+</tr>
+<tr>
+<td>M05-Q09</td>
+<td>早处理组可能错误充当晚处理组对照。</td>
+</tr>
+<tr>
+<td>M05-Q10</td>
+<td>cutoff 附近局部效应。</td>
+</tr>
+<tr>
+<td>M05-Q11</td>
+<td>密度、协变量连续性和带宽敏感性。</td>
+</tr>
+<tr>
+<td>M05-Q12</td>
+<td>供体权重通常非负且总和为一。</td>
+</tr>
+<tr>
+<td>M05-Q13</td>
+<td>假单位、假时间重复估计缺口。</td>
+</tr>
+<tr>
+<td>M05-Q14</td>
+<td>使推断匹配处理分配和误差相关结构。</td>
+</tr>
+<tr>
+<td>M05-Q15</td>
+<td>pooled 遗漏与 x 相关的实体效应。</td>
+</tr>
+<tr>
+<td>M05-Q16</td>
+<td>所有协变量/处理必须在 asof 前可见。</td>
+</tr>
+<tr>
+<td>M05-Q17</td>
+<td>只能排除被测试的伪效应模式。</td>
+</tr>
+<tr>
+<td>M05-Q18</td>
+<td>需额外外部有效性/可迁移性假设。</td>
+</tr>
+<tr>
+<td>M05-Q19</td>
+<td>验证代码和已知 DGP 下的方向。</td>
+</tr>
+<tr>
+<td>M05-Q20</td>
+<td>核心识别假设无法陈述或证伪时。</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="risks">风险与后续建议（Risks &amp; Next）</h2>
+<ul>
+<li>当前环境未安装 <code>linearmodels</code>，本地脚本使用 NumPy 教学实现；聚类标准误、弱 IV 稳健区间和现代 staggered DiD 估计需后续库环境。</li>
+<li>RDD 与合成控制只完成方法、诊断与伪代码契约，没有真实估计输出。</li>
+<li>下一 slice G11/M06 将进入 CAPM/SDF、Fama–French 与 Fama–MacBeth 资产定价检验，必须继续区分预测、因果和定价误差。</li>
+</ul>
+<h2 id="references">参考文献（References）</h2>
+<ol>
+<li>[1] Bruce E. Hansen, “Econometrics.” <a href="https://www.ssc.wisc.edu/~bhansen/econometrics/">链接</a></li>
+<li>[2] MIT OpenCourseWare, “14.382 Econometrics,” 2017. <a href="https://ocw.mit.edu/courses/14-382-econometrics-spring-2017/">链接</a></li>
+<li>[3] linearmodels documentation. <a href="https://bashtage.github.io/linearmodels/">链接</a></li>
+<li>[4] David Card and Alan B. Krueger, “Minimum Wages and Employment,” <em>American Economic Review</em>, 1994. <a href="https://www.jstor.org/stable/2118030">链接</a></li>
+<li>[5] Guido W. Imbens and Thomas Lemieux, “Regression Discontinuity Designs: A Guide to Practice,” <em>Journal of Econometrics</em>, 2008. <a href="https://doi.org/10.1016/j.jeconom.2007.05.001">链接</a></li>
+<li>[6] Alberto Abadie, Alexis Diamond, and Jens Hainmueller, “Synthetic Control Methods for Comparative Case Studies,” <em>JASA</em>, 2010. <a href="https://doi.org/10.1198/jasa.2009.ap08746">链接</a></li>
+</ol>
+
+        <nav class="next-chapter" aria-label="下一章节">
+          <span class="next-chapter-label">下一章节</span>
+          <a rel="next" href="06_asset_pricing_notes.html">M06 资产定价 →</a>
+        </nav>
+
+        <a class="back-to-top" href="#top">返回页首 ↑</a>
+      </article>
+    </main>
+  </div>
+</body>
+</html>

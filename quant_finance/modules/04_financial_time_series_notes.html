@@ -1,0 +1,673 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="generator" content="quant_finance ARIS render-html (academic, v1)">
+  <meta name="source-file" content="04_financial_time_series_notes.md">
+  <meta name="source-sha256" content="42c7edabce241e2cc5da7ad76abd089130ba3b7063d66c21b15c5db65fc353b4">
+  <title>金融时间序列：ARIMA、VAR、状态空间与波动率模型</title>
+  <script>
+    window.MathJax = {
+      tex: {inlineMath: [['\\(', '\\)'], ['$', '$']], displayMath: [['\\[', '\\]'], ['$$', '$$']]},
+      options: {skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']}
+    };
+  </script>
+  <script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+  <style>
+/* ARIS academic v1 — quant_finance canonical inline stylesheet. */
+:root {
+  --paper: #fdfcf7;
+  --paper-soft: #f4f1ea;
+  --ink: #1a1a1a;
+  --muted: #625f58;
+  --blue: #1a4a8c;
+  --blue-soft: #dce7f4;
+  --rust: #b8390e;
+  --rule: #b9b2a6;
+  --serif: "Source Serif Pro", "Source Serif 4", "Crimson Pro", Georgia, "Songti SC", STSong, serif;
+  --mono: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  margin: 0;
+  color: var(--ink);
+  background: var(--paper);
+  font-family: var(--serif);
+  font-size: 16px;
+  line-height: 1.8;
+}
+a { color: var(--blue); text-underline-offset: 0.16em; }
+a:hover { color: var(--rust); }
+
+.page-shell {
+  width: min(1280px, calc(100% - 40px));
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: 260px minmax(0, 1fr);
+  gap: 42px;
+  align-items: start;
+}
+.toc {
+  position: sticky;
+  top: 24px;
+  max-height: calc(100vh - 48px);
+  overflow-y: auto;
+  padding: 28px 18px 24px 0;
+  color: var(--muted);
+}
+.toc-title {
+  margin: 0 0 0.65rem;
+  color: var(--blue);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+.toc ol { margin: 0; padding: 0; list-style: none; }
+.toc li { margin: 0.24rem 0; line-height: 1.35; }
+.toc a { color: inherit; text-decoration: none; }
+.toc a:hover { color: var(--rust); }
+.toc .depth-3 { padding-left: 0.85rem; font-size: 0.92rem; }
+.toc .depth-4 { padding-left: 1.55rem; font-size: 0.86rem; }
+
+main {
+  min-width: 0;
+  margin: 24px 0 64px;
+  padding: 48px clamp(32px, 5vw, 72px) 64px;
+  background: var(--paper-soft);
+  border: 1px solid #ded8cd;
+  box-shadow: 0 16px 44px rgba(55, 47, 36, 0.08);
+}
+article { min-width: 0; }
+.eyebrow {
+  margin: 0 0 0.45rem;
+  color: var(--rust);
+  font-family: var(--serif);
+  font-size: 0.76rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+.subtitle { margin: 0 0 0.5rem; color: var(--muted); font-size: 1.05rem; }
+.meta {
+  margin: 0 0 2.2rem;
+  color: var(--muted);
+  font-size: 0.86rem;
+}
+h1 {
+  margin: 0 0 0.7rem;
+  padding: 0 0 0.8rem;
+  color: var(--ink);
+  border-bottom: 5px double var(--blue);
+  font-size: clamp(2rem, 5vw, 3.1rem);
+  line-height: 1.14;
+  letter-spacing: -0.025em;
+}
+h2 {
+  margin: 3.2rem 0 1.15rem;
+  padding-bottom: 0.42rem;
+  border-bottom: 1px solid var(--rule);
+  color: var(--ink);
+  font-size: 1.62rem;
+  line-height: 1.35;
+}
+h3 { margin: 2.15rem 0 0.8rem; color: var(--blue); font-size: 1.28rem; line-height: 1.4; }
+h4 { margin: 1.55rem 0 0.6rem; color: var(--ink); font-size: 1.06rem; line-height: 1.45; }
+p, ul, ol, blockquote { margin: 0 0 1rem; }
+ul, ol { padding-left: 1.5rem; }
+li + li { margin-top: 0.24rem; }
+strong { color: #111; }
+
+code {
+  font-family: var(--mono);
+  font-size: 0.9em;
+  background: #e9e5dc;
+  border-radius: 3px;
+  padding: 0.1em 0.32em;
+}
+pre {
+  max-width: 100%;
+  margin: 1.2rem 0 1.5rem;
+  padding: 1rem 1.1rem;
+  overflow-x: auto;
+  background: #faf9f5;
+  border: 1px solid #d8d2c7;
+  border-left: 4px solid var(--blue);
+  border-radius: 2px;
+  line-height: 1.55;
+}
+pre code {
+  display: block;
+  min-width: max-content;
+  padding: 0;
+  color: #383a42;
+  background: transparent;
+}
+/* Highlight.js atom-one-light-compatible colors for portable, inline styling. */
+.hljs-comment, .hljs-quote { color: #a0a1a7; font-style: italic; }
+.hljs-keyword, .hljs-selector-tag, .hljs-literal { color: #a626a4; }
+.hljs-string, .hljs-regexp { color: #50a14f; }
+.hljs-number, .hljs-symbol { color: #986801; }
+.hljs-title, .hljs-section, .hljs-function { color: #4078f2; }
+
+.formula {
+  max-width: 100%;
+  margin: 1.25rem 0 1.5rem;
+  padding: 1rem 1.15rem;
+  overflow-x: auto;
+  background: #faf9f5;
+  border: 1px solid #d8d2c7;
+  border-left: 4px solid var(--blue);
+}
+.formula mjx-container { min-width: max-content; }
+
+.table-wrap { max-width: 100%; margin: 1.25rem 0 1.6rem; overflow-x: auto; }
+table { width: 100%; min-width: 640px; border-collapse: collapse; font-size: 0.93rem; line-height: 1.55; }
+th, td { padding: 0.68rem 0.78rem; border: 1px solid #aaa398; text-align: left; vertical-align: top; }
+thead th { color: #fff; background: var(--blue); font-weight: 700; }
+tbody tr:nth-child(even) { background: #ebe6dc; }
+tbody tr:nth-child(odd) { background: #f8f5ee; }
+
+.note, .warning, .evidence, blockquote {
+  margin: 1.2rem 0 1.45rem;
+  padding: 0.85rem 1rem;
+  background: #f8f5ee;
+  border: 1px solid #d2cbc0;
+  border-left: 4px solid var(--blue);
+}
+.warning { border-left-color: var(--rust); background: #fff2e9; }
+.evidence { border-left-color: #6b5b8e; background: #f2eef8; }
+.note > :last-child, .warning > :last-child, .evidence > :last-child, blockquote > :last-child { margin-bottom: 0; }
+.back-to-top { display: inline-block; margin-top: 2rem; font-size: 0.88rem; }
+
+@media (max-width: 900px) {
+  .page-shell { width: min(100% - 24px, 820px); grid-template-columns: 1fr; gap: 0; }
+  .toc { position: static; max-height: none; padding: 20px 8px 4px; columns: 2; column-gap: 1.5rem; }
+  .toc-title { column-span: all; }
+  main { margin-top: 16px; padding: 34px clamp(18px, 5vw, 40px) 48px; }
+  h1 { font-size: clamp(1.8rem, 8vw, 2.55rem); }
+  table { min-width: 600px; }
+  pre, .formula, .table-wrap { overflow-x: auto; }
+}
+
+@media (max-width: 560px) {
+  .toc { columns: 1; }
+  .page-shell { width: calc(100% - 12px); }
+  main { padding-left: 15px; padding-right: 15px; }
+}
+
+@media print {
+  body { background: #fff; }
+  .page-shell { display: block; width: 100%; }
+  .toc, .back-to-top { display: none !important; }
+  main { margin: 0; padding: 0; background: #fff; border: 0; box-shadow: none; }
+  a { color: inherit; text-decoration: none; }
+  pre, .formula, table { break-inside: avoid; }
+}
+
+    .next-chapter { margin: 2.5rem 0 1rem; padding: 1rem 1.2rem; border: 1px solid #b9c9df; border-left: 4px solid #1a4a8c; background: #f4f1ea; display: flex; gap: .75rem; align-items: baseline; justify-content: space-between; }
+    .next-chapter-label { color: #1a4a8c; font-weight: 700; white-space: nowrap; }
+    .next-chapter a { color: #1a4a8c; font-weight: 700; text-decoration: none; }
+    .next-chapter a:hover, .next-chapter a:focus { color: #b8390e; text-decoration: underline; }
+    @media (max-width: 900px) { .next-chapter { display: block; } .next-chapter-label { display: block; margin-bottom: .35rem; } }
+  </style>
+</head>
+<body id="top">
+  <div class="page-shell">
+    <nav class="toc" aria-label="目录">
+      <p class="toc-title">Contents</p>
+      <ol>
+<li class="depth-2"><a href="#question">问题（Question）</a></li>
+<li class="depth-2"><a href="#background">背景与动机（Background &amp; Motivation）</a></li>
+<li class="depth-2"><a href="#concepts">基础概念与术语</a></li>
+<li class="depth-2"><a href="#methods">方法</a></li>
+<li class="depth-3"><a href="#arima">ARIMA 与单位根</a></li>
+<li class="depth-3"><a href="#var">VAR 与协整</a></li>
+<li class="depth-3"><a href="#state-space">状态空间与滤波</a></li>
+<li class="depth-3"><a href="#garch">ARCH/GARCH 与波动率</a></li>
+<li class="depth-2"><a href="#math">数学与评估契约（Mathematical Form）</a></li>
+<li class="depth-2"><a href="#pipeline">Pipeline 与伪代码（Pipeline &amp; Pseudocode）</a></li>
+<li class="depth-2"><a href="#implementation">实现证据与结果（Implementation &amp; Results）</a></li>
+<li class="depth-2"><a href="#boundary">数据契约与坏案例</a></li>
+<li class="depth-2"><a href="#comparison">方法对比与选择建议（Comparison）</a></li>
+<li class="depth-2"><a href="#exercises">练习与答案边界（Exercises）</a></li>
+<li class="depth-2"><a href="#answer-boundary">答案索引（Answer Boundary）</a></li>
+<li class="depth-2"><a href="#risks">风险与后续建议（Risks &amp; Next）</a></li>
+<li class="depth-2"><a href="#references">参考文献（References）</a></li>
+      </ol>
+    </nav>
+    <main>
+      <article>
+        <header>
+          <p class="eyebrow">Quant Finance · Financial Time Series</p>
+          <p class="subtitle">M04 · 用时间顺序、滚动窗口和依赖结构约束预测评估</p>
+          <h1>金融时间序列：ARIMA、VAR、状态空间与波动率模型</h1>
+          <p class="meta">发布日期：2026-07-22 · 证据截止：2026-07-22 · 源文件 SHA-256：<code>42c7edabce241e2cc5da7ad76abd089130ba3b7063d66c21b15c5db65fc353b4</code></p>
+        </header>
+<h2 id="question">问题（Question）</h2>
+<p>金融序列不是 iid 横截面：收益、利率和波动率都有滞后依赖、结构变化和预测信息集。如何在不打乱时间的前提下比较 ARIMA/VAR、状态空间和 ARCH/GARCH，并把单位根、协整与预测损失写进研究协议？</p>
+<h2 id="background">背景与动机（Background &amp; Motivation）</h2>
+<p>时间序列研究必须区分描述、预测与结构解释。<code>statsmodels</code> 官方文档提供 ARIMA、VAR、状态空间和单位根检验的实现入口；<code>arch</code> 官方文档覆盖条件波动率、Bootstrap、单位根与协整工具。[1][2] 本模块先用 NumPy 合成双变量序列验证严格时间切分和基本递推，不把未安装的可选包伪装成已运行证据。</p>
+<div class="evidence"><strong>证据边界：</strong>ARIMA/VAR/状态空间/ARCH-GARCH 的模型定义来自官方文档和计量课程；本地结果只验证简化 AR(1)、VAR(1)、EWMA 与 local-level Kalman 风格滤波递推。没有真实 FRED/ALFRED 数据，因此不支持宏观预测或交易收益主张。</div>
+<h2 id="concepts">基础概念与术语</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>术语</th>
+<th>含义</th>
+<th>关键风险</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>平稳（stationary）</td>
+<td>分布或矩在时间平移下保持稳定</td>
+<td>趋势/单位根会使回归和预测失真</td>
+</tr>
+<tr>
+<td>单位根（unit root）</td>
+<td>AR 多项式在单位圆上有根</td>
+<td>水平回归可能是伪回归</td>
+</tr>
+<tr>
+<td>协整（cointegration）</td>
+<td>非平稳序列的某个线性组合平稳</td>
+<td>需误差修正而非任意差分</td>
+</tr>
+<tr>
+<td>ARIMA</td>
+<td>自回归、差分与移动平均组合</td>
+<td>阶数、差分和残差诊断需冻结</td>
+</tr>
+<tr>
+<td>VAR</td>
+<td>多变量滞后系统</td>
+<td>参数数量和稳定性随维度快速增长</td>
+</tr>
+<tr>
+<td>状态空间</td>
+<td>隐状态转移与观测方程</td>
+<td>需要初始化、噪声方差和滤波设定</td>
+</tr>
+<tr>
+<td>ARCH/GARCH</td>
+<td>条件方差依赖过去冲击/方差</td>
+<td>分布尾部、杠杆和结构变化可能未建模</td>
+</tr>
+<tr>
+<td>滚动样本外</td>
+<td>每个时点只用此前观测训练</td>
+<td>随机切分会泄漏未来</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="methods">方法</h2>
+<h3 id="arima">ARIMA 与单位根</h3>
+<p>ARIMA<span class="math-inline" data-math-kind="inline">\((p,d,q)\)</span> 对差分序列建模：</p>
+<div class="formula" data-math-kind="display">\[\phi(L)(1-L)^d y_t=c+\theta(L)\varepsilon_t,\qquad \varepsilon_t\sim(0,\sigma^2).\]</div>
+<p>先通过图形、ADF/KPSS 等互补证据判断差分与趋势；检验的零假设方向不同，不能只看一个 p 值。</p>
+<h3 id="var">VAR 与协整</h3>
+<p>VAR(1) 写为：</p>
+<div class="formula" data-math-kind="display">\[y_t=c+A_1y_{t-1}+u_t,\qquad E[u_t\mid\mathcal F_{t-1}]=0.\]</div>
+<p>稳定性要求 companion matrix 的特征根在单位圆内。若变量非平稳但存在协整关系，应考虑 VECM；盲目对所有变量差分会丢失长期关系。</p>
+<h3 id="state-space">状态空间与滤波</h3>
+<p>一般形式为：</p>
+<div class="formula" data-math-kind="display">\[\alpha_t=T_t\alpha_{t-1}+R_t\eta_t,\qquad y_t=Z_t\alpha_t+\varepsilon_t.\]</div>
+<p>Kalman filter 用预测误差更新隐状态；初始化、缺失观测处理和噪声协方差必须进入实验记录。local-level 递推是本切片的最小可执行示例。</p>
+<h3 id="garch">ARCH/GARCH 与波动率</h3>
+<p>GARCH(1,1) 的条件方差为：</p>
+<div class="formula" data-math-kind="display">\[\sigma_t^2=\omega+\alpha\varepsilon_{t-1}^2+\beta\sigma_{t-1}^2,
+\qquad \omega&gt;0,\ \alpha,\beta\ge0.\]</div>
+<p>通常要求 <span class="math-inline" data-math-kind="inline">\(\alpha+\beta&lt;1\)</span> 以得到有限无条件方差（在标准设定下）。EWMA 是不含常数项的指数加权基线，不应称为完整 GARCH 估计。</p>
+<h2 id="math">数学与评估契约（Mathematical Form）</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>项目</th>
+<th>契约</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>训练信息集</td>
+<td>预测 <span class="math-inline" data-math-kind="inline">\(y_t\)</span> 只能使用 <span class="math-inline" data-math-kind="inline">\(\{y_s:s&lt;t\}\)</span></td>
+</tr>
+<tr>
+<td>损失</td>
+<td>RMSE/MAE 评估均值预测；QLIKE 更适合方差预测</td>
+</tr>
+<tr>
+<td>滚动窗口</td>
+<td>记录 expanding 或 fixed-width、初始训练长度和再估计频率</td>
+</tr>
+<tr>
+<td>稳定性</td>
+<td>报告单位根/特征根、残差自相关和条件方差约束</td>
+</tr>
+<tr>
+<td>不确定性</td>
+<td>使用滚动误差、Bootstrap 或预测区间；不把点预测当确定值</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="pipeline">Pipeline 与伪代码（Pipeline &amp; Pseudocode）</h2>
+<pre><code class="language-python">series = load_point_in_time_series(asof_at)  # 继承 M02 时间与可用性契约
+train, test = strict_time_split(series, initial=160)
+for t in test:
+    fit = refit_model(train)                 # ARIMA/VAR/state-space/GARCH
+    forecast[t] = fit.forecast(horizon=1)
+    train = append_observation(train, series[t])
+score = evaluate_forecasts(forecast, metric=&quot;RMSE&quot;)
+diagnose_residuals_and_stability(fit, score)
+</code></pre>
+<p>可执行 smoke 实验见 <a href="../tools/m04_time_series.py"><code>m04_time_series.py</code></a>，结果见 <a href="../data/m04_time_series_results.json"><code>m04_time_series_results.json</code></a>。由于环境未安装 <code>statsmodels</code>/<code>arch</code>，本切片不声称已执行其 API；后续环境准备后应增加同一数据的官方实现对照。</p>
+<h2 id="implementation">实现证据与结果（Implementation &amp; Results）</h2>
+<pre><code class="language-powershell">python quant_finance/tools/m04_time_series.py
+python quant_finance/data/test_m04_time_series.py -v
+</code></pre>
+<p>本地脚本固定 seed 生成 260 期双变量序列，前 160 期训练、后 100 期滚动预测；同时输出 VAR(1) 系数、EWMA 条件方差和 local-level 过滤状态。测试验证两次运行输出逐字一致、VAR 系数矩阵形状正确、预测误差与方差为正。</p>
+<h2 id="boundary">数据契约与坏案例</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>坏案例</th>
+<th>为什么失效</th>
+<th>修复</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>随机打乱 train/test</td>
+<td>未来观测进入训练集</td>
+<td>expanding/fixed rolling split</td>
+</tr>
+<tr>
+<td>先看全样本再选差分阶数</td>
+<td>测试集信息泄漏</td>
+<td>在每个训练窗口内选择并记录</td>
+</tr>
+<tr>
+<td>非平稳水平回归</td>
+<td>伪回归、残差不平稳</td>
+<td>差分、协整/VECM 或结构模型</td>
+</tr>
+<tr>
+<td>用对称 Gaussian 解释极端波动</td>
+<td>尾部风险低估</td>
+<td>t 分布、skew、EVT 与压力测试</td>
+</tr>
+<tr>
+<td>EWMA 叫作 GARCH</td>
+<td>缺少常数项和估计的条件方差结构</td>
+<td>准确标注模型并报告参数约束</td>
+</tr>
+<tr>
+<td>忽略交易日缺失</td>
+<td>滞后和年化尺度错误</td>
+<td>使用 M02 日历、时区和 session_id</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="comparison">方法对比与选择建议（Comparison）</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>研究问题</th>
+<th>起步模型</th>
+<th>追加诊断</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>单变量均值预测</td>
+<td>ARIMA/ETS</td>
+<td>单位根、残差、自相关、滚动误差</td>
+</tr>
+<tr>
+<td>多变量联动</td>
+<td>VAR/VECM</td>
+<td>稳定性、协整秩、脉冲响应不确定性</td>
+</tr>
+<tr>
+<td>隐状态/缺失观测</td>
+<td>状态空间/Kalman</td>
+<td>初始化、噪声方差、滤波与平滑差异</td>
+</tr>
+<tr>
+<td>波动率预测</td>
+<td>GARCH、EWMA 基线</td>
+<td>QLIKE、尾部、杠杆、样本外比较</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="exercises">练习与答案边界（Exercises）</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>ID</th>
+<th>题目</th>
+<th>通过边界</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>M04-Q01</td>
+<td>什么是弱平稳？</td>
+<td>说明均值、方差和协方差只依赖滞后。</td>
+</tr>
+<tr>
+<td>M04-Q02</td>
+<td>单位根为何危险？</td>
+<td>能解释伪回归和差分选择。</td>
+</tr>
+<tr>
+<td>M04-Q03</td>
+<td>ADF 与 KPSS 零假设有何差异？</td>
+<td>说清一个以单位根为零假设、一个以平稳为零假设。</td>
+</tr>
+<tr>
+<td>M04-Q04</td>
+<td>ARIMA 的 d 表示什么？</td>
+<td>差分阶数，不是 AR 阶数。</td>
+</tr>
+<tr>
+<td>M04-Q05</td>
+<td>VAR 稳定性如何检查？</td>
+<td>看 companion matrix 特征根。</td>
+</tr>
+<tr>
+<td>M04-Q06</td>
+<td>何时使用 VECM？</td>
+<td>非平稳变量存在协整关系时。</td>
+</tr>
+<tr>
+<td>M04-Q07</td>
+<td>状态空间的两条方程是什么？</td>
+<td>状态转移方程和观测方程。</td>
+</tr>
+<tr>
+<td>M04-Q08</td>
+<td>Kalman filter 更新什么？</td>
+<td>用预测误差和增益更新隐状态及方差。</td>
+</tr>
+<tr>
+<td>M04-Q09</td>
+<td>GARCH(1,1) 参数有何约束？</td>
+<td><span class="math-inline" data-math-kind="inline">\(\omega&gt;0,\alpha,\beta\ge0\)</span>，通常 <span class="math-inline" data-math-kind="inline">\(\alpha+\beta&lt;1\)</span>。</td>
+</tr>
+<tr>
+<td>M04-Q10</td>
+<td>EWMA 与 GARCH 的边界？</td>
+<td>EWMA 是固定衰减基线，不等于估计的 GARCH。</td>
+</tr>
+<tr>
+<td>M04-Q11</td>
+<td>为什么不能随机切时间序列？</td>
+<td>会把未来信息泄漏到训练。</td>
+</tr>
+<tr>
+<td>M04-Q12</td>
+<td>expanding 与 rolling window 差异？</td>
+<td>前者样本累积，后者窗口固定。</td>
+</tr>
+<tr>
+<td>M04-Q13</td>
+<td>均值预测应报告什么损失？</td>
+<td>至少 RMSE/MAE 和样本外切分。</td>
+</tr>
+<tr>
+<td>M04-Q14</td>
+<td>方差预测为什么常用 QLIKE？</td>
+<td>对正方差预测更适合且对尺度有明确惩罚。</td>
+</tr>
+<tr>
+<td>M04-Q15</td>
+<td>如何处理缺失交易会话？</td>
+<td>遵循日历，不把缺失收益任意填零。</td>
+</tr>
+<tr>
+<td>M04-Q16</td>
+<td>结构突变会怎样？</td>
+<td>历史参数不稳定，需滚动、状态转换或分段诊断。</td>
+</tr>
+<tr>
+<td>M04-Q17</td>
+<td>多步预测为何不同于一步？</td>
+<td>递推误差与参数不确定性会累积。</td>
+</tr>
+<tr>
+<td>M04-Q18</td>
+<td>什么时候使用 block bootstrap？</td>
+<td>残差或收益存在时间依赖时。</td>
+</tr>
+<tr>
+<td>M04-Q19</td>
+<td>本地 smoke 结果支持什么？</td>
+<td>支持递推和时间切分实现，不支持真实市场结论。</td>
+</tr>
+<tr>
+<td>M04-Q20</td>
+<td>何时暂停模型比较？</td>
+<td>日历、切分、稳定性或残差诊断未通过时。</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="answer-boundary">答案索引（Answer Boundary）</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>ID</th>
+<th>答案边界</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>M04-Q01</td>
+<td>二阶矩只依赖滞后而不依赖绝对时间。</td>
+</tr>
+<tr>
+<td>M04-Q02</td>
+<td>单位根使水平关系可能伪回归并破坏常规渐近近似。</td>
+</tr>
+<tr>
+<td>M04-Q03</td>
+<td>ADF 以单位根为零假设，KPSS 以平稳为零假设。</td>
+</tr>
+<tr>
+<td>M04-Q04</td>
+<td>d 是差分次数。</td>
+</tr>
+<tr>
+<td>M04-Q05</td>
+<td>companion matrix 特征根应在单位圆内。</td>
+</tr>
+<tr>
+<td>M04-Q06</td>
+<td>非平稳变量有稳定长期线性组合时。</td>
+</tr>
+<tr>
+<td>M04-Q07</td>
+<td>状态转移与观测方程。</td>
+</tr>
+<tr>
+<td>M04-Q08</td>
+<td>用创新项按 Kalman gain 修正状态和不确定性。</td>
+</tr>
+<tr>
+<td>M04-Q09</td>
+<td>非负参数，标准有限方差设定通常要求 alpha+beta 小于 1。</td>
+</tr>
+<tr>
+<td>M04-Q10</td>
+<td>EWMA 是固定递推基线，GARCH 还估计常数和参数。</td>
+</tr>
+<tr>
+<td>M04-Q11</td>
+<td>随机切分让未来观测进入过去训练。</td>
+</tr>
+<tr>
+<td>M04-Q12</td>
+<td>expanding 累积样本，rolling 固定窗口。</td>
+</tr>
+<tr>
+<td>M04-Q13</td>
+<td>RMSE/MAE、时间切分和基准模型。</td>
+</tr>
+<tr>
+<td>M04-Q14</td>
+<td>QLIKE 对方差预测的尺度和正值约束更合适。</td>
+</tr>
+<tr>
+<td>M04-Q15</td>
+<td>记录交易日历并保留缺失原因。</td>
+</tr>
+<tr>
+<td>M04-Q16</td>
+<td>参数随时间变化，需滚动或状态转换诊断。</td>
+</tr>
+<tr>
+<td>M04-Q17</td>
+<td>多步递推会积累预测和参数误差。</td>
+</tr>
+<tr>
+<td>M04-Q18</td>
+<td>存在序列相关时按连续块重抽样。</td>
+</tr>
+<tr>
+<td>M04-Q19</td>
+<td>只证明本地递推/切分可重放。</td>
+</tr>
+<tr>
+<td>M04-Q20</td>
+<td>任一数据、切分、稳定性或残差闸门失败。</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="risks">风险与后续建议（Risks &amp; Next）</h2>
+<ul>
+<li><code>statsmodels</code> 与 <code>arch</code> 未安装，本 slice 的官方实现对照留作环境准备项，不能标记为已完成。</li>
+<li>单一合成机制无法覆盖利率、汇率、股指、跳跃和微观结构序列的全部特征。</li>
+<li>下一 slice G08/P1 将冻结 FRED/ALFRED 实时 vintage 数据，比较修订值与当时可用值，重点验证时间信息集而非追求高预测分数。</li>
+</ul>
+<h2 id="references">参考文献（References）</h2>
+<ol>
+<li>[1] statsmodels developers, “Time Series Analysis,” official documentation. <a href="https://www.statsmodels.org/stable/tsa.html">链接</a></li>
+<li>[2] bashtage, “arch documentation: volatility, unit root, cointegration and bootstrap.” <a href="https://arch.readthedocs.io/en/stable/">链接</a></li>
+<li>[3] MIT OpenCourseWare, “14.382 Econometrics,” 2017. <a href="https://ocw.mit.edu/courses/14-382-econometrics-spring-2017/">链接</a></li>
+<li>[4] Bruce E. Hansen, “Econometrics.” <a href="https://www.ssc.wisc.edu/~bhansen/econometrics/">链接</a></li>
+</ol>
+
+        <nav class="next-chapter" aria-label="下一章节">
+          <span class="next-chapter-label">下一章节</span>
+          <a rel="next" href="05_panel_and_causal_identification_notes.html">M05 面板与因果识别 →</a>
+        </nav>
+
+        <a class="back-to-top" href="#top">返回页首 ↑</a>
+      </article>
+    </main>
+  </div>
+</body>
+</html>

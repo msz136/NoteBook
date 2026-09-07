@@ -1,0 +1,53 @@
+{
+  "snapshot_date_utc": "2026-07-27",
+  "source": "Kenneth French Data Library",
+  "source_type": "primary_data_local_evidence",
+  "source_url": "https://mba.tuck.dartmouth.edu/pages/faculty/ken.french/ftp/F-F_Research_Data_Factors_CSV.zip",
+  "download_sha256": "80b88699a18ac408e2456d25b1004e340f3f7f8d41d5b476a0285bc53c6f0436",
+  "file_header": "This file was created using the 202605 CRSP database.",
+  "frequency": "monthly",
+  "unit_conversion": "official percentage values divided by 100",
+  "sample": {
+    "start": "1926-07",
+    "end": "2026-05",
+    "months": 1199
+  },
+  "series_definition": {
+    "HML": "High book-to-market portfolio return minus low book-to-market portfolio return, as published by the French Data Library.",
+    "Mkt-RF": "Market excess return factor, as published by the French Data Library."
+  },
+  "full_sample_statistics": {
+    "HML": {
+      "annualized_arithmetic_return": 0.0422462052,
+      "cagr": 0.0355644562,
+      "annualized_volatility": 0.1230032108,
+      "sharpe_rf0": 0.3434561171,
+      "max_drawdown": -0.5778632519,
+      "max_drawdown_trough": "2020-09",
+      "final_wealth_multiple": 32.8434525840
+    },
+    "Mkt-RF": {
+      "annualized_arithmetic_return": 0.0835946622,
+      "cagr": 0.0687744835,
+      "annualized_volatility": 0.1838587798,
+      "sharpe_rf0": 0.4546677744,
+      "max_drawdown": -0.8463414903,
+      "max_drawdown_trough": "1932-06",
+      "final_wealth_multiple": 769.4855936627
+    }
+  },
+  "HML_subperiods": {
+    "1926-07": {"months": 1199, "annualized_arithmetic_return": 0.0422462052, "cagr": 0.0355644562, "annualized_volatility": 0.1230032108, "sharpe_rf0": 0.3434561171, "max_drawdown": -0.5778632519},
+    "1970-01": {"months": 677, "annualized_arithmetic_return": 0.0366700148, "cagr": 0.0314876008, "annualized_volatility": 0.1063175986, "sharpe_rf0": 0.3449101114, "max_drawdown": -0.5778632519},
+    "1990-01": {"months": 437, "annualized_arithmetic_return": 0.0189528604, "cagr": 0.0128256835, "annualized_volatility": 0.1116919339, "sharpe_rf0": 0.1696887118, "max_drawdown": -0.5778632519},
+    "2000-01": {"months": 317, "annualized_arithmetic_return": 0.0259305994, "cagr": 0.0190791762, "annualized_volatility": 0.1188578869, "sharpe_rf0": 0.2181647348, "max_drawdown": -0.5778632519},
+    "2010-01": {"months": 197, "annualized_arithmetic_return": -0.0066578680, "cagr": -0.0128621633, "annualized_volatility": 0.1124165018, "sharpe_rf0": -0.0592250062, "max_drawdown": -0.5337676504},
+    "2020-01": {"months": 77, "annualized_arithmetic_return": 0.0196363636, "cagr": 0.0083928055, "annualized_volatility": 0.1508936423, "sharpe_rf0": 0.1301338037, "max_drawdown": -0.2933830154}
+  },
+  "evidence_boundary": [
+    "HML is a published long-short factor proxy, not the return of a discretionary value investor or a long-only value fund.",
+    "The full-sample path is descriptive and not a sample-out-of-time prediction test.",
+    "The CRSP-derived source file is not redistributed; only URL, file header, hash, and derived statistics are stored.",
+    "Sector composition, leverage, shorting, financing, turnover, and implementation costs are not represented by the simple factor summary."
+  ]
+}

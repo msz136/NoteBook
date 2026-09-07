@@ -1,0 +1,17 @@
+{
+  "bond": {
+    "price": 97.7834459127829,
+    "macaulay_duration": 4.575345624627525,
+    "modified_duration": 4.474665647557482
+  },
+  "option": {
+    "black_scholes": 9.413403383853016,
+    "binomial_600": 9.41009859835654,
+    "monte_carlo_antithetic": 9.406504619307274,
+    "mc_standard_error": 0.03148316802146258,
+    "tree_abs_error": 0.003304785496474949,
+    "mc_abs_error": 0.006898764545741898
+  },
+  "assumptions": "European call, no dividends, constant r and sigma; bond uses flat yield and semiannual coupons",
+  "evidence_boundary": "numerical identity and convergence checks only; no market calibration or hedge-PnL claim"
+}

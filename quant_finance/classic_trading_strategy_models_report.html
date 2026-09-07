@@ -1,0 +1,3794 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="generator" content="quant_finance ARIS render-html (academic, v1)">
+  <meta name="source-file" content="classic_trading_strategy_models_report.md">
+  <meta name="source-sha256" content="32a337c5d3a836a7ab8e38f105ee64b14a9b846ee41feecc36c530f773fcb49b">
+  <title>经典交易策略模型：主观判断、计量信号与跨资产组合</title>
+  <script>
+    window.MathJax = {
+      tex: {inlineMath: [['\\(', '\\)'], ['$', '$']], displayMath: [['\\[', '\\]'], ['$$', '$$']]},
+      options: {skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']}
+    };
+  </script>
+  <script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+  <style>
+/* ARIS academic v1 — quant_finance canonical inline stylesheet. */
+:root {
+  --paper: #fdfcf7;
+  --paper-soft: #f4f1ea;
+  --ink: #1a1a1a;
+  --muted: #625f58;
+  --blue: #1a4a8c;
+  --blue-soft: #dce7f4;
+  --rust: #b8390e;
+  --rule: #b9b2a6;
+  --serif: "Source Serif Pro", "Source Serif 4", "Crimson Pro", Georgia, "Songti SC", STSong, serif;
+  --mono: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  margin: 0;
+  color: var(--ink);
+  background: var(--paper);
+  font-family: var(--serif);
+  font-size: 16px;
+  line-height: 1.8;
+}
+a { color: var(--blue); text-underline-offset: 0.16em; overflow-wrap: anywhere; word-break: break-word; }
+a:hover { color: var(--rust); }
+
+.page-shell {
+  width: min(1280px, calc(100% - 40px));
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: 260px minmax(0, 1fr);
+  gap: 42px;
+  align-items: start;
+}
+.toc {
+  position: sticky;
+  top: 24px;
+  max-height: calc(100vh - 48px);
+  overflow-y: auto;
+  padding: 28px 18px 24px 0;
+  color: var(--muted);
+}
+.toc-title {
+  margin: 0 0 0.65rem;
+  color: var(--blue);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+.toc ol { margin: 0; padding: 0; list-style: none; }
+.toc li { margin: 0.24rem 0; line-height: 1.35; }
+.toc a { color: inherit; text-decoration: none; overflow-wrap: anywhere; word-break: break-word; }
+.toc a:hover { color: var(--rust); }
+.toc .depth-3 { padding-left: 0.85rem; font-size: 0.92rem; }
+.toc .depth-4 { padding-left: 1.55rem; font-size: 0.86rem; }
+
+main {
+  min-width: 0;
+  margin: 24px 0 64px;
+  padding: 48px clamp(32px, 5vw, 72px) 64px;
+  background: var(--paper-soft);
+  border: 1px solid #ded8cd;
+  box-shadow: 0 16px 44px rgba(55, 47, 36, 0.08);
+}
+article { min-width: 0; }
+.eyebrow {
+  margin: 0 0 0.45rem;
+  color: var(--rust);
+  font-family: var(--serif);
+  font-size: 0.76rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+.subtitle { margin: 0 0 0.5rem; color: var(--muted); font-size: 1.05rem; }
+.meta {
+  margin: 0 0 2.2rem;
+  color: var(--muted);
+  font-size: 0.86rem;
+}
+h1 {
+  margin: 0 0 0.7rem;
+  padding: 0 0 0.8rem;
+  color: var(--ink);
+  border-bottom: 5px double var(--blue);
+  font-size: clamp(2rem, 5vw, 3.1rem);
+  line-height: 1.14;
+  letter-spacing: -0.025em;
+}
+h2 {
+  margin: 3.2rem 0 1.15rem;
+  padding-bottom: 0.42rem;
+  border-bottom: 1px solid var(--rule);
+  color: var(--ink);
+  font-size: 1.62rem;
+  line-height: 1.35;
+}
+h3 { margin: 2.15rem 0 0.8rem; color: var(--blue); font-size: 1.28rem; line-height: 1.4; }
+h4 { margin: 1.55rem 0 0.6rem; color: var(--ink); font-size: 1.06rem; line-height: 1.45; }
+p, ul, ol, blockquote { margin: 0 0 1rem; }
+ul, ol { padding-left: 1.5rem; }
+li + li { margin-top: 0.24rem; }
+strong { color: #111; }
+
+code {
+  font-family: var(--mono);
+  font-size: 0.9em;
+  background: #e9e5dc;
+  border-radius: 3px;
+  padding: 0.1em 0.32em;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+pre {
+  max-width: 100%;
+  margin: 1.2rem 0 1.5rem;
+  padding: 1rem 1.1rem;
+  overflow-x: auto;
+  background: #faf9f5;
+  border: 1px solid #d8d2c7;
+  border-left: 4px solid var(--blue);
+  border-radius: 2px;
+  line-height: 1.55;
+}
+pre code {
+  display: block;
+  min-width: max-content;
+  padding: 0;
+  color: #383a42;
+  background: transparent;
+  overflow-wrap: normal;
+  word-break: normal;
+}
+/* Highlight.js atom-one-light-compatible colors for portable, inline styling. */
+.hljs-comment, .hljs-quote { color: #a0a1a7; font-style: italic; }
+.hljs-keyword, .hljs-selector-tag, .hljs-literal { color: #a626a4; }
+.hljs-string, .hljs-regexp { color: #50a14f; }
+.hljs-number, .hljs-symbol { color: #986801; }
+.hljs-title, .hljs-section, .hljs-function { color: #4078f2; }
+
+.formula {
+  max-width: 100%;
+  margin: 1.25rem 0 1.5rem;
+  padding: 1rem 1.15rem;
+  overflow-x: auto;
+  background: #faf9f5;
+  border: 1px solid #d8d2c7;
+  border-left: 4px solid var(--blue);
+}
+.formula mjx-container { min-width: max-content; }
+
+.table-wrap { max-width: 100%; margin: 1.25rem 0 1.6rem; overflow-x: auto; }
+table { width: 100%; min-width: 640px; border-collapse: collapse; font-size: 0.93rem; line-height: 1.55; }
+th, td { padding: 0.68rem 0.78rem; border: 1px solid #aaa398; text-align: left; vertical-align: top; }
+thead th { color: #fff; background: var(--blue); font-weight: 700; }
+tbody tr:nth-child(even) { background: #ebe6dc; }
+tbody tr:nth-child(odd) { background: #f8f5ee; }
+
+.note, .warning, .evidence, blockquote {
+  margin: 1.2rem 0 1.45rem;
+  padding: 0.85rem 1rem;
+  background: #f8f5ee;
+  border: 1px solid #d2cbc0;
+  border-left: 4px solid var(--blue);
+}
+.warning { border-left-color: var(--rust); background: #fff2e9; }
+.evidence { border-left-color: #6b5b8e; background: #f2eef8; }
+.note > :last-child, .warning > :last-child, .evidence > :last-child, blockquote > :last-child { margin-bottom: 0; }
+.back-to-top { display: inline-block; margin-top: 2rem; font-size: 0.88rem; }
+
+@media (max-width: 900px) {
+  .page-shell { width: min(100% - 24px, 820px); grid-template-columns: 1fr; gap: 0; }
+  .toc { position: static; max-height: 34vh; overflow-x: hidden; overflow-y: auto; padding: 20px 8px 4px; columns: 2; column-gap: 1.5rem; }
+  .toc-title { column-span: all; }
+  main { margin-top: 16px; padding: 34px clamp(18px, 5vw, 40px) 48px; }
+  h1 { font-size: clamp(1.8rem, 8vw, 2.55rem); }
+  table { min-width: 600px; }
+  pre, .formula, .table-wrap { overflow-x: auto; }
+}
+
+@media (max-width: 560px) {
+  .toc { columns: 1; max-height: 30vh; }
+  .toc .depth-3, .toc .depth-4 { display: none; }
+  .page-shell { width: calc(100% - 12px); }
+  main { padding-left: 15px; padding-right: 15px; }
+}
+
+@media print {
+  body { background: #fff; }
+  .page-shell { display: block; width: 100%; }
+  .toc, .back-to-top { display: none !important; }
+  main { margin: 0; padding: 0; background: #fff; border: 0; box-shadow: none; }
+  a { color: inherit; text-decoration: none; }
+  pre, .formula, table { break-inside: avoid; }
+}
+
+    .next-chapter { margin: 2.5rem 0 1rem; padding: 1rem 1.2rem; border: 1px solid #b9c9df; border-left: 4px solid #1a4a8c; background: #f4f1ea; display: flex; gap: .75rem; align-items: baseline; justify-content: space-between; }
+    .next-chapter-label { color: #1a4a8c; font-weight: 700; white-space: nowrap; }
+    .next-chapter a { color: #1a4a8c; font-weight: 700; text-decoration: none; }
+    .next-chapter a:hover, .next-chapter a:focus { color: #b8390e; text-decoration: underline; }
+    @media (max-width: 900px) { .next-chapter { display: block; } .next-chapter-label { display: block; margin-bottom: .35rem; } }
+  </style>
+</head>
+<body id="top">
+  <div class="page-shell">
+    <nav class="toc" aria-label="目录">
+      <p class="toc-title">Contents</p>
+      <ol>
+<li class="depth-2"><a href="#问题-question">问题（Question）</a></li>
+<li class="depth-2"><a href="#背景与动机-background-motivation">背景与动机（Background &amp; Motivation）</a></li>
+<li class="depth-2"><a href="#报告范围与证据边界">报告范围与证据边界</a></li>
+<li class="depth-2"><a href="#基础概念与数据契约">基础概念与数据契约</a></li>
+<li class="depth-3"><a href="#收益与财富">收益与财富</a></li>
+<li class="depth-3"><a href="#资产与交易时点">资产与交易时点</a></li>
+<li class="depth-2"><a href="#方法总览与章节导航">方法总览与章节导航</a></li>
+<li class="depth-2"><a href="#模型章节-01-买入并持有与战略资产配置">模型章节 01：买入并持有与战略资产配置</a></li>
+<li class="depth-3"><a href="#1-1-模型定位-所有主动策略的基准线">1.1 模型定位：所有主动策略的基准线</a></li>
+<li class="depth-3"><a href="#1-2-数学表达">1.2 数学表达</a></li>
+<li class="depth-3"><a href="#1-3-统计特征与应报告指标">1.3 统计特征与应报告指标</a></li>
+<li class="depth-3"><a href="#1-4-股票与黄金的资产映射">1.4 股票与黄金的资产映射</a></li>
+<li class="depth-3"><a href="#1-5-文献与研究证据">1.5 文献与研究证据</a></li>
+<li class="depth-3"><a href="#1-6-本地示例结果-spy-gld-与固定权重组合">1.6 本地示例结果：SPY、GLD 与固定权重组合</a></li>
+<li class="depth-3"><a href="#1-7-固定权重组合的实现伪代码">1.7 固定权重组合的实现伪代码</a></li>
+<li class="depth-3"><a href="#1-8-失败模式与模型边界">1.8 失败模式与模型边界</a></li>
+<li class="depth-3"><a href="#1-9-本章结论与后续接口">1.9 本章结论与后续接口</a></li>
+<li class="depth-3"><a href="#本章参考文献">本章参考文献</a></li>
+<li class="depth-2"><a href="#模型章节-02-主观基本面-价值交易">模型章节 02：主观基本面 / 价值交易</a></li>
+<li class="depth-3"><a href="#2-1-模型定位-从-便宜-到-可证伪的估值判断">2.1 模型定位：从“便宜”到“可证伪的估值判断”</a></li>
+<li class="depth-3"><a href="#2-2-内在价值与安全边际的数学表达">2.2 内在价值与安全边际的数学表达</a></li>
+<li class="depth-4"><a href="#现金流折现-dcf">现金流折现（DCF）</a></li>
+<li class="depth-4"><a href="#相对估值与收益率表达">相对估值与收益率表达</a></li>
+<li class="depth-4"><a href="#安全边际与仓位">安全边际与仓位</a></li>
+<li class="depth-3"><a href="#2-3-股票基本面模型的输入-流程与统计特征">2.3 股票基本面模型的输入、流程与统计特征</a></li>
+<li class="depth-4"><a href="#输入字段与点时约束">输入字段与点时约束</a></li>
+<li class="depth-4"><a href="#价值模型的统计特征">价值模型的统计特征</a></li>
+<li class="depth-3"><a href="#2-4-黄金的基本面-宏观价值判断">2.4 黄金的基本面/宏观价值判断</a></li>
+<li class="depth-3"><a href="#2-5-文献证据与主观-计量边界">2.5 文献证据与主观—计量边界</a></li>
+<li class="depth-3"><a href="#2-6-本地复现代理-kenneth-french-hml-的平均收益与回撤">2.6 本地复现代理：Kenneth French HML 的平均收益与回撤</a></li>
+<li class="depth-3"><a href="#2-7-价值与其他模型的组合方式">2.7 价值与其他模型的组合方式</a></li>
+<li class="depth-3"><a href="#2-8-主观基本面-计量价值的实现伪代码">2.8 主观基本面—计量价值的实现伪代码</a></li>
+<li class="depth-3"><a href="#2-9-失败模式-统计陷阱与风险边界">2.9 失败模式、统计陷阱与风险边界</a></li>
+<li class="depth-3"><a href="#2-10-本章结论与后续接口">2.10 本章结论与后续接口</a></li>
+<li class="depth-3"><a href="#本章参考文献-2">本章参考文献</a></li>
+<li class="depth-2"><a href="#模型章节-03-趋势跟随与时间序列动量">模型章节 03：趋势跟随与时间序列动量</a></li>
+<li class="depth-3"><a href="#3-1-模型定位-不预测目标价-只判断方向是否延续">3.1 模型定位：不预测目标价，只判断方向是否延续</a></li>
+<li class="depth-3"><a href="#3-2-信号的数学表达">3.2 信号的数学表达</a></li>
+<li class="depth-4"><a href="#过去收益符号">过去收益符号</a></li>
+<li class="depth-4"><a href="#单移动平均与双移动平均">单移动平均与双移动平均</a></li>
+<li class="depth-4"><a href="#多尺度连续信号">多尺度连续信号</a></li>
+<li class="depth-3"><a href="#3-3-仓位-波动率目标和交易成本">3.3 仓位、波动率目标和交易成本</a></li>
+<li class="depth-3"><a href="#3-4-统计特征-趋势策略为什么常出现-多数小亏-少数大赚">3.4 统计特征：趋势策略为什么常出现“多数小亏、少数大赚”</a></li>
+<li class="depth-3"><a href="#3-5-股票趋势-减少深熊暴露-但可能降低长期复合收益">3.5 股票趋势：减少深熊暴露，但可能降低长期复合收益</a></li>
+<li class="depth-3"><a href="#3-6-黄金趋势-无现金流资产更适合方向模型-但不是更容易">3.6 黄金趋势：无现金流资产更适合方向模型，但不是更容易</a></li>
+<li class="depth-3"><a href="#3-7-文献证据与可支持边界">3.7 文献证据与可支持边界</a></li>
+<li class="depth-3"><a href="#3-8-本地复现实验-spy-gld-与双资产趋势">3.8 本地复现实验：SPY、GLD 与双资产趋势</a></li>
+<li class="depth-4"><a href="#10-月与-12-月-sma-的净结果">10 月与 12 月 SMA 的净结果</a></li>
+<li class="depth-4"><a href="#同样本买入并持有对照-2005-11-2026-06">同样本买入并持有对照（2005-11–2026-06）</a></li>
+<li class="depth-3"><a href="#3-9-实现伪代码-严格滞后-成本与组合">3.9 实现伪代码：严格滞后、成本与组合</a></li>
+<li class="depth-3"><a href="#3-10-失败模式与风险边界">3.10 失败模式与风险边界</a></li>
+<li class="depth-3"><a href="#3-11-本章结论与后续接口">3.11 本章结论与后续接口</a></li>
+<li class="depth-3"><a href="#本章参考文献-3">本章参考文献</a></li>
+<li class="depth-2"><a href="#模型章节-04-横截面动量与相对强弱">模型章节 04：横截面动量与相对强弱</a></li>
+<li class="depth-3"><a href="#4-1-模型定位-在同一时点买相对赢家-卖相对输家">4.1 模型定位：在同一时点买相对赢家、卖相对输家</a></li>
+<li class="depth-3"><a href="#4-2-排名-组合与风险调整的数学表达">4.2 排名、组合与风险调整的数学表达</a></li>
+<li class="depth-4"><a href="#形成期收益与排名">形成期收益与排名</a></li>
+<li class="depth-4"><a href="#约束与风险中性">约束与风险中性</a></li>
+<li class="depth-3"><a href="#4-3-持有期重叠-换手与统计推断">4.3 持有期重叠、换手与统计推断</a></li>
+<li class="depth-3"><a href="#4-4-统计特征与典型失败模式">4.4 统计特征与典型失败模式</a></li>
+<li class="depth-3"><a href="#4-5-股票横截面动量">4.5 股票横截面动量</a></li>
+<li class="depth-3"><a href="#4-6-黄金与跨资产相对强弱">4.6 黄金与跨资产相对强弱</a></li>
+<li class="depth-3"><a href="#4-7-文献证据与可支持边界">4.7 文献证据与可支持边界</a></li>
+<li class="depth-3"><a href="#4-8-本地复现代理-french-mom-与跨资产-top-k">4.8 本地复现代理：French MOM 与跨资产 Top-K</a></li>
+<li class="depth-4"><a href="#french-mom-因子">French MOM 因子</a></li>
+<li class="depth-4"><a href="#spy-gld-slv-tlt-相对强弱">SPY/GLD/SLV/TLT 相对强弱</a></li>
+<li class="depth-3"><a href="#4-9-与价值-趋势和风险模型的组合">4.9 与价值、趋势和风险模型的组合</a></li>
+<li class="depth-3"><a href="#4-10-实现伪代码-排名-持有期与成本">4.10 实现伪代码：排名、持有期与成本</a></li>
+<li class="depth-3"><a href="#4-11-失败模式与风险边界">4.11 失败模式与风险边界</a></li>
+<li class="depth-3"><a href="#4-12-本章结论与后续接口">4.12 本章结论与后续接口</a></li>
+<li class="depth-3"><a href="#本章参考文献-4">本章参考文献</a></li>
+<li class="depth-2"><a href="#模型章节-05-均值回复-配对交易与统计套利">模型章节 05：均值回复、配对交易与统计套利</a></li>
+<li class="depth-3"><a href="#5-1-模型定位-交易-偏离会收敛-而不是交易单边方向">5.1 模型定位：交易“偏离会收敛”，而不是交易单边方向</a></li>
+<li class="depth-3"><a href="#5-2-单变量均值回复-ar-1-与-ornstein-uhlenbeck">5.2 单变量均值回复：AR(1) 与 Ornstein–Uhlenbeck</a></li>
+<li class="depth-3"><a href="#5-3-配对价差-对冲比率与协整">5.3 配对价差、对冲比率与协整</a></li>
+<li class="depth-3"><a href="#5-4-z-score-入场-退出与组合收益">5.4 z-score 入场、退出与组合收益</a></li>
+<li class="depth-3"><a href="#5-5-统计特征-高胜率为何仍可能亏损">5.5 统计特征：高胜率为何仍可能亏损</a></li>
+<li class="depth-3"><a href="#5-6-股票配对与多资产统计套利">5.6 股票配对与多资产统计套利</a></li>
+<li class="depth-3"><a href="#5-7-黄金-白银与金银价差">5.7 黄金、白银与金银价差</a></li>
+<li class="depth-3"><a href="#5-8-文献证据与可支持边界">5.8 文献证据与可支持边界</a></li>
+<li class="depth-3"><a href="#5-9-本地反例-gld-slv-滚动配对结果">5.9 本地反例：GLD–SLV 滚动配对结果</a></li>
+<li class="depth-3"><a href="#5-10-与趋势-价值和波动模型的组合">5.10 与趋势、价值和波动模型的组合</a></li>
+<li class="depth-3"><a href="#5-11-实现伪代码-滚动估计-滞后与失败保留">5.11 实现伪代码：滚动估计、滞后与失败保留</a></li>
+<li class="depth-3"><a href="#5-12-失败模式与风险边界">5.12 失败模式与风险边界</a></li>
+<li class="depth-3"><a href="#5-13-本章结论与后续接口">5.13 本章结论与后续接口</a></li>
+<li class="depth-3"><a href="#本章参考文献-5">本章参考文献</a></li>
+<li class="depth-2"><a href="#模型章节-06-低波动-质量-规模与多因子股票模型">模型章节 06：低波动、质量、规模与多因子股票模型</a></li>
+<li class="depth-3"><a href="#6-1-模型定位-把-风格-变成可解释的风险暴露">6.1 模型定位：把“风格”变成可解释的风险暴露</a></li>
+<li class="depth-3"><a href="#6-2-因子组合与收益回归的数学表达">6.2 因子组合与收益回归的数学表达</a></li>
+<li class="depth-4"><a href="#排序因子">排序因子</a></li>
+<li class="depth-4"><a href="#低波动与风险加权">低波动与风险加权</a></li>
+<li class="depth-4"><a href="#质量与综合评分">质量与综合评分</a></li>
+<li class="depth-3"><a href="#6-3-四类因子的经济直觉与统计特征">6.3 四类因子的经济直觉与统计特征</a></li>
+<li class="depth-3"><a href="#6-4-股票实现的形成-约束与回归评估">6.4 股票实现的形成、约束与回归评估</a></li>
+<li class="depth-3"><a href="#6-5-黄金与跨资产的因子边界">6.5 黄金与跨资产的因子边界</a></li>
+<li class="depth-3"><a href="#6-6-文献证据与可支持边界">6.6 文献证据与可支持边界</a></li>
+<li class="depth-3"><a href="#6-7-官方五因子统计与-etf-代理结果">6.7 官方五因子统计与 ETF 代理结果</a></li>
+<li class="depth-4"><a href="#fama-french-五因子">Fama–French 五因子</a></li>
+<li class="depth-4"><a href="#etf-代理-共同窗口-2013-08-2026-06">ETF 代理（共同窗口 2013-08–2026-06）</a></li>
+<li class="depth-3"><a href="#6-8-多因子组合与风险归因">6.8 多因子组合与风险归因</a></li>
+<li class="depth-3"><a href="#6-9-实现伪代码-因子形成-约束和净收益">6.9 实现伪代码：因子形成、约束和净收益</a></li>
+<li class="depth-3"><a href="#6-10-失败模式与风险边界">6.10 失败模式与风险边界</a></li>
+<li class="depth-3"><a href="#6-11-本章结论与后续接口">6.11 本章结论与后续接口</a></li>
+<li class="depth-3"><a href="#本章参考文献-6">本章参考文献</a></li>
+<li class="depth-2"><a href="#模型章节-07-波动率目标-风险平价与动态风险管理">模型章节 07：波动率目标、风险平价与动态风险管理</a></li>
+<li class="depth-3"><a href="#7-1-模型定位-先决定-承受多少风险-再决定名义仓位">7.1 模型定位：先决定“承受多少风险”，再决定名义仓位</a></li>
+<li class="depth-3"><a href="#7-2-波动率预测与波动率目标">7.2 波动率预测与波动率目标</a></li>
+<li class="depth-3"><a href="#7-3-风险平价与风险贡献">7.3 风险平价与风险贡献</a></li>
+<li class="depth-3"><a href="#7-4-动态风险管理的统计特征">7.4 动态风险管理的统计特征</a></li>
+<li class="depth-3"><a href="#7-5-股票-黄金与跨资产风险管理">7.5 股票、黄金与跨资产风险管理</a></li>
+<li class="depth-3"><a href="#7-6-文献证据与可支持边界">7.6 文献证据与可支持边界</a></li>
+<li class="depth-3"><a href="#7-7-本地结果-固定权重-风险平价与波动目标">7.7 本地结果：固定权重、风险平价与波动目标</a></li>
+<li class="depth-3"><a href="#7-8-与其他策略的组合">7.8 与其他策略的组合</a></li>
+<li class="depth-3"><a href="#7-9-实现伪代码-滞后风险估计与风险贡献">7.9 实现伪代码：滞后风险估计与风险贡献</a></li>
+<li class="depth-3"><a href="#7-10-失败模式与风险边界">7.10 失败模式与风险边界</a></li>
+<li class="depth-3"><a href="#7-11-本章结论与后续接口">7.11 本章结论与后续接口</a></li>
+<li class="depth-3"><a href="#本章参考文献-7">本章参考文献</a></li>
+<li class="depth-2"><a href="#模型章节-08-carry-期限结构与宏观跨资产模型">模型章节 08：Carry、期限结构与宏观跨资产模型</a></li>
+<li class="depth-3"><a href="#8-1-模型定位-收益来自持有结构-而不只是价格方向">8.1 模型定位：收益来自持有结构，而不只是价格方向</a></li>
+<li class="depth-3"><a href="#8-2-期货收益-展期收益与远期点数的数学表达">8.2 期货收益、展期收益与远期点数的数学表达</a></li>
+<li class="depth-3"><a href="#8-3-黄金与宏观跨资产的-carry-解释">8.3 黄金与宏观跨资产的 carry 解释</a></li>
+<li class="depth-3"><a href="#8-4-计量模型-横截面-carry-排名与宏观过滤">8.4 计量模型：横截面 carry 排名与宏观过滤</a></li>
+<li class="depth-3"><a href="#8-5-本地证据-四资产-carry-basis-proxy-回测">8.5 本地证据：四资产 carry/basis proxy 回测</a></li>
+<li class="depth-3"><a href="#8-6-与趋势-价值和风险预算的组合方式">8.6 与趋势、价值和风险预算的组合方式</a></li>
+<li class="depth-3"><a href="#8-7-主观宏观模型与可形式化边界">8.7 主观宏观模型与可形式化边界</a></li>
+<li class="depth-3"><a href="#8-8-实现伪代码-carry-proxy-状态过滤与风险约束">8.8 实现伪代码：carry proxy、状态过滤与风险约束</a></li>
+<li class="depth-3"><a href="#8-9-统计特征-容量与失败边界">8.9 统计特征、容量与失败边界</a></li>
+<li class="depth-3"><a href="#8-10-本章结论与后续接口">8.10 本章结论与后续接口</a></li>
+<li class="depth-3"><a href="#本章参考文献-8">本章参考文献</a></li>
+<li class="depth-2"><a href="#模型章节-09-主观宏观与事件驱动模型">模型章节 09：主观宏观与事件驱动模型</a></li>
+<li class="depth-3"><a href="#9-1-模型定位-把叙事-信息到达和仓位治理分开">9.1 模型定位：把叙事、信息到达和仓位治理分开</a></li>
+<li class="depth-3"><a href="#9-2-事件研究的统计学表达">9.2 事件研究的统计学表达</a></li>
+<li class="depth-3"><a href="#9-3-宏观意外与跨资产响应">9.3 宏观意外与跨资产响应</a></li>
+<li class="depth-3"><a href="#9-4-主观宏观的状态-观点-仓位框架">9.4 主观宏观的状态—观点—仓位框架</a></li>
+<li class="depth-3"><a href="#9-5-股票-黄金与事件类型">9.5 股票、黄金与事件类型</a></li>
+<li class="depth-4"><a href="#fomc-通胀和实际利率事件">FOMC、通胀和实际利率事件</a></li>
+<li class="depth-4"><a href="#财报-盈利预期与公司行动">财报、盈利预期与公司行动</a></li>
+<li class="depth-4"><a href="#地缘风险与黄金">地缘风险与黄金</a></li>
+<li class="depth-3"><a href="#9-6-收益率-回撤与证据分层">9.6 收益率、回撤与证据分层</a></li>
+<li class="depth-3"><a href="#9-7-主观与计量的组合方式">9.7 主观与计量的组合方式</a></li>
+<li class="depth-3"><a href="#9-8-实现伪代码-事件窗口与主观观点账本">9.8 实现伪代码：事件窗口与主观观点账本</a></li>
+<li class="depth-3"><a href="#9-9-失败模式与风险边界">9.9 失败模式与风险边界</a></li>
+<li class="depth-3"><a href="#9-10-本章结论与后续接口">9.10 本章结论与后续接口</a></li>
+<li class="depth-3"><a href="#本章参考文献-9">本章参考文献</a></li>
+<li class="depth-2"><a href="#模型章节-10-组合构建-策略集成与综合比较">模型章节 10：组合构建、策略集成与综合比较</a></li>
+<li class="depth-3"><a href="#10-1-模型定位-组合不是把排行榜简单相加">10.1 模型定位：组合不是把排行榜简单相加</a></li>
+<li class="depth-3"><a href="#10-2-均值-方差-最小方差与约束">10.2 均值—方差、最小方差与约束</a></li>
+<li class="depth-3"><a href="#10-3-风险平价-风险预算与策略级分配">10.3 风险平价、风险预算与策略级分配</a></li>
+<li class="depth-3"><a href="#10-4-black-litterman-把主观观点限制在可解释的范围">10.4 Black–Litterman：把主观观点限制在可解释的范围</a></li>
+<li class="depth-3"><a href="#10-5-策略集成-等权-风险权重与状态切换">10.5 策略集成：等权、风险权重与状态切换</a></li>
+<li class="depth-3"><a href="#10-6-统一-spy-gld-组合实验">10.6 统一 SPY/GLD 组合实验</a></li>
+<li class="depth-3"><a href="#10-7-综合比较矩阵与选择建议">10.7 综合比较矩阵与选择建议</a></li>
+<li class="depth-3"><a href="#10-8-组合层统计与治理">10.8 组合层统计与治理</a></li>
+<li class="depth-3"><a href="#10-9-实现伪代码-统一组合管线">10.9 实现伪代码：统一组合管线</a></li>
+<li class="depth-3"><a href="#10-10-失败模式与组合边界">10.10 失败模式与组合边界</a></li>
+<li class="depth-3"><a href="#10-11-本章结论与后续接口">10.11 本章结论与后续接口</a></li>
+<li class="depth-3"><a href="#本章参考文献-10">本章参考文献</a></li>
+<li class="depth-2"><a href="#全局综合比较与选择建议">全局综合比较与选择建议</a></li>
+<li class="depth-3"><a href="#按研究目标选择">按研究目标选择</a></li>
+<li class="depth-3"><a href="#跨资产结果的正确读法">跨资产结果的正确读法</a></li>
+<li class="depth-2"><a href="#风险治理与可复现清单">风险治理与可复现清单</a></li>
+<li class="depth-3"><a href="#回测前">回测前</a></li>
+<li class="depth-3"><a href="#回测中">回测中</a></li>
+<li class="depth-3"><a href="#上线前">上线前</a></li>
+<li class="depth-2"><a href="#最终结论">最终结论</a></li>
+<li class="depth-2"><a href="#参考文献总表-references">参考文献总表（References）</a></li>
+<li class="depth-2"><a href="#可复现产物索引">可复现产物索引</a></li>
+      </ol>
+    </nav>
+    <main>
+      <article>
+        <header>
+          <p class="eyebrow">Quant Finance / Classic Trading Strategies</p>
+          <p class="subtitle">逐模型并列章节；每章同时讨论数学、统计特征、收益与回撤证据</p>
+          <h1>经典交易策略模型：主观判断、计量信号与跨资产组合</h1>
+          <p class="meta">发布日期：2026-07-27 · 证据截止：2026-07-27 · 源文件 SHA-256：<code>32a337c5d3a836a7ab8e38f105ee64b14a9b846ee41feecc36c530f773fcb49b</code></p>
+        </header>
+<h2 id="问题-question">问题（Question）</h2>
+<p>本报告回答四个相互约束的问题：</p>
+<ol>
+<li>主观判断（discretionary）与计量信号（systematic/quantitative）如何把股票、黄金和跨资产叙事转成可审计的决策？</li>
+<li>价值、趋势、动量、均值回复、因子、carry、波动率目标、风险平价、宏观事件等经典模型的数学表达、统计特征和失效条件是什么？</li>
+<li>如何在同一收益、成本和交易时点协议下报告平均收益、CAGR、Sharpe、最大回撤、换手和不确定性？</li>
+<li>单一模型如何组合成风险可解释、可执行且不会把重复暴露误认为分散化的投资组合？</li>
+</ol>
+<p>收益数字用于研究和教育，不构成个性化投资建议。任何数字都必须同时标注资产代理、样本期、频率、杠杆、交易成本、现金/融资收益和证据层级。</p>
+<h2 id="背景与动机-background-motivation">背景与动机（Background &amp; Motivation）</h2>
+<p>股票和黄金常被放在同一组合中：股票代表企业现金流与风险溢价，黄金没有固定票息，却可能在部分实际利率、美元和流动性状态下发挥对冲或避险作用。跨资产策略的难点不在于列出更多指标，而在于区分收益来源：价格方向、股息/票息、展期、抵押品收益、估值修复和风险缩放并不等价。</p>
+<p>主观策略拥有宏观信息、行业知识和事件判断的灵活性，但容易产生事后叙事、仓位漂移和不可复核的交易记录；计量策略具有明确的形成期、持有期和成本规则，却会遭遇数据窥探、参数不稳定、相关性跃迁和容量约束。本报告采用“模型章节并列”的组织方式：每个章节在同一章内同时讨论直觉、数学、统计指标、收益/回撤证据、组合方式和风险边界，而不是把所有公式集中在一章、所有结果集中在另一章。</p>
+<h2 id="报告范围与证据边界">报告范围与证据边界</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>证据层级</th>
+<th>本报告用法</th>
+<th>不允许的推论</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>primary：论文、官方数据、合约规格</td>
+<td>支撑模型定义、统计方法和原始研究结果</td>
+<td>不把论文样本期直接当作未来承诺</td>
+</tr>
+<tr>
+<td>official-code/data：Kenneth French、FRED、CME 等</td>
+<td>支撑数据字段、因子定义和接口边界</td>
+<td>不等于生产级数据许可或无偏回测</td>
+</tr>
+<tr>
+<td>local-evidence：本地 JSON、脚本和快照</td>
+<td>复核统一协议下的指标计算和失败案例</td>
+<td>不把 ETF 代理等同于现货、期货或个股宇宙</td>
+</tr>
+<tr>
+<td>inference：从证据推出的组合建议</td>
+<td>明确写出假设和适用条件</td>
+<td>不写成论文直接结论</td>
+</tr>
+<tr>
+<td>unverified：缺少点时数据或成交账本</td>
+<td>以“⚠️ 未核验”保留空白</td>
+<td>不用精确数字填补缺口</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="基础概念与数据契约">基础概念与数据契约</h2>
+<h3 id="收益与财富">收益与财富</h3>
+<p>对价格或总回报代理 (P_t)，简单收益和对数收益分别为：</p>
+<div class="formula" data-math-kind="display">\[r_t=\frac{P_t}{P_{t-1}}-1,
+\qquad
+g_t=\ln(1+r_t).\]</div>
+<p>对 <span class="math-inline" data-math-kind="inline">\(N\)</span> 个同频观测、年化因子 <span class="math-inline" data-math-kind="inline">\(K\)</span>，本报告使用：</p>
+<div class="formula" data-math-kind="display">\[\mathrm{CAGR}=\left(\frac{V_T}{V_0}\right)^{K/N}-1,
+\quad
+\sigma_{\mathrm{ann}}=\sqrt K\,s(r),
+\quad
+\mathrm{Sharpe}=\frac{K\bar r-r_{f,\mathrm{ann}}}{\sqrt K\,s(r)}.\]</div>
+<p>财富峰值 <span class="math-inline" data-math-kind="inline">\(M_t=\max_{u\le t}V_u\)</span>，回撤 <span class="math-inline" data-math-kind="inline">\(D_t=V_t/M_t-1\)</span>，最大回撤 <span class="math-inline" data-math-kind="inline">\(\mathrm{MDD}=\min_tD_t\)</span>。算术平均收益是线性尺度，CAGR 是乘法复合尺度；二者不能互换。</p>
+<h3 id="资产与交易时点">资产与交易时点</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>项目</th>
+<th>冻结口径</th>
+<th>重要限制</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>股票</td>
+<td>SPY 作为股票指数 ETF 代理；个股因子使用 French 官方组合/因子</td>
+<td>SPY 有费用、跟踪误差；未覆盖退市个股点时数据</td>
+</tr>
+<tr>
+<td>黄金</td>
+<td>GLD 作为可交易黄金 ETF 代理；黄金期货章节另用 GC=F 近月代理</td>
+<td>GLD 不等于现货金或 COMEX 总收益；美元、费用、展期分开说明</td>
+</tr>
+<tr>
+<td>频率</td>
+<td>主要组合实验按月；均值回复和事件模型可用日/窗口统计</td>
+<td>年化因子月频 <span class="math-inline" data-math-kind="inline">\(K=12\)</span>，日频 <span class="math-inline" data-math-kind="inline">\(K=252\)</span>；不同频率不直接比较</td>
+</tr>
+<tr>
+<td>信号时点</td>
+<td>在 <span class="math-inline" data-math-kind="inline">\(t\)</span> 月末形成，默认 <span class="math-inline" data-math-kind="inline">\(t+1\)</span> 月执行</td>
+<td>禁止使用当期收盘后才知道的未来信息</td>
+</tr>
+<tr>
+<td>成本</td>
+<td>统一示例为单向绝对目标换手 10bps；carry/事件额外讨论融资、点差和跳空</td>
+<td>10bps 不是报价承诺；税费、冲击和真实融资需单独建模</td>
+</tr>
+<tr>
+<td>现金/融资</td>
+<td>多数示例现金收益设为 0，杠杆上限显式记录</td>
+<td>零现金收益会低估去杠杆期间的机会收益，忽略融资会高估杠杆策略</td>
+</tr>
+<tr>
+<td>样本外</td>
+<td>章节快照主要用于协议验证；完整样本外筛选留待后续研究</td>
+<td>不能把同一历史样本的参数比较称为独立样本外证据</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="方法总览与章节导航">方法总览与章节导航</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th style="text-align:right">章节</th>
+<th>模型家族</th>
+<th>主观/计量方向</th>
+<th>代表资产</th>
+<th>核心统计对象</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:right">01</td>
+<td>买入并持有、战略资产配置</td>
+<td>计量基准</td>
+<td>SPY、GLD、50/50</td>
+<td>CAGR、MDD、再平衡成本</td>
+</tr>
+<tr>
+<td style="text-align:right">02</td>
+<td>基本面与价值</td>
+<td>主观 + 计量代理</td>
+<td>股票、黄金宏观</td>
+<td>DCF、E/P、B/M、HML</td>
+</tr>
+<tr>
+<td style="text-align:right">03</td>
+<td>趋势与时间序列动量</td>
+<td>计量</td>
+<td>SPY、GLD</td>
+<td>SMA、信号滞后、换手</td>
+</tr>
+<tr>
+<td style="text-align:right">04</td>
+<td>横截面动量与相对强弱</td>
+<td>计量</td>
+<td>股票/ETF/跨资产</td>
+<td>排名、赢家—输家、崩溃</td>
+</tr>
+<tr>
+<td style="text-align:right">05</td>
+<td>均值回复、配对、统计套利</td>
+<td>计量 + 主观过滤</td>
+<td>GLD–SLV、股票配对</td>
+<td>AR(1)、OU、协整、z-score</td>
+</tr>
+<tr>
+<td style="text-align:right">06</td>
+<td>低波动、质量、规模、多因子</td>
+<td>计量</td>
+<td>股票因子与 ETF 代理</td>
+<td>SMB/HML/RMW/CMA、因子回归</td>
+</tr>
+<tr>
+<td style="text-align:right">07</td>
+<td>波动率目标、风险平价</td>
+<td>计量风险管理</td>
+<td>SPY、GLD</td>
+<td>EWMA/GARCH、RC、杠杆</td>
+</tr>
+<tr>
+<td style="text-align:right">08</td>
+<td>Carry、期限结构、宏观跨资产</td>
+<td>计量 + 宏观</td>
+<td>黄金、商品、债券、外汇</td>
+<td>roll proxy、远期点数、库存</td>
+</tr>
+<tr>
+<td style="text-align:right">09</td>
+<td>主观宏观与事件驱动</td>
+<td>主观 + 事件计量</td>
+<td>股票、黄金、利率</td>
+<td>surprise、AR/CAR、情景概率</td>
+</tr>
+<tr>
+<td style="text-align:right">10</td>
+<td>组合构建与策略集成</td>
+<td>组合层</td>
+<td>SPY、GLD、策略收益</td>
+<td>均值—方差、BL、风险预算、集成</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="模型章节-01-买入并持有与战略资产配置">模型章节 01：买入并持有与战略资产配置</h2>
+<h3 id="1-1-模型定位-所有主动策略的基准线">1.1 模型定位：所有主动策略的基准线</h3>
+<p>买入并持有（buy-and-hold）把资产的目标权重长期保持在初始水平附近，主要收益来源是资产本身的风险溢价、现金分配和价格变化；战略资产配置（strategic asset allocation, SAA）进一步把股票、黄金、债券和现金按长期风险目标配置，并在固定日历或偏离阈值触发再平衡。它不是“没有模型”，而是把主动判断压缩到资产选择、权重、再平衡、杠杆和风险约束上。</p>
+<p>本章的作用是建立报告的零号基准：任何趋势、动量、均值回复或主观宏观策略，都必须回答“相对于固定权重基准增加了什么信息、承担了什么成本、是否真的改善了风险收益比”。若一套主动策略只是在样本内提高了收益，却没有说明它相对买入并持有的增量风险和换手，则不能称为完整比较。</p>
+<h3 id="1-2-数学表达">1.2 数学表达</h3>
+<p>设有 <span class="math-inline" data-math-kind="inline">\(n\)</span> 个资产，时点 <span class="math-inline" data-math-kind="inline">\(t\)</span> 的简单收益向量为 <span class="math-inline" data-math-kind="inline">\(\mathbf r_t=(r_{1,t},\ldots,r_{n,t})^\top\)</span>，目标权重为 <span class="math-inline" data-math-kind="inline">\(\mathbf w=(w_1,\ldots,w_n)^\top\)</span>，满足 <span class="math-inline" data-math-kind="inline">\(\sum_iw_i=1\)</span>。在不考虑交易成本、融资和现金流的第一版模型中，组合收益为：</p>
+<div class="formula" data-math-kind="display">\[r_{p,t}=\mathbf w^\top\mathbf r_t=\sum_{i=1}^{n}w_i r_{i,t}.\]</div>
+<p><strong>变量、直觉与实现映射：</strong> <span class="math-inline" data-math-kind="inline">\(r_{p,t}\)</span> 是组合在第 <span class="math-inline" data-math-kind="inline">\(t\)</span> 个周期的收益，<span class="math-inline" data-math-kind="inline">\(w_i\)</span> 是资产 <span class="math-inline" data-math-kind="inline">\(i\)</span> 的目标权重。代码对应对齐后的收益矩阵与权重向量点积；它只描述“持仓不变一个周期”的收益，不等于再平衡后的长期财富。</p>
+<p>若每月末把权重恢复为 <span class="math-inline" data-math-kind="inline">\(\mathbf w\)</span>，财富过程为：</p>
+<div class="formula" data-math-kind="display">\[V_t=V_{t-1}(1+r_{p,t}),\qquad
+V_T=V_0\prod_{t=1}^{T}(1+r_{p,t}).\]</div>
+<p><strong>变量、直觉与实现映射：</strong> <span class="math-inline" data-math-kind="inline">\(V_t\)</span> 是累计财富；乘法复合意味着一个大亏损会改变后续恢复所需的收益。回测实现应先按交易时点计算资产收益，再按目标权重合成组合收益；不能把各资产的年化平均收益简单加权后当作组合 CAGR。</p>
+<p>对于均值向量 <span class="math-inline" data-math-kind="inline">\(\boldsymbol\mu=E[\mathbf r_t]\)</span> 与协方差矩阵 <span class="math-inline" data-math-kind="inline">\(\boldsymbol\Sigma=\operatorname{Cov}(\mathbf r_t)\)</span>，组合的一阶二阶矩为：</p>
+<div class="formula" data-math-kind="display">\[E[r_p]=\mathbf w^\top\boldsymbol\mu,\qquad
+\operatorname{Var}(r_p)=\mathbf w^\top\boldsymbol\Sigma\mathbf w.\]</div>
+<p><strong>变量、直觉与实现映射：</strong> 协方差项 <span class="math-inline" data-math-kind="inline">\(w_iw_j\Sigma_{ij}\)</span> 是分散化的数学来源；两个资产收益率都很高并不保证组合波动低，关键是相关性和极端状态下的联合损失。样本实现用滚动均值和协方差估计，但估计误差会直接传导到权重，因此本章只把固定权重作为稳健基准，不宣称样本均值是可靠的未来预期。</p>
+<p>实际组合还存在权重漂移。令 <span class="math-inline" data-math-kind="inline">\(w_{i,t}^{\text{pre}}\)</span> 为收益发生后的漂移权重，月末再平衡交易量可用：</p>
+<div class="formula" data-math-kind="display">\[\Delta_t=\frac12\sum_i\left|w_{i,t}^{\text{pre}}-w_i\right|,
+\qquad
+r_{p,t}^{\text{net}}\approx r_{p,t}^{\text{gross}}-c_t\Delta_t,\]</div>
+<p>其中 <span class="math-inline" data-math-kind="inline">\(c_t\)</span> 是每单位换手的综合成本。这里的 <span class="math-inline" data-math-kind="inline">\(\Delta_t\)</span> 是单边换手近似；实际执行还需拆分手续费、买卖价差、冲击、融资、税费和 ETF 管理费。</p>
+<h3 id="1-3-统计特征与应报告指标">1.3 统计特征与应报告指标</h3>
+<p>对 <span class="math-inline" data-math-kind="inline">\(N\)</span> 个观测、年化因子 <span class="math-inline" data-math-kind="inline">\(K\)</span>（日频通常取 252，月频取 12），本报告统一报告以下指标：</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>指标</th>
+<th>数学定义</th>
+<th>解释</th>
+<th>本模型的注意事项</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>年化算术平均收益</td>
+<td><span class="math-inline" data-math-kind="inline">\(K\bar r_p\)</span></td>
+<td>单周期平均收益的线性年化</td>
+<td>不是长期财富增长率，忽略复合和波动拖累</td>
+</tr>
+<tr>
+<td>CAGR</td>
+<td><span class="math-inline" data-math-kind="inline">\((V_T/V_0)^{K/N}-1\)</span></td>
+<td>真实复合增长速度</td>
+<td>最适合和最大回撤并列，但对起止点敏感</td>
+</tr>
+<tr>
+<td>年化波动</td>
+<td><span class="math-inline" data-math-kind="inline">\(\sqrt K\,s(r_p)\)</span></td>
+<td>收益标准差的年化尺度</td>
+<td>只描述二阶矩，不覆盖跳跃和尾部</td>
+</tr>
+<tr>
+<td>Sharpe（零 RF 示例）</td>
+<td><span class="math-inline" data-math-kind="inline">\(\sqrt K\,\bar r_p/s(r_p)\)</span></td>
+<td>每单位波动的超额收益</td>
+<td>正式版本应扣除同频无风险利率</td>
+</tr>
+<tr>
+<td>最大回撤 MDD</td>
+<td><span class="math-inline" data-math-kind="inline">\(\min_t(V_t/\max_{u\le t}V_u-1)\)</span></td>
+<td>从历史峰值到谷值的最大损失</td>
+<td>不是平均损失；单一路径统计量，置信区间需 bootstrap</td>
+</tr>
+<tr>
+<td>Calmar</td>
+<td><span class="math-inline" data-math-kind="inline">\(\mathrm{CAGR}/|\mathrm{MDD}|\)</span></td>
+<td>用最坏路径损失衡量增长效率</td>
+<td>对样本长度、起止点和单次危机很敏感</td>
+</tr>
+<tr>
+<td>回撤持续期</td>
+<td>峰值到恢复峰值的时间</td>
+<td>衡量资金被套住多久</td>
+<td>对长期配置者常比单一 MDD 更有决策意义</td>
+</tr>
+<tr>
+<td>换手与成本</td>
+<td><span class="math-inline" data-math-kind="inline">\(\Delta_t,\;c_t\Delta_t\)</span></td>
+<td>再平衡的可实现代价</td>
+<td>低频不等于零成本，黄金期货还要考虑展期和保证金</td>
+</tr>
+</tbody>
+</table></div>
+<p>固定权重组合的收益分布通常具有以下统计性质：一是资产收益的尖峰厚尾使样本均值和标准差不稳定；二是危机期间相关性可能上升，黄金并不保证每次股灾都上涨；三是再平衡把部分“卖出近期赢家、买入近期输家”的反向交易嵌入组合，但再平衡收益不是无条件的免费 alpha；四是长期 CAGR 与算术平均收益之间存在波动拖累，不能使用 <span class="math-inline" data-math-kind="inline">\(K\bar r_p\)</span> 替代 CAGR。</p>
+<h3 id="1-4-股票与黄金的资产映射">1.4 股票与黄金的资产映射</h3>
+<p><strong>股票代理。</strong> 本轮本地快照使用 SPDR S&amp;P 500 ETF Trust（SPY）的调整收盘价。它更接近含分红再投资的 ETF 持有者回报，但仍包含基金费率、跟踪误差和 ETF 交易机制；它不是无摩擦的 S&amp;P 500 总回报指数，也不覆盖退市股票。</p>
+<p><strong>黄金代理。</strong> 本轮使用 SPDR Gold Shares（GLD）的调整收盘价，作为可交易黄金 ETF 代理。它不等于伦敦现货金或 COMEX 期货：ETF 费率、跟踪误差、交易时段、美元汇率、税务和流动性都可能改变投资者结果。黄金是否具有 hedge（对冲）或 safe haven（避险）属性，依赖“相对什么资产、什么时间窗口、什么冲击”定义，不能简化成始终与股票负相关。</p>
+<p><strong>组合代理。</strong> 60% SPY + 40% GLD、50%/50% 和 80%/20% 是月末再平衡的固定权重示例，用于展示“降低单一资产回撤”的机制，不代表最优权重。后续风险平价、波动率目标和宏观状态切换将作为平行章节分别研究，不能从本章的固定权重结果直接推断它们更优。</p>
+<h3 id="1-5-文献与研究证据">1.5 文献与研究证据</h3>
+<ol>
+<li>Markowitz (1952) 将投资组合选择写成均值—方差权衡，支持“相关性与权重共同决定组合风险”的理论起点；该文不支持任何具体股票+黄金权重在未来必然有效。[1]</li>
+<li>Sharpe (1964) 的资本资产定价框架把风险与预期收益联系起来，为 Sharpe 比率和基准调整提供理论背景；它不等于一个可直接交易的择时策略，也不消除参数估计与模型错设。[2]</li>
+<li>Baur 与 Lucey (2010) 区分 gold hedge 与 safe haven：黄金对股票的关系需要按正常时期与极端下跌时期分别检验；论文的概念边界支持条件相关性分析，不支持“黄金永远避险”的口号。[3]</li>
+<li>Erb 与 Harvey (2013) 讨论黄金长期回报、通胀、美元和仓位问题，提醒研究者区分名义价格上涨、实际回报、持有成本和投资组合用途；其历史样本结论不能直接外推到当前 ETF 或人民币投资者。[4]</li>
+</ol>
+<h3 id="1-6-本地示例结果-spy-gld-与固定权重组合">1.6 本地示例结果：SPY、GLD 与固定权重组合</h3>
+<p>以下结果来自 <code>quant_finance/data/classic_strategy_baseline_snapshot.json</code>。抓取频率为月度，使用 Yahoo Finance chart API 的 adjusted close，排除未完成的 2026-07 月；统计窗口是各 ETF 可用数据的交集。没有扣除额外交易成本、融资、税费或非零无风险利率，因此属于 <code>local-evidence / secondary_data_proxy</code>，只用于验证指标计算和展示组合机制。</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>代理/组合</th>
+<th style="text-align:right">样本期</th>
+<th style="text-align:right">年化算术平均</th>
+<th style="text-align:right">CAGR</th>
+<th style="text-align:right">年化波动</th>
+<th style="text-align:right">Sharpe（RF=0）</th>
+<th style="text-align:right">最大回撤</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>SPY</td>
+<td style="text-align:right">2004-01–2026-06</td>
+<td style="text-align:right">11.37%</td>
+<td style="text-align:right">10.79%</td>
+<td style="text-align:right">14.64%</td>
+<td style="text-align:right">0.78</td>
+<td style="text-align:right">−50.78%（2009-02）</td>
+</tr>
+<tr>
+<td>GLD</td>
+<td style="text-align:right">2004-11–2026-06</td>
+<td style="text-align:right">11.24%</td>
+<td style="text-align:right">10.22%</td>
+<td style="text-align:right">17.22%</td>
+<td style="text-align:right">0.65</td>
+<td style="text-align:right">−42.91%（2015-12）</td>
+</tr>
+<tr>
+<td>60% SPY + 40% GLD</td>
+<td style="text-align:right">2004-12–2026-06</td>
+<td style="text-align:right">11.43%</td>
+<td style="text-align:right">11.28%</td>
+<td style="text-align:right">11.70%</td>
+<td style="text-align:right">0.98</td>
+<td style="text-align:right">−28.84%（2009-02）</td>
+</tr>
+<tr>
+<td>50% SPY + 50% GLD</td>
+<td style="text-align:right">2004-12–2026-06</td>
+<td style="text-align:right">11.39%</td>
+<td style="text-align:right">11.23%</td>
+<td style="text-align:right">11.82%</td>
+<td style="text-align:right">0.96</td>
+<td style="text-align:right">−25.60%（2008-10）</td>
+</tr>
+<tr>
+<td>80% SPY + 20% GLD</td>
+<td style="text-align:right">2004-12–2026-06</td>
+<td style="text-align:right">11.49%</td>
+<td style="text-align:right">11.23%</td>
+<td style="text-align:right">12.64%</td>
+<td style="text-align:right">0.91</td>
+<td style="text-align:right">−40.55%（2009-02）</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>结果解释。</strong> 在这个特定 ETF 样本中，加入黄金降低了最大回撤和波动；60/40 的零利率 Sharpe 高于单独 SPY。但这不是“黄金提高收益”的证据：GLD 与 SPY 的起始日期、费用、美元计价、样本期和危机路径都不同；50/50 的最大回撤谷值落在 2008-10，而 60/40 的谷值落在 2009-02，说明权重改变了路径，不是消除了风险。</p>
+<p><strong>不确定性与不可外推项。</strong> 本快照没有 block bootstrap 置信区间、真实现金利率、税费、点差、汇率转换、资产负债表约束和容量压力测试；SPY/GLD 也不能替代个股、现货黄金或期货连续合约。因此后续 S03 必须用冻结的数据契约重新运行，并把该表标记为“示例基线”，而非策略推荐。</p>
+<h3 id="1-7-固定权重组合的实现伪代码">1.7 固定权重组合的实现伪代码</h3>
+<pre><code class="language-python">def monthly_fixed_weight_backtest(price_panel, target_weights, cost_bps=0):
+    # 1) 使用调整后价格构造同频收益，并删除尚未完成的当前周期。
+    returns = price_panel.pct_change().dropna()
+    wealth = 1.0
+    weights = target_weights.copy()
+    ledger = []
+
+    for date, asset_returns in returns.iterrows():
+        # 2) 先用上一期目标权重承受本期资产收益，避免未来函数。
+        portfolio_return = (weights * asset_returns).sum()
+        wealth *= 1.0 + portfolio_return
+
+        # 3) 周期末把漂移权重恢复到目标权重，并记录单边换手。
+        pretrade_value = weights * (1.0 + asset_returns)
+        pretrade_weights = pretrade_value / pretrade_value.sum()
+        turnover = 0.5 * (pretrade_weights - target_weights).abs().sum()
+        wealth *= 1.0 - cost_bps / 10000.0 * turnover
+        weights = target_weights.copy()
+
+        # 4) 保存净收益、财富、权重和换手，供 MDD 与成本敏感性计算。
+        ledger.append((date, wealth, portfolio_return, turnover))
+
+    return ledger
+</code></pre>
+<h3 id="1-8-失败模式与模型边界">1.8 失败模式与模型边界</h3>
+<ul>
+<li><strong>把 ETF 代理当成资产本体：</strong> GLD 不是现货金，SPY 不是无摩擦总回报指数；必须在结果表标注代理和费用。</li>
+<li><strong>把历史算术平均当作未来预期：</strong> 样本均值受起止点、估计误差、制度变化和幸存者偏差影响。</li>
+<li><strong>忽略再平衡交易：</strong> 固定权重不是自动可实现；频率越高，换手和成本越可能吞噬分散化收益。</li>
+<li><strong>用单一 MDD 评价全部风险：</strong> MDD 不反映回撤发生概率、持续时间、尾部频率和流动性。</li>
+<li><strong>把黄金的条件避险性写成无条件规律：</strong> 需要按危机定义、窗口和基准做条件相关/尾部分析。</li>
+<li><strong>把组合较低回撤误写为“策略 alpha”：</strong> 固定权重只是风险暴露组合，除非有严谨基准、样本外和成本后的增量证据，不能叫 alpha。</li>
+</ul>
+<h3 id="1-9-本章结论与后续接口">1.9 本章结论与后续接口</h3>
+<p>买入并持有与战略资产配置是报告后续所有模型的共同基准：它给出最少参数、低换手、可解释的风险收益路径。SPY/GLD 示例显示固定权重可能降低特定样本中的最大回撤，但结果高度依赖代理、窗口、再平衡和成本。下一并列章节将研究<strong>主观基本面/价值模型</strong>，重点讨论如何把估值叙事变成可记录、可检验、但不伪装成机械信号的决策规则。</p>
+<h3 id="本章参考文献">本章参考文献</h3>
+<ol>
+<li>[1] Markowitz, H., “Portfolio Selection,” <em>The Journal of Finance</em>, 1952. <a href="https://doi.org/10.2307/1907413">https://doi.org/10.2307/1907413</a></li>
+<li>[2] Sharpe, W. F., “Capital Asset Prices: A Theory of Market Equilibrium under Conditions of Risk,” <em>The Journal of Finance</em>, 1964. <a href="https://doi.org/10.2307/2977928">https://doi.org/10.2307/2977928</a></li>
+<li>[3] Baur, D. G. &amp; Lucey, B. M., “Is Gold a Hedge or a Safe Haven? An Analysis of Stocks, Bonds and Gold,” <em>Financial Review</em>, 2010. <a href="https://doi.org/10.1016/j.frl.2010.03.001">https://doi.org/10.1016/j.frl.2010.03.001</a></li>
+<li>[4] Erb, C. B. &amp; Harvey, C. R., “The Golden Dilemma,” <em>Financial Analysts Journal</em>, 2013. <a href="https://papers.ssrn.com/sol3/papers.cfm?abstract_id=2078535">https://papers.ssrn.com/sol3/papers.cfm?abstract_id=2078535</a></li>
+<li>[5] Yahoo Finance chart API, SPY/GLD adjusted-close snapshot retrieved 2026-07-27; local evidence JSON: <code>quant_finance/data/classic_strategy_baseline_snapshot.json</code>. <a href="https://finance.yahoo.com/">https://finance.yahoo.com/</a></li>
+</ol>
+<h2 id="模型章节-02-主观基本面-价值交易">模型章节 02：主观基本面 / 价值交易</h2>
+<h3 id="2-1-模型定位-从-便宜-到-可证伪的估值判断">2.1 模型定位：从“便宜”到“可证伪的估值判断”</h3>
+<p>主观基本面交易（discretionary fundamental trading）先提出企业或宏观资产的经济判断，再决定买入价格、持有期限、仓位和退出条件。价值交易（value investing）是其中最容易被机械化的一支：核心命题不是“低市盈率必涨”，而是市场价格 <span class="math-inline" data-math-kind="inline">\(P\)</span> 与由现金流、资产、盈利能力或宏观稀缺性推导的内在价值 <span class="math-inline" data-math-kind="inline">\(V\)</span> 之间可能存在可利用的偏离。</p>
+<p>主观判断与计量价值因子必须并列而不能混写：</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>维度</th>
+<th>主观基本面/价值判断</th>
+<th>计量价值代理</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>研究对象</td>
+<td>企业竞争优势、资本配置、会计质量、管理层、行业结构、宏观情景</td>
+<td>B/M、E/P、FCF/P、EV/EBITDA 等可计算字段</td>
+</tr>
+<tr>
+<td>核心输出</td>
+<td>内在价值区间、置信度、催化剂、失效条件、仓位</td>
+<td>横截面排序、分组收益、HML 多空收益</td>
+</tr>
+<tr>
+<td>信息更新</td>
+<td>财报、调研、政策与事件触发</td>
+<td>固定频率重算、点时数据更新</td>
+</tr>
+<tr>
+<td>可复现程度</td>
+<td>决策日志可复核，但判断本身可能不可完全机械化</td>
+<td>规则可复现，但数据定义与交易成本仍需冻结</td>
+</tr>
+<tr>
+<td>主要风险</td>
+<td>价值陷阱、叙事偏差、确认偏误、估值锚定</td>
+<td>因子拥挤、结构变化、行业暴露、短腿融资和换手</td>
+</tr>
+</tbody>
+</table></div>
+<p>本章不把“优秀公司”或“低估资产”的投资故事写成确定收益率。主观模型的可审查单位应是：<strong>假设 → 证据 → 估值区间 → 安全边际 → 仓位 → 催化剂/退出 → 复盘结果</strong>。只有当这些字段在时间上冻结，研究者才能判断一个判断是事后解释还是事前决策。</p>
+<h3 id="2-2-内在价值与安全边际的数学表达">2.2 内在价值与安全边际的数学表达</h3>
+<h4 id="现金流折现-dcf">现金流折现（DCF）</h4>
+<p>对有可预测现金流的股票，最小化的股权现金流折现形式是：</p>
+<div class="formula" data-math-kind="display">\[V_0=\sum_{t=1}^{T}\frac{FCFE_t}{(1+k_e)^t}
+\;+\;\frac{TV_T}{(1+k_e)^T},
+\qquad
+TV_T=\frac{FCFE_{T+1}}{k_e-g}.\]</div>
+<p>其中 <span class="math-inline" data-math-kind="inline">\(FCFE_t\)</span> 是第 <span class="math-inline" data-math-kind="inline">\(t\)</span> 期股权自由现金流，<span class="math-inline" data-math-kind="inline">\(k_e\)</span> 是股权资本成本，<span class="math-inline" data-math-kind="inline">\(g\)</span> 是稳定期增长率，且终值公式要求 <span class="math-inline" data-math-kind="inline">\(k_e&gt;g\)</span>。若采用企业自由现金流，则折现率换成 WACC，并在终值后扣除净债务得到股权价值。</p>
+<p><strong>变量、直觉与实现映射：</strong> DCF 把“未来能给股东多少钱”转换成今天的价格；远期现金流的折现权重较小，但终值通常占估值很大比例，因此 <span class="math-inline" data-math-kind="inline">\(k_e\)</span>、<span class="math-inline" data-math-kind="inline">\(g\)</span>、利润率和再投资率的微小变动会造成巨大估值区间。实现上应保存每次估值的输入快照、发布日期和假设，而不是只保存一个最终目标价。</p>
+<h4 id="相对估值与收益率表达">相对估值与收益率表达</h4>
+<p>常见相对估值指标可写为：</p>
+<div class="formula" data-math-kind="display">\[EY_i=\frac{E_i}{P_i},\qquad
+FCFY_i=\frac{FCF_i}{P_i},\qquad
+BM_i=\frac{B_i}{M_i},\qquad
+EVEBITDA_i=\frac{EV_i}{EBITDA_i}.\]</div>
+<p>其中 <span class="math-inline" data-math-kind="inline">\(EY\)</span> 是盈利收益率（earnings yield），<span class="math-inline" data-math-kind="inline">\(FCFY\)</span> 是自由现金流收益率，<span class="math-inline" data-math-kind="inline">\(BM\)</span> 是账面市值比（book-to-market），<span class="math-inline" data-math-kind="inline">\(EVEBITDA\)</span> 是企业价值倍数。收益率越高或倍数越低通常意味着“更便宜”，但只有在盈利、现金流和资产账面值具有可持续性时才有经济意义。</p>
+<p>为了减少不同单位和行业分布差异，可以在同一形成日做横截面标准化：</p>
+<div class="formula" data-math-kind="display">\[z_{i,k,t}=\frac{x_{i,k,t}-\operatorname{median}_t(x_{k,t})}
+{1.4826\operatorname{MAD}_t(x_{k,t})+\epsilon},
+\qquad
+S_{i,t}=\sum_{k\in\mathcal K}\lambda_k z_{i,k,t}.\]</div>
+<p>这里使用 median/MAD（median absolute deviation）而非均值/标准差，是为了减弱极端估值的影响；<span class="math-inline" data-math-kind="inline">\(S_{i,t}\)</span> 是价值、质量或盈利稳定性指标的组合分数，<span class="math-inline" data-math-kind="inline">\(\lambda_k\)</span> 是预先登记的权重。行业内标准化、规模中性和 winsorization 必须在形成期内完成，不能看到未来收益后再挑选阈值。</p>
+<h4 id="安全边际与仓位">安全边际与仓位</h4>
+<p>主观价值判断通常不是使用单点估值，而是使用价值区间 <span class="math-inline" data-math-kind="inline">\([V_i^L,V_i^U]\)</span>。一个可审查的安全边际（margin of safety, MOS）定义是：</p>
+<div class="formula" data-math-kind="display">\[MOS_i=1-\frac{P_i}{V_i^L}.\]</div>
+<p>只有当 <span class="math-inline" data-math-kind="inline">\(MOS_i\)</span> 超过预先登记的门槛、会计质量检查通过、催化剂存在且失效条件尚未触发时，才进入候选池。仓位可用风险预算而非“越便宜越重仓”：</p>
+<div class="formula" data-math-kind="display">\[w_i=\operatorname{clip}\!\left(
+\frac{MOS_i\,q_i}{\hat\sigma_i^2},
+-w_{\max},w_{\max}\right),\]</div>
+<p>其中 <span class="math-inline" data-math-kind="inline">\(q_i\in[0,1]\)</span> 是对现金流质量、会计可靠性和催化剂确定性的置信度，<span class="math-inline" data-math-kind="inline">\(\hat\sigma_i^2\)</span> 是滚动风险估计。该式是研究模板而不是标准答案；它显式说明低估值如果伴随高不确定性，仓位仍可能被压低。</p>
+<h3 id="2-3-股票基本面模型的输入-流程与统计特征">2.3 股票基本面模型的输入、流程与统计特征</h3>
+<h4 id="输入字段与点时约束">输入字段与点时约束</h4>
+<p>股票价值模型至少需要以下字段，并区分“财报发布日期”和“财报所属期”：</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>字段</th>
+<th>作用</th>
+<th>常见陷阱</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>市值、企业价值</td>
+<td>分母与资本结构</td>
+<td>使用未来修订市值或忽略优先股/少数股东</td>
+</tr>
+<tr>
+<td>净利润、EBIT、EBITDA</td>
+<td>盈利能力与估值倍数</td>
+<td>一次性项目、周期峰值和负盈利</td>
+</tr>
+<tr>
+<td>CFO、Capex、FCF</td>
+<td>现金流质量</td>
+<td>把营运资本释放当作可持续现金流</td>
+</tr>
+<tr>
+<td>总资产、净资产、商誉</td>
+<td>B/M 与资产重估</td>
+<td>无形资产和回购导致账面值失真</td>
+</tr>
+<tr>
+<td>ROIC、ROE、毛利率</td>
+<td>质量过滤</td>
+<td>杠杆可机械抬高 ROE</td>
+</tr>
+<tr>
+<td>负债、利息覆盖率</td>
+<td>生存风险</td>
+<td>低估值可能只是破产概率上升</td>
+</tr>
+<tr>
+<td>财报发布日期</td>
+<td>Point-in-time 可用性</td>
+<td>用年末数据回填到财报公开前的回测日期</td>
+</tr>
+</tbody>
+</table></div>
+<p>一个标准流程是：在形成日冻结当时可获得的基本面字段；做行业内 winsorization 与标准化；剔除负盈利、极端杠杆和流动性不足标的；构造价值/质量分数；按分位数形成多空或长-only 组合；在下一交易窗口执行；将 delisting return、公司行动、停牌和交易成本写入账本。</p>
+<h4 id="价值模型的统计特征">价值模型的统计特征</h4>
+<p>价值暴露的常见统计特征不是“低估值每月稳定上涨”，而是：</p>
+<ol>
+<li><strong>收益分布偏态与尾部集中：</strong> 赢家可能来自少数价值重估，输家可能因破产或盈利崩塌形成大损失。</li>
+<li><strong>长周期均值回复：</strong> 估值偏离可能持续多年，等待成本和职业风险高于单次交易成本。</li>
+<li><strong>价值陷阱（value trap）：</strong> 低倍数由行业衰退、会计质量恶化、过高杠杆或技术替代解释，而不是价格错误。</li>
+<li><strong>行业和风格暴露：</strong> B/M 与 E/P 组合可能集中于金融、能源、周期和小盘股；“价值收益”与行业 beta 难以完全分离。</li>
+<li><strong>与动量的负相关风险：</strong> 价值反转常发生在价格持续下跌后，而动量策略会继续减仓；二者组合可改善路径，但不保证所有时期都对冲。</li>
+<li><strong>样本不稳定：</strong> 账面价值对软件、平台和研发密集企业的经济资本解释力下降，单一 B/M 不是跨时代不变的内在价值测量。</li>
+</ol>
+<h3 id="2-4-黄金的基本面-宏观价值判断">2.4 黄金的基本面/宏观价值判断</h3>
+<p>黄金没有企业现金流，不能直接套用股票 DCF。主观黄金模型通常把金价视为实际利率、美元、通胀预期、央行需求、风险厌恶和供给库存的共同结果。一个可用于研究而非因果宣称的状态模型是：</p>
+<div class="formula" data-math-kind="display">\[r_{gold,t+1}
+=\alpha
++\beta_1\Delta(-y^{real}_t)
++\beta_2\Delta USD_t
++\beta_3\Delta\pi^e_t
++\beta_4\Delta Risk_t
++\varepsilon_{t+1}.\]</div>
+<p><span class="math-inline" data-math-kind="inline">\(y^{real}\)</span> 是实际利率，<span class="math-inline" data-math-kind="inline">\(USD\)</span> 是美元指数，<span class="math-inline" data-math-kind="inline">\(\pi^e\)</span> 是通胀预期，<span class="math-inline" data-math-kind="inline">\(Risk\)</span> 是预先定义的风险厌恶代理。使用 <span class="math-inline" data-math-kind="inline">\(\Delta(-y^{real})\)</span> 表示实际利率下降通常会降低持有无息黄金的机会成本；但这只是经济假设，必须用滚动样本外检验、稳定性检查和替代指标验证。</p>
+<p>为了把宏观叙事转成仓位规则，可以构造标准化状态分数：</p>
+<div class="formula" data-math-kind="display">\[F_t=\theta_1 z(-y^{real}_t)+\theta_2 z(-USD_t)
++\theta_3 z(\pi^e_t)+\theta_4 z(Risk_t),
+\qquad
+w^{gold}_t=\operatorname{clip}(w_0+\eta F_t,0,w_{\max}).\]</div>
+<p>这里的 <span class="math-inline" data-math-kind="inline">\(w_0\)</span> 是战略黄金权重，<span class="math-inline" data-math-kind="inline">\(\eta\)</span> 是状态倾斜幅度。实际研究必须记录宏观数据发布日期、修订版本、滞后、交易时点和 FX 口径；否则“知道当时的实际利率”可能包含未来修订信息。</p>
+<h3 id="2-5-文献证据与主观-计量边界">2.5 文献证据与主观—计量边界</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>来源</th>
+<th>支持的内容</th>
+<th>不支持的推论</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Graham &amp; Dodd (1934)</td>
+<td>安全边际、价值与价格区分的投资思想</td>
+<td>不提供现代点时数据、成本或样本外 Sharpe</td>
+</tr>
+<tr>
+<td>Shiller (1981)</td>
+<td>讨论价格相对后续股息的过度波动，为估值可预测性研究提供问题意识</td>
+<td>不等于一个可执行的个股买卖规则</td>
+</tr>
+<tr>
+<td>Fama &amp; French (1992, 1993)</td>
+<td>B/M、规模和市场因子与股票收益横截面关系</td>
+<td>因子收益不等于主观投资者的净 alpha</td>
+</tr>
+<tr>
+<td>Lakonishok, Shleifer &amp; Vishny (1994)</td>
+<td>讨论价值与增长策略及投资者外推偏差</td>
+<td>不保证未来价值溢价继续存在</td>
+</tr>
+<tr>
+<td>Piotroski (2000)</td>
+<td>以财务强度过滤低 B/M/高 B/M 组合的研究范例</td>
+<td>不能把论文样本期收益外推为普适筛选器</td>
+</tr>
+<tr>
+<td>Asness, Moskowitz &amp; Pedersen (2013)</td>
+<td>价值与动量在多资产上的共同研究框架</td>
+<td>不消除交易成本、容量和制度变化风险</td>
+</tr>
+</tbody>
+</table></div>
+<p>主观研究可以吸收这些论文的变量和反例，但必须保留自己的证据边界：论文中的组合规则是公开的机械代理；投资者对管理层、产品、监管和资本配置的判断可能含有不可压缩的信息，也可能含有无法回溯的叙事偏差。</p>
+<h3 id="2-6-本地复现代理-kenneth-french-hml-的平均收益与回撤">2.6 本地复现代理：Kenneth French HML 的平均收益与回撤</h3>
+<p>本节使用 <code>quant_finance/data/classic_strategy_value_snapshot.json</code>，来源是 Kenneth French Data Library 的官方三因子 ZIP，文件头为 <code>202605 CRSP database</code>，下载 SHA-256 为 <code>80b88699a18ac408e2456d25b1004e340f3f7f8d41d5b476a0285bc53c6f0436</code>。HML 是高账面市值比组合减低账面市值比组合的多空因子，不是主观价值基金的长-only 净收益。</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>HML 窗口</th>
+<th style="text-align:right">月数</th>
+<th style="text-align:right">年化算术平均</th>
+<th style="text-align:right">CAGR</th>
+<th style="text-align:right">年化波动</th>
+<th style="text-align:right">Sharpe（RF=0）</th>
+<th style="text-align:right">最大回撤</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1926-07–2026-05</td>
+<td style="text-align:right">1199</td>
+<td style="text-align:right">4.22%</td>
+<td style="text-align:right">3.56%</td>
+<td style="text-align:right">12.30%</td>
+<td style="text-align:right">0.34</td>
+<td style="text-align:right">−57.79%</td>
+</tr>
+<tr>
+<td>1970-01–2026-05</td>
+<td style="text-align:right">677</td>
+<td style="text-align:right">3.67%</td>
+<td style="text-align:right">3.15%</td>
+<td style="text-align:right">10.63%</td>
+<td style="text-align:right">0.34</td>
+<td style="text-align:right">−57.79%</td>
+</tr>
+<tr>
+<td>1990-01–2026-05</td>
+<td style="text-align:right">437</td>
+<td style="text-align:right">1.90%</td>
+<td style="text-align:right">1.28%</td>
+<td style="text-align:right">11.17%</td>
+<td style="text-align:right">0.17</td>
+<td style="text-align:right">−57.79%</td>
+</tr>
+<tr>
+<td>2000-01–2026-05</td>
+<td style="text-align:right">317</td>
+<td style="text-align:right">2.59%</td>
+<td style="text-align:right">1.91%</td>
+<td style="text-align:right">11.89%</td>
+<td style="text-align:right">0.22</td>
+<td style="text-align:right">−57.79%</td>
+</tr>
+<tr>
+<td>2010-01–2026-05</td>
+<td style="text-align:right">197</td>
+<td style="text-align:right">−0.67%</td>
+<td style="text-align:right">−1.29%</td>
+<td style="text-align:right">11.24%</td>
+<td style="text-align:right">−0.06</td>
+<td style="text-align:right">−53.38%</td>
+</tr>
+<tr>
+<td>2020-01–2026-05</td>
+<td style="text-align:right">77</td>
+<td style="text-align:right">1.96%</td>
+<td style="text-align:right">0.84%</td>
+<td style="text-align:right">15.09%</td>
+<td style="text-align:right">0.13</td>
+<td style="text-align:right">−29.34%</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>统计解释。</strong> HML 的长样本平均收益为正，但不同起点的 CAGR 显著下降；2010 年以来的简单 HML 代理为负 CAGR，说明价值暴露存在长期失效/再定价阶段。最大回撤约 58% 且持续到 2020 年附近，说明“估值便宜”可能需要多年等待，并承担严重的路径风险。该结果只描述公开因子，不能证明主观研究、价值质量过滤或交易后净收益同样如此。</p>
+<p><strong>与市场因子比较。</strong> 同一文件中的 Mkt-RF 全样本年化算术平均约 8.36%、CAGR 6.88%、最大回撤约 −84.63%（1932-06）。这不是“市场优于价值”的简单结论：两者风险暴露、杠杆和定义不同；比较的目的只是提醒读者，价值因子的较低波动并不自动意味着更高的绝对收益，也不代表其在所有窗口都提供危机保护。</p>
+<h3 id="2-7-价值与其他模型的组合方式">2.7 价值与其他模型的组合方式</h3>
+<p>价值模型常与以下模型组合，而不是孤立地提高“便宜程度”：</p>
+<ol>
+<li><strong>价值 + 质量：</strong> 先用 B/M、E/P 或 FCF/P 找便宜资产，再用 ROIC、现金流稳定性、杠杆和盈利修正筛掉价值陷阱。组合分数可写为 <span class="math-inline" data-math-kind="inline">\(S_i=\lambda_VS_i^V+\lambda_QS_i^Q\)</span>。</li>
+<li><strong>价值 + 动量：</strong> 价值提供较慢的均值回复，动量提供价格确认；可在形成期做动量 veto，或让两类信号分别占风险预算。</li>
+<li><strong>价值 + 黄金宏观覆盖：</strong> 股票价值组合在估值修复等待期可能回撤很久，黄金状态分数可以作为低频防御仓位；这不是保证对冲，应报告条件相关和危机窗口。</li>
+<li><strong>价值 + 风险目标：</strong> 用单名波动、行业暴露、流动性和组合 MDD 约束仓位，避免“最便宜的股票”集中占据组合。</li>
+</ol>
+<p>组合时必须保持信号和风险的边界：提高价值分数不等于提高仓位；只有在估值、质量、流动性和风险预算同时通过时才执行。</p>
+<h3 id="2-8-主观基本面-计量价值的实现伪代码">2.8 主观基本面—计量价值的实现伪代码</h3>
+<pre><code class="language-python">def fundamental_value_pipeline(asof_date, point_in_time_fundamentals, prices):
+    # 1) 只读取在 asof_date 之前已经公开的财报和市场数据。
+    fields = point_in_time_fundamentals(asof_date)
+
+    # 2) 计算估值、盈利质量、杠杆和流动性字段，并做行业内稳健标准化。
+    value_score = robust_zscore(fields[&quot;fcf_yield&quot;]) + robust_zscore(fields[&quot;book_to_market&quot;])
+    quality_score = robust_zscore(fields[&quot;roic&quot;]) - robust_zscore(fields[&quot;leverage&quot;])
+    tradable = (fields[&quot;market_cap&quot;] &gt; MIN_CAP) &amp; (fields[&quot;price&quot;] &gt; 0)
+
+    # 3) 把主观判断登记为结构化字段，而不是在回测后手工挑选赢家。
+    thesis = load_pre_registered_thesis(asof_date)
+    eligible = tradable &amp; thesis[&quot;accounting_ok&quot;] &amp; thesis[&quot;catalyst_present&quot;]
+    score = 0.5 * value_score + 0.5 * quality_score
+
+    # 4) 先做行业/规模中性排序，再应用安全边际、波动率和单名上限。
+    candidates = rank_within_industry(score[eligible])
+    weights = risk_budget(candidates, prices, max_single=0.02, max_sector=0.20)
+
+    # 5) 输出形成日持仓与证据账本；执行从下一交易窗口开始，避免未来函数。
+    return {&quot;weights&quot;: weights, &quot;thesis&quot;: thesis, &quot;evidence_date&quot;: asof_date}
+</code></pre>
+<h3 id="2-9-失败模式-统计陷阱与风险边界">2.9 失败模式、统计陷阱与风险边界</h3>
+<ul>
+<li><strong>把低倍数等同于低估：</strong> 盈利下修、债务到期、监管冲击和技术替代都可能使“便宜”成为合理价格。</li>
+<li><strong>财报未来函数：</strong> 使用财报所属期而非发布日期会把未来信息提前放入形成期。</li>
+<li><strong>行业不可比：</strong> 银行、软件、矿业和消费公司的资产负债表与现金流定义不同，跨行业直接比较 P/B 或 FCF yield 会制造伪信号。</li>
+<li><strong>终值主导 DCF：</strong> <span class="math-inline" data-math-kind="inline">\(k_e\)</span> 和 <span class="math-inline" data-math-kind="inline">\(g\)</span> 的小变化可能改变估值数倍；应报告情景区间和反向估值，而不是单一目标价。</li>
+<li><strong>HML 不是可直接交易净收益：</strong> 因子通常隐含多空、再平衡、借券和融资，真实策略会有成本、容量和税费。</li>
+<li><strong>价值因子长期失效：</strong> 2010–2026 的本地 HML 代理为负 CAGR，不应因长样本正均值就隐藏近期衰减。</li>
+<li><strong>主观复盘偏差：</strong> 只记录成功案例会产生 survivorship 与 hindsight bias；必须保留失败交易、撤销理由和当时可见信息。</li>
+<li><strong>把黄金宏观回归当作因果：</strong> 实际利率、美元、通胀和风险厌恶高度相关，回归系数需要稳健标准误、替代指标和样本外验证。</li>
+</ul>
+<h3 id="2-10-本章结论与后续接口">2.10 本章结论与后续接口</h3>
+<p>主观基本面/价值模型的可复现核心不是一个神奇估值倍数，而是把现金流假设、会计质量、安全边际、催化剂、退出条件和仓位风险写成事前可核验的决策链。HML 的官方长样本代理显示价值暴露具有正的长期平均收益，但经历过约 58% 的最大回撤和长时间衰减；这正是为什么价值策略需要质量过滤、动量确认、行业约束和组合层风险管理。</p>
+<p>下一并列章节将进入<strong>趋势跟随与时间序列动量</strong>：重点比较股票指数、黄金和跨资产趋势信号的数学形式、波动率目标、换手与危机期回撤。</p>
+<h3 id="本章参考文献-2">本章参考文献</h3>
+<ol>
+<li>[1] Graham, B. &amp; Dodd, D. L., <em>Security Analysis</em>, 1934. <a href="https://www.mheducation.com/highered/product/security-analysis-graham-dodd">https://www.mheducation.com/highered/product/security-analysis-graham-dodd</a></li>
+<li>[2] Shiller, R. J., “Do Stock Prices Move Too Much to Be Justified by Subsequent Changes in Dividends?”, <em>American Economic Review</em>, 1981. <a href="https://doi.org/10.2307/1802789">https://doi.org/10.2307/1802789</a></li>
+<li>[3] Fama, E. F. &amp; French, K. R., “The Cross-Section of Expected Stock Returns,” <em>The Journal of Finance</em>, 1992. <a href="https://doi.org/10.2307/2329112">https://doi.org/10.2307/2329112</a></li>
+<li>[4] Fama, E. F. &amp; French, K. R., “Common Risk Factors in the Returns on Stocks and Bonds,” <em>Journal of Financial Economics</em>, 1993. <a href="https://doi.org/10.1016/0304-405X(93)90023-5">https://doi.org/10.1016/0304-405X(93)90023-5</a></li>
+<li>[5] Lakonishok, J., Shleifer, A. &amp; Vishny, R. W., “Contrarian Investment, Extrapolation, and Risk,” <em>The Journal of Finance</em>, 1994. <a href="https://doi.org/10.1111/j.1540-6261.1994.tb04772.x">https://doi.org/10.1111/j.1540-6261.1994.tb04772.x</a></li>
+<li>[6] Piotroski, J. D., “Value Investing: The Use of Historical Financial Statement Information to Separate Winners from Losers,” <em>Journal of Accounting Research</em>, 2000. <a href="https://doi.org/10.2307/2672906">https://doi.org/10.2307/2672906</a></li>
+<li>[7] Asness, C. S., Moskowitz, T. J. &amp; Pedersen, L. H., “Value and Momentum Everywhere,” <em>The Review of Financial Studies</em>, 2013. <a href="https://doi.org/10.1093/rfs/hhs107">https://doi.org/10.1093/rfs/hhs107</a></li>
+<li>[8] Kenneth R. French, “Data Library: Fama/French Research Factors.” <a href="https://mba.tuck.dartmouth.edu/pages/faculty/ken.french/data_library.html">https://mba.tuck.dartmouth.edu/pages/faculty/ken.french/data_library.html</a></li>
+<li>[9] 本地派生统计：<code>quant_finance/data/classic_strategy_value_snapshot.json</code>；原始 ZIP 不提交仓库。</li>
+</ol>
+<h2 id="模型章节-03-趋势跟随与时间序列动量">模型章节 03：趋势跟随与时间序列动量</h2>
+<h3 id="3-1-模型定位-不预测目标价-只判断方向是否延续">3.1 模型定位：不预测目标价，只判断方向是否延续</h3>
+<p>趋势跟随（trend following）与时间序列动量（time-series momentum, TSMOM）都利用同一资产过去价格变化与未来方向之间可能存在的持续性。它们与价值模型的逻辑相反：价值模型问“价格偏离内在价值多少”，趋势模型问“已经发生的价格方向是否仍在延续”。趋势交易不要求知道股票指数或黄金的合理价值，只要求信号、风险目标、交易时点和退出规则可机械执行。</p>
+<p>二者常被混用，但可作如下区分：</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>类型</th>
+<th>信号核心</th>
+<th>典型仓位</th>
+<th>研究问题</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>移动平均趋势</td>
+<td>当前/前期价格与移动均线的相对位置</td>
+<td>多头/现金或多空</td>
+<td>价格是否位于平滑趋势之上</td>
+</tr>
+<tr>
+<td>绝对动量</td>
+<td>过去 <span class="math-inline" data-math-kind="inline">\(L\)</span> 期累计收益的正负</td>
+<td>正收益做多、负收益空仓/做空</td>
+<td>单资产自身是否具有方向</td>
+</tr>
+<tr>
+<td>时间序列动量</td>
+<td>多个回看期收益方向，配合波动率缩放</td>
+<td>多空且风险标准化</td>
+<td>不同资产的自身方向能否组合</td>
+</tr>
+<tr>
+<td>突破系统</td>
+<td>价格突破过去 <span class="math-inline" data-math-kind="inline">\(L\)</span> 期高/低点</td>
+<td>突破入场、反向突破退出</td>
+<td>新趋势是否已突破历史区间</td>
+</tr>
+<tr>
+<td>多尺度趋势</td>
+<td>短、中、长回看信号集成</td>
+<td>连续仓位</td>
+<td>减少单一参数依赖和换手跳跃</td>
+</tr>
+</tbody>
+</table></div>
+<p>趋势跟随不是“上涨就买”的口号。可交易模型至少要回答：信号何时可见、下一期何时成交、未持仓资金收益是多少、是否允许做空、如何估计波动、仓位上限、交易成本和连续合约展期如何处理。</p>
+<h3 id="3-2-信号的数学表达">3.2 信号的数学表达</h3>
+<h4 id="过去收益符号">过去收益符号</h4>
+<p>设资产价格为 <span class="math-inline" data-math-kind="inline">\(P_t\)</span>，<span class="math-inline" data-math-kind="inline">\(L\)</span> 是回看长度，最简单的时间序列动量信号是：</p>
+<div class="formula" data-math-kind="display">\[m_{t,L}=\frac{P_t}{P_{t-L}}-1,
+\qquad
+s_{t,L}=\operatorname{sign}(m_{t,L}).\]</div>
+<p><strong>变量、直觉与实现映射：</strong> <span class="math-inline" data-math-kind="inline">\(m_{t,L}\)</span> 是过去 <span class="math-inline" data-math-kind="inline">\(L\)</span> 期累计简单收益；<span class="math-inline" data-math-kind="inline">\(s=+1\)</span> 表示做多，<span class="math-inline" data-math-kind="inline">\(s=-1\)</span> 表示做空。若研究对象不允许做空，则把负信号映射为现金：<span class="math-inline" data-math-kind="inline">\(s_{t,L}^{LC}=\max(s_{t,L},0)\)</span>。实现时必须把 <span class="math-inline" data-math-kind="inline">\(s_t\)</span> 至少滞后一根 bar 后乘以 <span class="math-inline" data-math-kind="inline">\(r_{t+1}\)</span>，否则会把本期收盘信号用于本期收益。</p>
+<h4 id="单移动平均与双移动平均">单移动平均与双移动平均</h4>
+<p>长度为 <span class="math-inline" data-math-kind="inline">\(L\)</span> 的简单移动平均（simple moving average, SMA）为：</p>
+<div class="formula" data-math-kind="display">\[SMA_{t,L}=\frac1L\sum_{j=0}^{L-1}P_{t-j},
+\qquad
+s_t^{SMA}=\mathbb I(P_t&gt;SMA_{t,L}).\]</div>
+<p><strong>变量、直觉与实现映射：</strong> <span class="math-inline" data-math-kind="inline">\(\mathbb I(\cdot)\)</span> 是指示函数；本章的长-only 规则在价格高于均线时持有资产，否则持有零收益现金。回测中先在月末 <span class="math-inline" data-math-kind="inline">\(t\)</span> 计算信号，再让该信号作用于 <span class="math-inline" data-math-kind="inline">\(t+1\)</span> 月收益。</p>
+<p>双移动平均规则将短期均线 <span class="math-inline" data-math-kind="inline">\(SMA_{t,L_s}\)</span> 与长期均线 <span class="math-inline" data-math-kind="inline">\(SMA_{t,L_l}\)</span> 比较：</p>
+<div class="formula" data-math-kind="display">\[s_t^{dual}=\operatorname{sign}
+\left(SMA_{t,L_s}-SMA_{t,L_l}\right),
+\qquad L_s&lt;L_l.\]</div>
+<p><strong>变量、直觉与实现映射：</strong> 短均线上穿长均线表示近期价格相对长期水平转强。双均线减少价格对单条均线的瞬时穿越，但会增加两个窗口参数和信号延迟。</p>
+<h4 id="多尺度连续信号">多尺度连续信号</h4>
+<p>单一 10 月或 12 月窗口容易产生参数偶然性。多尺度模型可将多个回看期合成连续信号：</p>
+<div class="formula" data-math-kind="display">\[\tilde s_t=\sum_{L\in\mathcal L}a_L
+\frac{m_{t,L}}{\hat\sigma_{t,L}},
+\qquad
+s_t=\tanh(\tilde s_t),
+\qquad \sum_La_L=1.\]</div>
+<p><strong>变量、直觉与实现映射：</strong> <span class="math-inline" data-math-kind="inline">\(a_L\)</span> 是事前固定的窗口权重，<span class="math-inline" data-math-kind="inline">\(\hat\sigma_{t,L}\)</span> 标准化不同窗口的收益尺度，<span class="math-inline" data-math-kind="inline">\(\tanh\)</span> 把仓位限制在 <span class="math-inline" data-math-kind="inline">\([-1,1]\)</span>。连续信号比二元切换更平滑，但其参数、估计窗口和非线性映射必须登记，不能通过测试集反复调节。</p>
+<h3 id="3-3-仓位-波动率目标和交易成本">3.3 仓位、波动率目标和交易成本</h3>
+<p>对目标年化波动 <span class="math-inline" data-math-kind="inline">\(\sigma^*\)</span>、预测波动 <span class="math-inline" data-math-kind="inline">\(\hat\sigma_t\)</span> 和最大杠杆 <span class="math-inline" data-math-kind="inline">\(w_{\max}\)</span>，风险标准化仓位为：</p>
+<div class="formula" data-math-kind="display">\[w_t=\operatorname{clip}\!\left(
+s_t\frac{\sigma^*}{\hat\sigma_t},
+-w_{\max},w_{\max}\right).\]</div>
+<p><strong>变量、直觉与实现映射：</strong> 趋势方向由 <span class="math-inline" data-math-kind="inline">\(s_t\)</span> 决定，仓位大小由波动率预算决定；高波动期自动降杠杆。实现中 <span class="math-inline" data-math-kind="inline">\(\hat\sigma_t\)</span> 只能使用 <span class="math-inline" data-math-kind="inline">\(t\)</span> 及以前数据，且应设置波动率下限，避免低波动估计制造极端杠杆。</p>
+<p>计入换手成本后的下一期收益为：</p>
+<div class="formula" data-math-kind="display">\[r_{t+1}^{trend,net}
+=w_t r_{t+1}
++(1-|w_t|)r_{f,t+1}
+-c_t|w_t-w_{t-1}|.\]</div>
+<p><strong>变量、直觉与实现映射：</strong> <span class="math-inline" data-math-kind="inline">\(r_f\)</span> 是现金收益，<span class="math-inline" data-math-kind="inline">\(c_t\)</span> 是每单位仓位变化的手续费、点差和冲击近似。本章本地示例为 long/cash，现金收益设为 0，每次单边仓位变化扣 10 bps；因此它没有反映真实 T-bill 收益、借券、期货保证金或展期。</p>
+<p>对 <span class="math-inline" data-math-kind="inline">\(n\)</span> 个资产，可先分别产生风险标准化趋势收益，再按风险预算组合：</p>
+<div class="formula" data-math-kind="display">\[r_{p,t+1}
+=\sum_{i=1}^{n}b_i
+\frac{s_{i,t}}{\hat\sigma_{i,t}}
+r_{i,t+1},
+\qquad
+\sum_ib_i=1.\]</div>
+<p><strong>变量、直觉与实现映射：</strong> <span class="math-inline" data-math-kind="inline">\(b_i\)</span> 是资产族风险预算，而不是名义资金权重。真实跨资产 CTA 会覆盖股票指数、国债、商品和外汇；本章只有 SPY/GLD 两个 ETF，因而只能验证信号与统计流程，不能代表多资产期货趋势组合。</p>
+<h3 id="3-4-统计特征-趋势策略为什么常出现-多数小亏-少数大赚">3.4 统计特征：趋势策略为什么常出现“多数小亏、少数大赚”</h3>
+<p>趋势策略的统计分布通常不同于买入并持有：</p>
+<ol>
+<li><strong>截断部分下行但牺牲反弹：</strong> 长-only 趋势在跌破均线后进入现金，可能减少持续熊市损失，却会错过 V 型反弹的初段。</li>
+<li><strong>锯齿损失（whipsaw）：</strong> 横盘期价格反复穿越均线，连续小亏与成本累积成为主要失败模式。</li>
+<li><strong>收益可能正偏：</strong> 多空趋势在少数长趋势中产生大收益，而在无趋势期承受小额反复止损；但正偏不是所有参数和资产的保证。</li>
+<li><strong>波动率条件化：</strong> 未做波动率标准化时，高波动资产会主导组合；做标准化后又引入估计误差和去杠杆滞后。</li>
+<li><strong>危机凸性具有条件：</strong> 趋势需要时间识别方向，突然跳空或快速 V 型反转可能同时伤害多资产仓位；“危机 alpha”不能写成无条件保险。</li>
+<li><strong>参数相关性高：</strong> 10、12、18 个月均线高度相关，不能把每个窗口当作独立策略计算显著性。</li>
+</ol>
+<p>除平均收益、CAGR、Sharpe 和 MDD 外，本章应额外报告：</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>指标</th>
+<th>意义</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>在场比例（invested fraction）</td>
+<td>资金暴露于风险资产的时间比例</td>
+</tr>
+<tr>
+<td>年化换手</td>
+<td>趋势切换与成本敏感度</td>
+</tr>
+<tr>
+<td>信号翻转次数</td>
+<td>whipsaw 的直接计数</td>
+</tr>
+<tr>
+<td>上涨/下跌市场捕获率</td>
+<td>趋势在不同市场方向中的参与程度</td>
+</tr>
+<tr>
+<td>最长空仓与最长连续亏损</td>
+<td>等待成本和执行纪律压力</td>
+</tr>
+<tr>
+<td>危机窗口收益</td>
+<td>只能在事前冻结的危机列表上报告</td>
+</tr>
+<tr>
+<td>参数稳定性</td>
+<td>多窗口、不同成本和延迟下结果是否一致</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="3-5-股票趋势-减少深熊暴露-但可能降低长期复合收益">3.5 股票趋势：减少深熊暴露，但可能降低长期复合收益</h3>
+<p>股票指数具有长期正风险溢价，长-only 趋势的核心取舍是：牺牲一部分持续上涨期和反弹期收益，换取在缓慢熊市中退出的可能。对个股趋势还需处理退市、涨跌停、停牌和横截面分散；本章使用 SPY，是为了隔离指数方向信号，不能推广到单名股票。</p>
+<p>股票趋势的主要风险包括：</p>
+<ul>
+<li>长期牛市中现金仓位形成机会成本；</li>
+<li>大跌后快速反弹导致“低位卖出、高位买回”；</li>
+<li>月度规则无法避免月内跳空；</li>
+<li>价格指数、总回报指数和 ETF 调整价可能产生不同均线交叉；</li>
+<li>现金利率为零的假设在高利率阶段低估空仓收益，在低利率阶段影响较小。</li>
+</ul>
+<h3 id="3-6-黄金趋势-无现金流资产更适合方向模型-但不是更容易">3.6 黄金趋势：无现金流资产更适合方向模型，但不是更容易</h3>
+<p>黄金缺少可直接折现的现金流，趋势信号因此常被用作宏观判断的替代。然而黄金的价格路径受美元、实际利率、央行需求、地缘冲击、ETF 申赎和期货仓位共同影响，长期横盘与快速反转会产生严重 whipsaw。</p>
+<p>ETF、现货和期货趋势必须分开：</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>载体</th>
+<th>趋势信号输入</th>
+<th>额外收益/成本</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>GLD 等 ETF</td>
+<td>调整后 ETF 价格</td>
+<td>基金费率、跟踪误差、交易点差</td>
+</tr>
+<tr>
+<td>伦敦现货</td>
+<td>现货定盘/报价</td>
+<td>托管、资金和交易时段</td>
+</tr>
+<tr>
+<td>COMEX 期货</td>
+<td>连续合约或单合约价格</td>
+<td>展期、保证金、期限结构和合约切换</td>
+</tr>
+</tbody>
+</table></div>
+<p>本章 GLD 结果显示，12 月均线没有显著改善该样本的黄金最大回撤：净 MDD 约 −41.81%，与 GLD 买入并持有的 −42.91% 接近。这一反例很重要：趋势规则对股票有效的回撤控制不能机械外推到黄金。</p>
+<h3 id="3-7-文献证据与可支持边界">3.7 文献证据与可支持边界</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>来源</th>
+<th>支持的内容</th>
+<th>不能支持的推论</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Fama &amp; Blume (1966)</td>
+<td>早期过滤规则、交易成本和市场效率检验</td>
+<td>不代表现代多资产期货趋势净表现</td>
+</tr>
+<tr>
+<td>Brock, Lakonishok &amp; LeBaron (1992)</td>
+<td>对移动平均与交易区间突破规则的统计检验</td>
+<td>不消除数据窥探和样本依赖</td>
+</tr>
+<tr>
+<td>Faber (2007)</td>
+<td>10 月移动平均用于低频战术资产配置的公开规则</td>
+<td>论文样本结果不能直接外推到当前 ETF 或成本</td>
+</tr>
+<tr>
+<td>Moskowitz, Ooi &amp; Pedersen (2012)</td>
+<td>跨期货资产的时间序列动量研究框架</td>
+<td>不等于 SPY/GLD 两资产长-only 规则</td>
+</tr>
+<tr>
+<td>Hurst, Ooi &amp; Pedersen (2017)</td>
+<td>长历史趋势跟随证据与危机讨论</td>
+<td>历史回溯不构成未来回报承诺</td>
+</tr>
+<tr>
+<td>Fung &amp; Hsieh (2001)</td>
+<td>趋势策略与类似期权的非线性风险暴露</td>
+<td>不说明任意 CTA 都有相同凸性</td>
+</tr>
+</tbody>
+</table></div>
+<p>这些研究支持“趋势是可检验的经典策略家族”，不支持挑选一个最好窗口后宣称发现稳定 alpha。特别是同一数据上测试大量回看期、平滑方式、止损与波动目标，需要多重检验和 Deflated Sharpe 调整。</p>
+<h3 id="3-8-本地复现实验-spy-gld-与双资产趋势">3.8 本地复现实验：SPY、GLD 与双资产趋势</h3>
+<p>本节使用 <code>quant_finance/data/classic_strategy_trend_snapshot.json</code>。月末信号只作用于下一月；当价格不高于均线时持有零收益现金；每单位仓位变化扣 10 bps。数据仍是 Yahoo Finance SPY/GLD adjusted-close 二手代理，不能替代正式指数、现货或期货数据。</p>
+<h4 id="10-月与-12-月-sma-的净结果">10 月与 12 月 SMA 的净结果</h4>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>模型</th>
+<th style="text-align:right">样本</th>
+<th style="text-align:right">年化算术平均</th>
+<th style="text-align:right">CAGR</th>
+<th style="text-align:right">年化波动</th>
+<th style="text-align:right">Sharpe（RF=0）</th>
+<th style="text-align:right">最大回撤</th>
+<th style="text-align:right">年化换手</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>SPY SMA10</td>
+<td style="text-align:right">2005-09–2026-06</td>
+<td style="text-align:right">8.60%</td>
+<td style="text-align:right">8.34%</td>
+<td style="text-align:right">10.57%</td>
+<td style="text-align:right">0.81</td>
+<td style="text-align:right">−23.43%</td>
+<td style="text-align:right">1.58</td>
+</tr>
+<tr>
+<td>GLD SMA10</td>
+<td style="text-align:right">2005-09–2026-06</td>
+<td style="text-align:right">8.67%</td>
+<td style="text-align:right">7.92%</td>
+<td style="text-align:right">14.42%</td>
+<td style="text-align:right">0.60</td>
+<td style="text-align:right">−39.81%</td>
+<td style="text-align:right">1.78</td>
+</tr>
+<tr>
+<td>50/50 独立 SMA10</td>
+<td style="text-align:right">2005-09–2026-06</td>
+<td style="text-align:right">8.63%</td>
+<td style="text-align:right">8.53%</td>
+<td style="text-align:right">9.19%</td>
+<td style="text-align:right">0.94</td>
+<td style="text-align:right">−15.02%</td>
+<td style="text-align:right">1.68</td>
+</tr>
+<tr>
+<td>SPY SMA12</td>
+<td style="text-align:right">2005-11–2026-06</td>
+<td style="text-align:right">9.64%</td>
+<td style="text-align:right">9.45%</td>
+<td style="text-align:right">10.76%</td>
+<td style="text-align:right">0.90</td>
+<td style="text-align:right">−16.89%</td>
+<td style="text-align:right">1.31</td>
+</tr>
+<tr>
+<td>GLD SMA12</td>
+<td style="text-align:right">2005-11–2026-06</td>
+<td style="text-align:right">8.83%</td>
+<td style="text-align:right">8.06%</td>
+<td style="text-align:right">14.65%</td>
+<td style="text-align:right">0.60</td>
+<td style="text-align:right">−41.81%</td>
+<td style="text-align:right">1.40</td>
+</tr>
+<tr>
+<td>50/50 独立 SMA12</td>
+<td style="text-align:right">2005-11–2026-06</td>
+<td style="text-align:right">9.23%</td>
+<td style="text-align:right">9.17%</td>
+<td style="text-align:right">9.31%</td>
+<td style="text-align:right">0.99</td>
+<td style="text-align:right">−12.01%</td>
+<td style="text-align:right">1.35</td>
+</tr>
+</tbody>
+</table></div>
+<h4 id="同样本买入并持有对照-2005-11-2026-06">同样本买入并持有对照（2005-11–2026-06）</h4>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>资产/组合</th>
+<th style="text-align:right">买入持有 CAGR</th>
+<th style="text-align:right">SMA12 净 CAGR</th>
+<th style="text-align:right">买入持有 MDD</th>
+<th style="text-align:right">SMA12 净 MDD</th>
+<th style="text-align:right">买入持有 Sharpe</th>
+<th style="text-align:right">SMA12 净 Sharpe</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>SPY</td>
+<td style="text-align:right">11.28%</td>
+<td style="text-align:right">9.45%</td>
+<td style="text-align:right">−50.78%</td>
+<td style="text-align:right">−16.89%</td>
+<td style="text-align:right">0.79</td>
+<td style="text-align:right">0.90</td>
+</tr>
+<tr>
+<td>GLD</td>
+<td style="text-align:right">10.54%</td>
+<td style="text-align:right">8.06%</td>
+<td style="text-align:right">−42.91%</td>
+<td style="text-align:right">−41.81%</td>
+<td style="text-align:right">0.66</td>
+<td style="text-align:right">0.60</td>
+</tr>
+<tr>
+<td>50/50 月度再平衡/独立趋势</td>
+<td style="text-align:right">11.58%</td>
+<td style="text-align:right">9.17%</td>
+<td style="text-align:right">−25.60%</td>
+<td style="text-align:right">−12.01%</td>
+<td style="text-align:right">0.98</td>
+<td style="text-align:right">0.99</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>结果解释。</strong> SPY SMA12 在该样本中显著降低了 MDD，但 CAGR 低约 1.83 个百分点；双资产趋势组合也以较低 CAGR 换取更低 MDD，Sharpe 仅小幅改善。GLD 趋势的 Sharpe 和 CAGR 低于买入持有，MDD 几乎未改善，说明策略有效性具有资产依赖。</p>
+<p><strong>成本解释。</strong> 10 bps 单边换仓成本对月度趋势影响不大但非零：SMA12 SPY 毛 CAGR 9.59%，净 CAGR 9.45%；50/50 毛 CAGR 9.32%，净 CAGR 9.17%。高频趋势、期货换月或小盘个股会有更高成本，不能套用这里的低频 ETF 假设。</p>
+<p><strong>证据边界。</strong> 本地实验只比较 10/12 月窗口，没有独立测试集、现金利率、税费、参数选择惩罚或多资产期货；它是机制演示，不是趋势策略未来收益估计。</p>
+<h3 id="3-9-实现伪代码-严格滞后-成本与组合">3.9 实现伪代码：严格滞后、成本与组合</h3>
+<pre><code class="language-python">def monthly_trend_backtest(prices, lookback=12, cost_bps=10):
+    # 1) 只在完整月份上计算移动平均，当前未完成月份必须排除。
+    monthly_returns = prices.pct_change()
+    moving_average = prices.rolling(lookback, min_periods=lookback).mean()
+
+    # 2) 月末 t 形成信号，shift(1) 后才作用于 t+1 收益。
+    raw_signal = (prices &gt; moving_average).astype(float)
+    position = raw_signal.where(moving_average.notna()).shift(1)
+
+    # 3) long/cash 收益；现金收益可替换为同月 T-bill。
+    gross_return = position * monthly_returns
+
+    # 4) 初始建仓和后续翻转都计入单边仓位变化成本。
+    turnover = position.diff().abs().fillna(position)
+    net_return = gross_return - cost_bps / 10000.0 * turnover
+
+    # 5) 多资产先独立计算信号，再按预先登记的风险预算聚合。
+    portfolio_return = risk_budgeted_sum(net_return)
+    return compute_cagr_sharpe_drawdown_turnover(portfolio_return)
+</code></pre>
+<h3 id="3-10-失败模式与风险边界">3.10 失败模式与风险边界</h3>
+<ul>
+<li><strong>信号与收益同月相乘：</strong> 未 shift 的回测含收盘价未来函数，会系统性夸大收益。</li>
+<li><strong>选择最好窗口：</strong> 在 3–24 个月中挑最高 Sharpe 而不计试验次数，会产生数据窥探。</li>
+<li><strong>忽略现金收益：</strong> 长期空仓比例约 20%–30% 时，现金利率对结果有实质影响。</li>
+<li><strong>连续合约错误：</strong> 黄金期货趋势若使用未经审查的回填连续价格，会把展期跳跃当成交易信号。</li>
+<li><strong>把低 MDD 等同于高收益：</strong> 本地 SPY/50-50 结果降低回撤但也降低 CAGR；目标函数必须事先确定。</li>
+<li><strong>突然反转和跳空：</strong> 趋势信号是滞后的，无法保证在闪崩、政策跳跃或 V 型反弹中及时退出/重入。</li>
+<li><strong>波动率目标顺周期：</strong> 危机初期波动上升迫使去杠杆，危机后波动下降又可能加仓过慢。</li>
+<li><strong>资产不足造成伪分散：</strong> SPY 与 GLD 两个代理不能代表股票、债券、外汇和商品的多资产 CTA。</li>
+<li><strong>交易成本线性化：</strong> 10 bps 只是示例；真实点差、冲击、借券、期货保证金和税费具有状态依赖。</li>
+</ul>
+<h3 id="3-11-本章结论与后续接口">3.11 本章结论与后续接口</h3>
+<p>趋势跟随的核心价值是把方向判断、退出和风险预算机械化，而不是提高所有资产的平均收益。本地结果显示，12 月 SMA 在 SPY 和 SPY/GLD 组合上以较低 CAGR 换取明显较低的最大回撤，但对 GLD 的回撤控制有限。这说明趋势应作为跨资产、风险标准化和多尺度模型评估，不能从股票指数经验直接外推黄金。</p>
+<p>下一并列章节将研究<strong>横截面动量与相对强弱模型</strong>：比较赢家—输家排序、行业中性、持有期重叠、反转风险及其与价值模型的组合。</p>
+<h3 id="本章参考文献-3">本章参考文献</h3>
+<ol>
+<li>[1] Fama, E. F. &amp; Blume, M. E., “Filter Rules and Stock-Market Trading,” <em>The Journal of Business</em>, 1966. <a href="https://doi.org/10.1086/294849">https://doi.org/10.1086/294849</a></li>
+<li>[2] Brock, W., Lakonishok, J. &amp; LeBaron, B., “Simple Technical Trading Rules and the Stochastic Properties of Stock Returns,” <em>The Journal of Finance</em>, 1992. <a href="https://doi.org/10.1111/j.1540-6261.1992.tb04681.x">https://doi.org/10.1111/j.1540-6261.1992.tb04681.x</a></li>
+<li>[3] Faber, M. T., “A Quantitative Approach to Tactical Asset Allocation,” 2007. <a href="https://papers.ssrn.com/sol3/papers.cfm?abstract_id=962461">https://papers.ssrn.com/sol3/papers.cfm?abstract_id=962461</a></li>
+<li>[4] Moskowitz, T. J., Ooi, Y. H. &amp; Pedersen, L. H., “Time Series Momentum,” <em>Journal of Financial Economics</em>, 2012. <a href="https://doi.org/10.1016/j.jfineco.2011.11.003">https://doi.org/10.1016/j.jfineco.2011.11.003</a></li>
+<li>[5] Hurst, B., Ooi, Y. H. &amp; Pedersen, L. H., “A Century of Evidence on Trend-Following Investing,” <em>The Journal of Portfolio Management</em>, 2017. <a href="https://doi.org/10.3905/jpm.2017.44.1.015">https://doi.org/10.3905/jpm.2017.44.1.015</a></li>
+<li>[6] Fung, W. &amp; Hsieh, D. A., “The Risk in Hedge Fund Strategies: Theory and Evidence from Trend Followers,” <em>The Review of Financial Studies</em>, 2001. <a href="https://doi.org/10.1093/rfs/14.2.313">https://doi.org/10.1093/rfs/14.2.313</a></li>
+<li>[7] 本地派生统计：<code>quant_finance/data/classic_strategy_trend_snapshot.json</code>；不提交供应商原始行情。</li>
+</ol>
+<h2 id="模型章节-04-横截面动量与相对强弱">模型章节 04：横截面动量与相对强弱</h2>
+<h3 id="4-1-模型定位-在同一时点买相对赢家-卖相对输家">4.1 模型定位：在同一时点买相对赢家、卖相对输家</h3>
+<p>横截面动量（cross-sectional momentum）不问单个资产自身是否处于长期上升趋势，而是在同一形成日把资产按过去收益排序：买入相对赢家，卖出或低配相对输家。相对强弱（relative strength）是它在 long-only 组合中的版本，常用于行业轮动、ETF 轮动和跨资产配置。</p>
+<p>它与第 3 章时间序列动量的差别是：</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>维度</th>
+<th>时间序列动量</th>
+<th>横截面动量</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>比较对象</td>
+<td>同一资产过去与现在</td>
+<td>同一时点不同资产之间</td>
+</tr>
+<tr>
+<td>信号</td>
+<td><span class="math-inline" data-math-kind="inline">\(R_{i,t}^{(L)}\)</span> 的正负</td>
+<td><span class="math-inline" data-math-kind="inline">\(R_{i,t}^{(L)}\)</span> 的横截面排名</td>
+</tr>
+<tr>
+<td>负信号</td>
+<td>现金或做空自身</td>
+<td>低配/做空输家</td>
+</tr>
+<tr>
+<td>主要风险</td>
+<td>趋势反转、空仓机会成本</td>
+<td>动量崩溃、拥挤、行业和 beta 暴露</td>
+</tr>
+<tr>
+<td>典型实现</td>
+<td>CTA 趋势</td>
+<td>股票赢家—输家、行业/ETF 轮动</td>
+</tr>
+</tbody>
+</table></div>
+<p>横截面动量的经典结论是经验性的，不是市场必然规律。它必须同时处理形成期与持有期重叠、行业中性、风险暴露、借券和交易成本；否则“赢家收益”可能只是行业、规模、市场 beta 或流动性风险的重新命名。</p>
+<h3 id="4-2-排名-组合与风险调整的数学表达">4.2 排名、组合与风险调整的数学表达</h3>
+<h4 id="形成期收益与排名">形成期收益与排名</h4>
+<p>对 <span class="math-inline" data-math-kind="inline">\(N_t\)</span> 个可交易资产，回看 <span class="math-inline" data-math-kind="inline">\(L\)</span> 个月、可选跳过最近 <span class="math-inline" data-math-kind="inline">\(J\)</span> 个月，形成期收益为：</p>
+<div class="formula" data-math-kind="display">\[R_{i,t}^{(L,J)}
+=\prod_{u=t-L-J+1}^{t-J}(1+r_{i,u})-1.\]</div>
+<p><strong>变量、直觉与实现映射：</strong> <span class="math-inline" data-math-kind="inline">\(J=0\)</span> 使用最新收益，<span class="math-inline" data-math-kind="inline">\(J=1\)</span> 跳过最近一个月以减弱短期反转；<span class="math-inline" data-math-kind="inline">\(L=12,J=1\)</span> 是经典中期动量的常见近似。形成日 <span class="math-inline" data-math-kind="inline">\(t\)</span> 只能使用已结束的 <span class="math-inline" data-math-kind="inline">\(t-J\)</span> 数据，持有期从下一交易窗口开始。</p>
+<p>令 <span class="math-inline" data-math-kind="inline">\(rank_t(i)\)</span> 是 <span class="math-inline" data-math-kind="inline">\(R_{i,t}^{(L,J)}\)</span> 的降序排名。Top-<span class="math-inline" data-math-kind="inline">\(K\)</span> long-only 权重为：</p>
+<div class="formula" data-math-kind="display">\[w_{i,t}^{TopK}
+=\frac{\mathbb I(rank_t(i)\le K)}
+{\sum_{j=1}^{N_t}\mathbb I(rank_t(j)\le K)}.\]</div>
+<p><strong>变量、直觉与实现映射：</strong> 每期只持有前 <span class="math-inline" data-math-kind="inline">\(K\)</span> 个资产并等权；若 <span class="math-inline" data-math-kind="inline">\(K=1\)</span>，集中度高、换手和单资产风险都高；增大 <span class="math-inline" data-math-kind="inline">\(K\)</span> 可提高分散化但稀释信号。</p>
+<p>多空赢家—输家组合常写为：</p>
+<div class="formula" data-math-kind="display">\[r_{p,t+1}^{LS}
+=\frac1K\sum_{i\in Winner_t}r_{i,t+1}
+-\frac1K\sum_{j\in Loser_t}r_{j,t+1}.\]</div>
+<p><strong>变量、直觉与实现映射：</strong> 多空结构减少市场 beta，但引入借券、融资、保证金、短腿挤压和尾部损失。French MOM 因子就是这类公开定义的股票多空代理之一，但它的构造细节、规模分组和再平衡不能被简单等同于个人投资者的 Top-K long-only。</p>
+<h4 id="约束与风险中性">约束与风险中性</h4>
+<p>为减少行业和市场暴露，可在形成日对初始分数做残差化：</p>
+<div class="formula" data-math-kind="display">\[score_{i,t}^{res}
+=score_{i,t}
+-\hat\gamma_t^\top z_{i,t}^{risk},
+\qquad
+\hat\gamma_t
+=\arg\min_\gamma
+\sum_i(score_{i,t}-\gamma^\top z_{i,t}^{risk})^2.\]</div>
+<p>其中 <span class="math-inline" data-math-kind="inline">\(z^{risk}\)</span> 可包含行业哑变量、规模、beta、波动率和流动性；残差化只能减少已登记的线性暴露，不能消除非线性或未来状态变化。</p>
+<p>对连续仓位，可按风险调整后的动量评分排序：</p>
+<div class="formula" data-math-kind="display">\[Q_{i,t}=\frac{R_{i,t}^{(L,J)}}{\hat\sigma_{i,t}}
+-\lambda_\beta\hat\beta_{i,t}
+-\lambda_c\widehat{cost}_{i,t}.\]</div>
+<p><strong>变量、直觉与实现映射：</strong> <span class="math-inline" data-math-kind="inline">\(Q\)</span> 把收益、波动、市场 beta 和交易成本放在同一排序框架，但 <span class="math-inline" data-math-kind="inline">\(\lambda\)</span> 必须在训练/验证区间预先登记；否则它只是回测后调参。</p>
+<h3 id="4-3-持有期重叠-换手与统计推断">4.3 持有期重叠、换手与统计推断</h3>
+<p>经典动量常用 <span class="math-inline" data-math-kind="inline">\(J=1\)</span> 的跳过最近月和 <span class="math-inline" data-math-kind="inline">\(K_h\)</span> 月持有期。若每月形成一个新组合，任意时点同时存在 <span class="math-inline" data-math-kind="inline">\(K_h\)</span> 个 vintage 组合，组合收益是：</p>
+<div class="formula" data-math-kind="display">\[r_{p,t}
+=\frac1{K_h}\sum_{h=0}^{K_h-1}
+r_{p,t}^{(formation=t-h)}.\]</div>
+<p><strong>变量、直觉与实现映射：</strong> 重叠持有使收益序列具有序列相关，不能把每个月观察当成独立样本；显著性需要 HAC/Newey–West、block bootstrap 或按形成期聚类。</p>
+<p>换手由目标权重与实际漂移权重差异决定：</p>
+<div class="formula" data-math-kind="display">\[\operatorname{Turnover}_t
+=\frac12\sum_i|w_{i,t}^{target}-w_{i,t}^{pre}|,
+\qquad
+r_{p,t}^{net}=r_{p,t}^{gross}-c_t\operatorname{Turnover}_t.\]</div>
+<p><strong>变量、直觉与实现映射：</strong> <span class="math-inline" data-math-kind="inline">\(c_t\)</span> 应拆成佣金、点差、冲击、借券、融资和税费；动量策略的短形成窗口、Top-1 集中仓位和频繁重排会使成本与容量成为一阶问题。</p>
+<h3 id="4-4-统计特征与典型失败模式">4.4 统计特征与典型失败模式</h3>
+<p>横截面动量的统计风险可概括为：</p>
+<ol>
+<li><strong>中期延续、短期反转：</strong> 过去 3–12 个月的相对收益可能延续，但最近几周的极端赢家/输家可能因流动性和价格压力反转，因此形成期与跳过期必须明确。</li>
+<li><strong>动量崩溃（momentum crash）：</strong> 市场急剧反弹时，危机前做空/低配的输家突然大涨，赢家组合相对落后；Daniel 与 Moskowitz 对这种状态依赖有专门讨论。</li>
+<li><strong>负偏或厚尾：</strong> 多空动量在少数快速反转中出现大损失，均值和 Sharpe 不能单独描述风险。</li>
+<li><strong>行业/规模聚集：</strong> 横截面赢家可能集中于同一行业或小盘股，所谓 alpha 可能是未控制的暴露。</li>
+<li><strong>持有期重叠与显著性膨胀：</strong> 多个窗口、跳过期、Top-K 和行业约束构成一个实验族，需要记录选择次数。</li>
+<li><strong>容量与冲击：</strong> 赢家—输家交易常发生在价格已大幅变化后，点差和市场冲击可能随信号强度上升。</li>
+<li><strong>短腿与融资风险：</strong> 多空策略的账面收益可被借券费、召回、涨停和保证金挤压。</li>
+</ol>
+<p>因此本章除平均收益、CAGR、Sharpe 和 MDD 外，还应报告：</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>指标</th>
+<th>目的</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Top-K 集中度/有效持仓数</td>
+<td>判断是否被少数资产支配</td>
+</tr>
+<tr>
+<td>行业和 beta 暴露</td>
+<td>区分动量信号与风险暴露</td>
+</tr>
+<tr>
+<td>年化换手、成本占比</td>
+<td>判断毛收益能否转为净收益</td>
+</tr>
+<tr>
+<td>最差月、最差连续期</td>
+<td>识别 momentum crash</td>
+</tr>
+<tr>
+<td>多空腿分别收益</td>
+<td>检查收益来自赢家、输家还是两者</td>
+</tr>
+<tr>
+<td>形成期/持有期敏感性</td>
+<td>检查参数稳定性</td>
+</tr>
+<tr>
+<td>HAC t 值、block bootstrap CI</td>
+<td>处理序列相关和非正态</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="4-5-股票横截面动量">4.5 股票横截面动量</h3>
+<p>股票动量的典型研究对象是个股或行业组合。研究契约需要冻结：</p>
+<ul>
+<li>股票池是全市场、仅存活股票还是指数成员；</li>
+<li>形成期价格是否使用复权总回报；</li>
+<li>财报/公司行动/退市回报是否点时可用；</li>
+<li>是否跳过最近一个月；</li>
+<li>Top-K 或赢家—输家分位数；</li>
+<li>是否行业中性、规模中性和 beta 中性；</li>
+<li>交易时点、限价/市价、点差、冲击、借券和涨跌停处理。</li>
+</ul>
+<p>对个股，多空动量通常比 ETF 轮动更依赖底层数据质量。若没有退市收益，输家腿会被幸存者偏差系统性抬高；若只使用当前指数成分，历史赢家已经被筛选进样本，也会夸大动量。</p>
+<h3 id="4-6-黄金与跨资产相对强弱">4.6 黄金与跨资产相对强弱</h3>
+<p>单一黄金资产不能构造横截面排名，因此本章用 SPY（股票）、GLD（黄金）、SLV（白银）和 TLT（长期国债）构造小型跨资产代理。它回答的问题是：“在同一月末，过去 12 个月相对最强的资产是否值得进入下一月组合？”而不是“黄金本身是否有动量”。</p>
+<p>黄金相关资产的相对强弱还存在额外边界：</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>问题</th>
+<th>影响</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>GLD 与 SLV 受美元和实际利率共同驱动</td>
+<td>排名信号可能只是金属 beta</td>
+</tr>
+<tr>
+<td>TLT 受利率周期驱动</td>
+<td>top-1 可能在危机期集中到债券</td>
+</tr>
+<tr>
+<td>ETF 上市日期不同</td>
+<td>交集样本缩短且存在代理选择</td>
+</tr>
+<tr>
+<td>资产交易时段不同</td>
+<td>月末收盘时间不一致可能造成排序错位</td>
+</tr>
+<tr>
+<td>低频排名仍需换手</td>
+<td>top-1 每月切换，成本和税费不可忽略</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="4-7-文献证据与可支持边界">4.7 文献证据与可支持边界</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>来源</th>
+<th>支持的内容</th>
+<th>不能据此推断</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Jegadeesh &amp; Titman (1993)</td>
+<td>3–12 月赢家—输家动量研究的经典形成/持有框架</td>
+<td>不保证当前市场仍有相同净收益</td>
+</tr>
+<tr>
+<td>Rouwenhorst (1998)</td>
+<td>国际股票动量的跨市场证据</td>
+<td>不替代本地市场、税费和执行研究</td>
+</tr>
+<tr>
+<td>Asness, Moskowitz &amp; Pedersen (2013)</td>
+<td>价值与动量在多资产中的联合研究</td>
+<td>不消除信号相关、容量和制度变化</td>
+</tr>
+<tr>
+<td>Daniel &amp; Moskowitz (2016)</td>
+<td>动量崩溃与市场状态依赖</td>
+<td>不提供无参数的崩溃预测器</td>
+</tr>
+<tr>
+<td>Novy-Marx (2012)</td>
+<td>12-1 动量、近期收益和信号定义的比较</td>
+<td>不允许把所有技术指标都归为同一动量效应</td>
+</tr>
+<tr>
+<td>Kenneth French MOM 数据</td>
+<td>官方股票赢家—输家多空代理</td>
+<td>不等于长-only ETF 轮动的净收益</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="4-8-本地复现代理-french-mom-与跨资产-top-k">4.8 本地复现代理：French MOM 与跨资产 Top-K</h3>
+<h4 id="french-mom-因子">French MOM 因子</h4>
+<p>官方 MOM 文件头声明基于 202605 CRSP database，SHA-256 为 <code>37baf72ae4eace9715e8746413d0122334c63aa4083fd1c3cf2060fa04e4bd28</code>。它从大/小市值与高/低过去收益组合构造动量因子。</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>窗口</th>
+<th style="text-align:right">CAGR</th>
+<th style="text-align:right">年化波动</th>
+<th style="text-align:right">Sharpe（RF=0）</th>
+<th style="text-align:right">最大回撤</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1927-01–2026-05</td>
+<td style="text-align:right">6.15%</td>
+<td style="text-align:right">16.21%</td>
+<td style="text-align:right">0.46</td>
+<td style="text-align:right">−78.54%</td>
+</tr>
+<tr>
+<td>1970-01–2026-05</td>
+<td style="text-align:right">6.02%</td>
+<td style="text-align:right">14.93%</td>
+<td style="text-align:right">0.47</td>
+<td style="text-align:right">−57.85%</td>
+</tr>
+<tr>
+<td>1990-01–2026-05</td>
+<td style="text-align:right">4.43%</td>
+<td style="text-align:right">16.04%</td>
+<td style="text-align:right">0.36</td>
+<td style="text-align:right">−57.85%</td>
+</tr>
+<tr>
+<td>2000-01–2026-05</td>
+<td style="text-align:right">1.15%</td>
+<td style="text-align:right">17.49%</td>
+<td style="text-align:right">0.16</td>
+<td style="text-align:right">−57.85%</td>
+</tr>
+<tr>
+<td>2010-01–2026-05</td>
+<td style="text-align:right">3.13%</td>
+<td style="text-align:right">12.35%</td>
+<td style="text-align:right">0.31</td>
+<td style="text-align:right">−25.42%</td>
+</tr>
+<tr>
+<td>2020-01–2026-05</td>
+<td style="text-align:right">3.95%</td>
+<td style="text-align:right">14.38%</td>
+<td style="text-align:right">0.34</td>
+<td style="text-align:right">−25.42%</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>解释。</strong> French MOM 长样本平均收益为正，但早期最大回撤接近 −79%；2000 年以来 CAGR 仅约 1.15%，说明动量收益高度依赖样本期和市场结构。它也不是零成本策略：多空腿、换手、短期反转与挤压风险都未在简单因子表中扣除。</p>
+<h4 id="spy-gld-slv-tlt-相对强弱">SPY/GLD/SLV/TLT 相对强弱</h4>
+<p>本地代理使用 12 个月回看、月末排名、下一月持有 Top-1 或 Top-2，现金收益为零，每单位权重变化扣 10 bps：</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>策略</th>
+<th style="text-align:right">CAGR</th>
+<th style="text-align:right">年化波动</th>
+<th style="text-align:right">Sharpe（RF=0）</th>
+<th style="text-align:right">最大回撤</th>
+<th style="text-align:right">年化换手</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Top-1 毛收益</td>
+<td style="text-align:right">6.65%</td>
+<td style="text-align:right">25.28%</td>
+<td style="text-align:right">0.38</td>
+<td style="text-align:right">−43.31%</td>
+<td style="text-align:right">6.03</td>
+</tr>
+<tr>
+<td>Top-1 净收益</td>
+<td style="text-align:right">6.00%</td>
+<td style="text-align:right">25.29%</td>
+<td style="text-align:right">0.36</td>
+<td style="text-align:right">−43.55%</td>
+<td style="text-align:right">6.03</td>
+</tr>
+<tr>
+<td>Top-2 毛收益</td>
+<td style="text-align:right">10.84%</td>
+<td style="text-align:right">18.81%</td>
+<td style="text-align:right">0.64</td>
+<td style="text-align:right">−33.03%</td>
+<td style="text-align:right">3.41</td>
+</tr>
+<tr>
+<td>Top-2 净收益</td>
+<td style="text-align:right">10.47%</td>
+<td style="text-align:right">18.81%</td>
+<td style="text-align:right">0.63</td>
+<td style="text-align:right">−33.11%</td>
+<td style="text-align:right">3.41</td>
+</tr>
+<tr>
+<td>四资产等权买入持有</td>
+<td style="text-align:right">9.03%</td>
+<td style="text-align:right">14.14%</td>
+<td style="text-align:right">0.68</td>
+<td style="text-align:right">−26.77%</td>
+<td style="text-align:right">—</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>结果解释。</strong> Top-2 比 Top-1 更分散，CAGR 和回撤均优于 Top-1，但在本地四资产样本中仍不如等权组合的 Sharpe 和 MDD；这说明“选择赢家”并不自动优于简单分散化。Top-1 年化换手约 6 倍，成本和价格冲击更容易改变结论。</p>
+<p><strong>证据边界。</strong> 四资产样本只覆盖 ETF 代理，未纳入股票个股、外汇、期货期限结构、现金利率和点时成分变更；Top-K 规则只评估一个 12 月窗口，不能作为多重检验后的策略发现。</p>
+<h3 id="4-9-与价值-趋势和风险模型的组合">4.9 与价值、趋势和风险模型的组合</h3>
+<p>横截面动量的主要组合方式包括：</p>
+<ol>
+<li><strong>价值 + 动量：</strong> 用价值找相对便宜资产，用动量避免过早接住持续下跌的价值陷阱；组合时应报告两个信号的相关性和各自贡献。</li>
+<li><strong>时间序列 + 横截面动量：</strong> 先判断资产自身趋势为正，再在可持有资产中按横截面排名，减少把最强但处于下跌趋势的资产买入。</li>
+<li><strong>动量 + 波动率目标：</strong> 对 Top-K 资产单独缩放波动，防止高波动黄金/白银或单一股票支配组合。</li>
+<li><strong>动量 + 行业/资产上限：</strong> 对行业、金属、利率和股票设置集中度约束，避免排名结果变成单一宏观下注。</li>
+<li><strong>动量 + 风险平价：</strong> 让信号决定方向，让风险模型决定资金；不要使用动量分数直接替代组合风险预算。</li>
+</ol>
+<h3 id="4-10-实现伪代码-排名-持有期与成本">4.10 实现伪代码：排名、持有期与成本</h3>
+<pre><code class="language-python">def cross_sectional_momentum(prices, lookback=12, skip=1, top_k=2, cost_bps=10):
+    # 1) 计算形成期收益；skip=1 跳过最近一个月以减少短期反转污染。
+    formation_return = prices.pct_change(lookback).shift(skip)
+
+    # 2) 每个月只用已经完成的数据，选出横截面 Top-K。
+    target_weights = rank_to_equal_weight(formation_return, top_k)
+
+    # 3) 目标权重作用于下一个月收益，避免把本期收盘排名用于本期成交。
+    realized_return = prices.pct_change() * target_weights
+    gross = realized_return.sum(axis=1)
+
+    # 4) 计算权重变化并扣除单边成本；空缺资产需要重新归一化。
+    turnover = target_weights.diff().abs().sum(axis=1)
+    turnover.iloc[0] = target_weights.iloc[0].abs().sum()
+    net = gross - cost_bps / 10000.0 * turnover
+
+    # 5) 输出分腿收益、集中度、行业/beta 暴露及回撤统计。
+    return build_momentum_ledger(gross, net, target_weights, turnover)
+</code></pre>
+<h3 id="4-11-失败模式与风险边界">4.11 失败模式与风险边界</h3>
+<ul>
+<li><strong>把横截面排名当作时间序列趋势：</strong> 相对最强资产可能仍然下跌，必须明确 long-only 还是允许做空。</li>
+<li><strong>没有跳过最近月：</strong> 短期反转可能混入中期动量，导致规则定义与经典文献不一致。</li>
+<li><strong>忽略成分和退市：</strong> 当前股票池或 ETF 清单会产生幸存者偏差。</li>
+<li><strong>Top-1 过度集中：</strong> 本地 Top-1 MDD −43.55%，且年化换手约 6 倍，显示集中和成本风险。</li>
+<li><strong>忽略行业/beta：</strong> 动量收益可能只是科技、金属或利率方向暴露。</li>
+<li><strong>把 French MOM 当成长线净收益：</strong> 官方因子是多空组合，借券、融资、税费和执行未在本地摘要中实现。</li>
+<li><strong>低估动量崩溃：</strong> 急剧反弹、政策转向或流动性恢复会使此前输家快速上涨。</li>
+<li><strong>重复测试参数：</strong> 回看期、skip、Top-K、持有期、行业约束和风险缩放构成大型实验族，必须登记并修正推断。</li>
+</ul>
+<h3 id="4-12-本章结论与后续接口">4.12 本章结论与后续接口</h3>
+<p>横截面动量的有效单位不是“买强卖弱”四个字，而是形成期、跳过期、持有期、排名池、风险中性、换手成本和崩溃保护的完整契约。官方 MOM 因子显示长期正均值伴随严重回撤和样本期衰减；四资产代理进一步显示 Top-2 比 Top-1 更稳健，但简单等权组合仍可能拥有更好的 Sharpe 和最大回撤。</p>
+<p>下一并列章节将研究<strong>均值回复、配对交易与统计套利</strong>：重点讨论价差、协整、半衰期、z-score、持仓约束和极端行情下的尾部风险。</p>
+<h3 id="本章参考文献-4">本章参考文献</h3>
+<ol>
+<li>[1] Jegadeesh, N. &amp; Titman, S., “Returns to Buying Winners and Selling Losers: Implications for Stock Market Efficiency,” <em>The Journal of Finance</em>, 1993. <a href="https://doi.org/10.1111/j.1540-6261.1993.tb04702.x">https://doi.org/10.1111/j.1540-6261.1993.tb04702.x</a></li>
+<li>[2] Rouwenhorst, K. G., “International Momentum Strategies,” <em>The Journal of Finance</em>, 1998. <a href="https://doi.org/10.1111/0022-1082.95722">https://doi.org/10.1111/0022-1082.95722</a></li>
+<li>[3] Asness, C. S., Moskowitz, T. J. &amp; Pedersen, L. H., “Value and Momentum Everywhere,” <em>The Review of Financial Studies</em>, 2013. <a href="https://doi.org/10.1093/rfs/hhs107">https://doi.org/10.1093/rfs/hhs107</a></li>
+<li>[4] Daniel, K. &amp; Moskowitz, T. J., “Momentum Crashes,” <em>Journal of Financial Economics</em>, 2016. <a href="https://doi.org/10.1016/j.jfineco.2015.12.002">https://doi.org/10.1016/j.jfineco.2015.12.002</a></li>
+<li>[5] Novy-Marx, R., “Is Momentum Really Momentum?”, <em>Journal of Financial Economics</em>, 2012. <a href="https://doi.org/10.1016/j.jfineco.2012.03.003">https://doi.org/10.1016/j.jfineco.2012.03.003</a></li>
+<li>[6] Kenneth R. French, “Data Library: Momentum Factor.” <a href="https://mba.tuck.dartmouth.edu/pages/faculty/ken.french/data_library.html">https://mba.tuck.dartmouth.edu/pages/faculty/ken.french/data_library.html</a></li>
+<li>[7] 本地派生统计：<code>quant_finance/data/classic_strategy_cross_sectional_momentum_snapshot.json</code>；不提交供应商原始行情。</li>
+</ol>
+<h2 id="模型章节-05-均值回复-配对交易与统计套利">模型章节 05：均值回复、配对交易与统计套利</h2>
+<h3 id="5-1-模型定位-交易-偏离会收敛-而不是交易单边方向">5.1 模型定位：交易“偏离会收敛”，而不是交易单边方向</h3>
+<p>均值回复（mean reversion）假设某个价格、收益、价差或残差偏离其稳定中心后，未来具有向中心回归的倾向。配对交易（pairs trading）把这种假设用于两个经济相关资产的相对价格；统计套利（statistical arbitrage）则把价差扩展到多资产、因子残差和大量小型相对价值头寸。</p>
+<p>它们与动量模型的差异是：</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>维度</th>
+<th>动量/趋势</th>
+<th>均值回复/配对</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>核心假设</td>
+<td>方向会持续</td>
+<td>偏离会收敛</td>
+</tr>
+<tr>
+<td>入场</td>
+<td>顺着已有方向</td>
+<td>逆着偏离方向</td>
+</tr>
+<tr>
+<td>主要收益形态</td>
+<td>少数长趋势贡献大收益</td>
+<td>多数小幅收敛，少数结构断裂造成大亏损</td>
+</tr>
+<tr>
+<td>主要风险</td>
+<td>whipsaw、突然反转</td>
+<td>接飞刀、协整失效、无限等待</td>
+</tr>
+<tr>
+<td>退出</td>
+<td>趋势反转/均线穿越</td>
+<td>价差回到中心、止损或最大持有期</td>
+</tr>
+</tbody>
+</table></div>
+<p>均值回复最危险的误区是把“历史上回到过均值”写成“未来一定回归”。只要均值本身移动、经济关系断裂、资本结构变化或交易载体改变，价差就可能在新水平稳定，甚至持续发散。</p>
+<h3 id="5-2-单变量均值回复-ar-1-与-ornstein-uhlenbeck">5.2 单变量均值回复：AR(1) 与 Ornstein–Uhlenbeck</h3>
+<p>离散时间的一阶自回归模型为：</p>
+<div class="formula" data-math-kind="display">\[x_t-\mu
+=\phi(x_{t-1}-\mu)+\varepsilon_t,
+\qquad
+\varepsilon_t\sim(0,\sigma_\varepsilon^2).\]</div>
+<p>当 <span class="math-inline" data-math-kind="inline">\(|\phi|&lt;1\)</span> 时，冲击的条件期望按 <span class="math-inline" data-math-kind="inline">\(\phi^h\)</span> 衰减；若 <span class="math-inline" data-math-kind="inline">\(\phi\)</span> 接近 1，回复很慢；若 <span class="math-inline" data-math-kind="inline">\(\phi=1\)</span>，过程含单位根，固定均值假设失效。</p>
+<p><strong>变量、直觉与实现映射：</strong> <span class="math-inline" data-math-kind="inline">\(x_t\)</span> 可是价差、估值残差或收益状态，<span class="math-inline" data-math-kind="inline">\(\mu\)</span> 是长期中心，<span class="math-inline" data-math-kind="inline">\(\phi\)</span> 是持续性。代码中用形成窗口拟合 <span class="math-inline" data-math-kind="inline">\(\hat\phi\)</span>，而不能用全样本拟合后回填历史信号。</p>
+<p>AR(1) 的启发式半衰期是：</p>
+<div class="formula" data-math-kind="display">\[h_{1/2}=-\frac{\ln 2}{\ln|\phi|}.\]</div>
+<p><strong>变量、直觉与实现映射：</strong> 半衰期表示预期偏离衰减一半所需周期；它不是强制退出日期。当 <span class="math-inline" data-math-kind="inline">\(\hat\phi\)</span> 接近 1 时，半衰期对估计误差极敏感，应报告置信区间和滚动稳定性。</p>
+<p>连续时间 Ornstein–Uhlenbeck（OU）过程写为：</p>
+<div class="formula" data-math-kind="display">\[dx_t=\kappa(\mu-x_t)\,dt+\sigma\,dW_t,
+\qquad \kappa&gt;0.\]</div>
+<p><strong>变量、直觉与实现映射：</strong> <span class="math-inline" data-math-kind="inline">\(\kappa\)</span> 是均值回复速度，<span class="math-inline" data-math-kind="inline">\(\sigma\)</span> 是扩散波动，<span class="math-inline" data-math-kind="inline">\(W_t\)</span> 是布朗运动；OU 是价差建模的理想化基线，不意味着资产价格本身可以无边界地围绕常数均值波动。</p>
+<h3 id="5-3-配对价差-对冲比率与协整">5.3 配对价差、对冲比率与协整</h3>
+<p>设两个价格序列为 <span class="math-inline" data-math-kind="inline">\(P_{A,t}\)</span> 与 <span class="math-inline" data-math-kind="inline">\(P_{B,t}\)</span>，对数价差可写为：</p>
+<div class="formula" data-math-kind="display">\[x_t=\log P_{A,t}-\alpha-\beta\log P_{B,t}.\]</div>
+<p><span class="math-inline" data-math-kind="inline">\(\beta\)</span> 是 hedge ratio（对冲比率），可由形成窗口 OLS、总最小二乘、Kalman filter 或经济价值比率估计。价格高度相关并不意味着 <span class="math-inline" data-math-kind="inline">\(x_t\)</span> 平稳：相关性描述共同波动，协整（cointegration）要求某个线性组合消除共同随机趋势。</p>
+<p>Engle–Granger 两步法的核心是：</p>
+<div class="formula" data-math-kind="display">\[\log P_{A,t}
+=\alpha+\beta\log P_{B,t}+u_t,
+\qquad
+\Delta u_t
+=\gamma u_{t-1}
++\sum_{j=1}^{p}\psi_j\Delta u_{t-j}
++\eta_t.\]</div>
+<p><strong>变量、直觉与实现映射：</strong> 第一步估计长期关系，第二步检验残差 <span class="math-inline" data-math-kind="inline">\(u_t\)</span> 是否平稳；<span class="math-inline" data-math-kind="inline">\(\gamma&lt;0\)</span> 表示误差修正。ADF 临界值在估计残差场景下不是普通 t 分布；正式研究需使用正确 Engle–Granger/Johansen 临界值和滞后选择。本章环境没有安装正式协整包，因此不伪造 p 值。</p>
+<h3 id="5-4-z-score-入场-退出与组合收益">5.4 z-score 入场、退出与组合收益</h3>
+<p>在形成窗口 <span class="math-inline" data-math-kind="inline">\(W\)</span> 上估计价差中心和尺度：</p>
+<div class="formula" data-math-kind="display">\[z_t=\frac{x_t-\hat\mu_{t,W}}{\hat\sigma_{t,W}}.\]</div>
+<p>经典规则是：</p>
+<div class="formula" data-math-kind="display">\[q_t=
+\begin{cases}
+-1,&amp;z_t\ge z_{entry},\\
++1,&amp;z_t\le-z_{entry},\\
+0,&amp;\text{价差回到 }z_{exit}\text{ 或触发止损}.
+\end{cases}\]</div>
+<p><strong>变量、直觉与实现映射：</strong> <span class="math-inline" data-math-kind="inline">\(q=+1\)</span> 表示做多价差（多 A、空 <span class="math-inline" data-math-kind="inline">\(\beta\)</span> 单位 B），<span class="math-inline" data-math-kind="inline">\(q=-1\)</span> 表示做空价差。信号必须延迟到下一交易时点；若价差仍在开仓方向扩大，不应不断加码而不设风险上限。</p>
+<p>把总名义暴露规范化后：</p>
+<div class="formula" data-math-kind="display">\[w_{A,t}=\frac{q_t}{1+|\beta_t|},
+\qquad
+w_{B,t}=-\frac{q_t\beta_t}{1+|\beta_t|},\]</div>
+<div class="formula" data-math-kind="display">\[r_{p,t+1}^{net}
+=w_{A,t}r_{A,t+1}
++w_{B,t}r_{B,t+1}
+-c_t\left(
+|\Delta w_{A,t}|+|\Delta w_{B,t}|
+\right).\]</div>
+<p><strong>变量、直觉与实现映射：</strong> 规范化使两条腿的绝对权重和约为 1，避免 <span class="math-inline" data-math-kind="inline">\(\beta\)</span> 大时隐含高杠杆；真实账户还需计入空头借券、融资、股息、期货保证金和不同交易时段。</p>
+<h3 id="5-5-统计特征-高胜率为何仍可能亏损">5.5 统计特征：高胜率为何仍可能亏损</h3>
+<p>配对交易常出现“多数交易小赚、少数交易大亏”的分布：</p>
+<ol>
+<li><strong>负偏与厚尾：</strong> 价差正常收敛时利润有限，结构断裂时损失可持续扩大。</li>
+<li><strong>收益序列自相关：</strong> 同一交易跨越多日，不能把每日 P&amp;L 当作独立样本。</li>
+<li><strong>参数估计误差：</strong> <span class="math-inline" data-math-kind="inline">\(\beta\)</span>、均值、波动和半衰期同时估计，误差会叠加到仓位。</li>
+<li><strong>多重检验：</strong> 从上千对股票中选择历史最平稳的配对，本身是大规模模型选择。</li>
+<li><strong>容量与融资：</strong> 表面市场中性不等于资本中性；短腿借券和极端波动会放大资金压力。</li>
+<li><strong>共同因子残留：</strong> 行业 beta、商品 beta、实际利率和美元风险可能仍存在。</li>
+</ol>
+<p>因此至少报告：</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>指标</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>交易次数、胜率</td>
+<td>只描述频率，不能替代平均盈亏</td>
+</tr>
+<tr>
+<td>平均/中位交易收益</td>
+<td>检查分布是否被少数尾部主导</td>
+</tr>
+<tr>
+<td>最好/最差交易</td>
+<td>识别结构断裂损失</td>
+</tr>
+<tr>
+<td>平均/中位持有期</td>
+<td>评估资金占用和半衰期一致性</td>
+</tr>
+<tr>
+<td>年化换手和成本占比</td>
+<td>判断价差利润能否覆盖执行</td>
+</tr>
+<tr>
+<td>滚动 <span class="math-inline" data-math-kind="inline">\(\beta,\phi,h_{1/2}\)</span></td>
+<td>检查关系稳定性</td>
+</tr>
+<tr>
+<td>MDD 与回撤持续期</td>
+<td>衡量“等待收敛”的账户风险</td>
+</tr>
+<tr>
+<td>ADF/Johansen 与结构断裂检验</td>
+<td>区分平稳价差和伪回归</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="5-6-股票配对与多资产统计套利">5.6 股票配对与多资产统计套利</h3>
+<p>股票配对通常从同一行业、商业模式或共同因子暴露中寻找候选：</p>
+<ol>
+<li>形成期按标准化价格距离、相关性或协整统计筛选；</li>
+<li>冻结候选对和 hedge ratio 估计方法；</li>
+<li>交易期只更新允许的滚动参数；</li>
+<li>对财报、并购、分拆、指数调整和借券变化设置事件停牌规则；</li>
+<li>保存未盈利和结构断裂的配对，而不是只报告存活赢家。</li>
+</ol>
+<p>统计套利可扩展到因子残差：</p>
+<div class="formula" data-math-kind="display">\[r_{i,t}
+=\alpha_i+\boldsymbol\beta_i^\top\mathbf f_t+\varepsilon_{i,t},
+\qquad
+z_{i,t}
+=\frac{\sum_{u=t-W+1}^{t}\varepsilon_{i,u}}
+{\widehat{\sigma}_{\varepsilon_i,t}}.\]</div>
+<p><strong>变量、直觉与实现映射：</strong> <span class="math-inline" data-math-kind="inline">\(\mathbf f_t\)</span> 是市场、行业、价值、动量等公共因子；交易对象是残差累积而非原始价格。组合需同时约束市场、行业、风格和单名暴露，否则“统计套利”可能只是隐含因子下注。</p>
+<h3 id="5-7-黄金-白银与金银价差">5.7 黄金、白银与金银价差</h3>
+<p>黄金和白银具有共同贵金属驱动，但经济用途、工业需求、库存、波动率和市场规模不同。GLD–SLV 高相关不等于它们的对数价格存在稳定协整关系；金银比也可能因产业结构、货币制度和危机需求发生永久变化。</p>
+<p>本章的 GLD–SLV 例子使用滚动 252 日 log-price OLS 和残差 z-score，目的不是推荐金银配对，而是展示：</p>
+<ul>
+<li>相关资产的价差仍可长期不回归；</li>
+<li>估计半衰期接近一年时，日频 z-score 交易资金占用很长；</li>
+<li>胜率超过 50% 仍可能因一个结构断裂交易而总体亏损；</li>
+<li>黄金 ETF 与白银 ETF 还包含不同费率、流动性和跟踪误差。</li>
+</ul>
+<h3 id="5-8-文献证据与可支持边界">5.8 文献证据与可支持边界</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>来源</th>
+<th>支持的内容</th>
+<th>不能据此推断</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Engle &amp; Granger (1987)</td>
+<td>协整、误差修正和两步检验框架</td>
+<td>相关资产必然协整</td>
+</tr>
+<tr>
+<td>Johansen (1988)</td>
+<td>多变量协整向量的系统检验</td>
+<td>小样本估计必然稳定</td>
+</tr>
+<tr>
+<td>Lo &amp; MacKinlay (1988)</td>
+<td>随机游走检验与收益可预测性问题</td>
+<td>任意均值回复规则扣成本后盈利</td>
+</tr>
+<tr>
+<td>Gatev, Goetzmann &amp; Rouwenhorst (2006)</td>
+<td>股票配对交易的经典形成/交易规则</td>
+<td>当前市场继续存在同样净收益</td>
+</tr>
+<tr>
+<td>Elliott, van der Hoek &amp; Malcolm (2005)</td>
+<td>连续时间配对交易与价差建模</td>
+<td>OU 过程适用于所有价格关系</td>
+</tr>
+<tr>
+<td>Avellaneda &amp; Lee (2010)</td>
+<td>PCA/ETF 因子残差统计套利框架</td>
+<td>因子残差在制度变化后仍平稳</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="5-9-本地反例-gld-slv-滚动配对结果">5.9 本地反例：GLD–SLV 滚动配对结果</h3>
+<p>本节使用 <code>quant_finance/data/classic_strategy_mean_reversion_snapshot.json</code>。规则为：252 日滚动 OLS、<span class="math-inline" data-math-kind="inline">\(|z|\ge2\)</span> 入场、回到 0 退出、信号延迟一天、两腿总名义暴露归一化、每单位权重变化扣 5 bps。</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>指标</th>
+<th style="text-align:right">毛收益</th>
+<th style="text-align:right">净收益</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>年化算术平均收益</td>
+<td style="text-align:right">−1.26%</td>
+<td style="text-align:right">−1.44%</td>
+</tr>
+<tr>
+<td>CAGR</td>
+<td style="text-align:right">−1.47%</td>
+<td style="text-align:right">−1.64%</td>
+</tr>
+<tr>
+<td>年化波动</td>
+<td style="text-align:right">6.60%</td>
+<td style="text-align:right">6.61%</td>
+</tr>
+<tr>
+<td>Sharpe（RF=0）</td>
+<td style="text-align:right">−0.19</td>
+<td style="text-align:right">−0.22</td>
+</tr>
+<tr>
+<td>最大回撤</td>
+<td style="text-align:right">−28.46%</td>
+<td style="text-align:right">−30.72%</td>
+</tr>
+<tr>
+<td>最终财富倍数</td>
+<td style="text-align:right">0.753</td>
+<td style="text-align:right">0.728</td>
+</tr>
+</tbody>
+</table></div>
+<p>交易级统计：</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>指标</th>
+<th style="text-align:right">结果</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>完整/截至样本末交易段</td>
+<td style="text-align:right">29</td>
+</tr>
+<tr>
+<td>胜率</td>
+<td style="text-align:right">58.62%</td>
+</tr>
+<tr>
+<td>平均单次收益</td>
+<td style="text-align:right">−0.96%</td>
+</tr>
+<tr>
+<td>中位单次收益</td>
+<td style="text-align:right">0.95%</td>
+</tr>
+<tr>
+<td>最差单次收益</td>
+<td style="text-align:right">−19.46%</td>
+</tr>
+<tr>
+<td>最好单次收益</td>
+<td style="text-align:right">4.03%</td>
+</tr>
+<tr>
+<td>平均持有期</td>
+<td style="text-align:right">85.2 个交易日</td>
+</tr>
+<tr>
+<td>中位持有期</td>
+<td style="text-align:right">74 个交易日</td>
+</tr>
+<tr>
+<td>年化换手</td>
+<td style="text-align:right">3.47</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>核心解释。</strong> 胜率 58.62% 且中位交易盈利，但平均交易亏损，说明少数大额结构断裂损失支配了总体结果。全样本静态诊断得到残差 AR(1) <span class="math-inline" data-math-kind="inline">\(\phi\approx0.998\)</span>，启发式半衰期约 345 个交易日；该诊断使用全样本，仅说明关系极慢且不稳定，不能作为交易信号或正式协整检验。</p>
+<p><strong>失败实验保留。</strong> 本报告不换一对资产或调低入场阈值来追求漂亮曲线。负 CAGR 与 −30.72% MDD 直接反驳“金银价差天然均值回复、配对交易天然市场中性”的主张。</p>
+<h3 id="5-10-与趋势-价值和波动模型的组合">5.10 与趋势、价值和波动模型的组合</h3>
+<ol>
+<li><strong>配对 + 趋势过滤：</strong> 只有当价差长期趋势未发生结构突破时执行短期均值回复；趋势过滤降低交易频率但可能错过正常回归。</li>
+<li><strong>配对 + 事件过滤：</strong> 财报、并购、分拆、指数调整、央行政策和商品供应冲击前暂停新仓，避免把基本面断裂当作统计偏离。</li>
+<li><strong>配对 + 波动率目标：</strong> 按残差波动缩放，而不是仅用 z-score 决定仓位；设置单对、行业和总 gross 上限。</li>
+<li><strong>残差统计套利 + 因子中性：</strong> 先剔除市场、行业、价值和动量因子，再交易残差；需报告因子暴露漂移。</li>
+<li><strong>均值回复 + 动量组合：</strong> 两类策略在不同状态下可能互补，但同一资产上可能产生相互抵消的频繁交易，必须在组合层统一净仓位。</li>
+</ol>
+<h3 id="5-11-实现伪代码-滚动估计-滞后与失败保留">5.11 实现伪代码：滚动估计、滞后与失败保留</h3>
+<pre><code class="language-python">def rolling_pair_trade(price_a, price_b, window=252, entry_z=2.0, cost_bps=5):
+    # 1) 每日只用过去 window 天对数价格估计 alpha、beta 和残差尺度。
+    rolling_beta, rolling_z = rolling_log_price_regression(price_a, price_b, window)
+
+    # 2) z 超过阈值时反向交易价差，回到 0 才平仓；状态机防止每日重复开仓。
+    raw_position = state_machine(rolling_z, entry=entry_z, exit=0.0)
+
+    # 3) 信号和 hedge ratio 均延迟一天，避免当日收盘信息用于当日收益。
+    position = raw_position.shift(1)
+    beta = rolling_beta.shift(1)
+
+    # 4) 规范化两腿名义暴露，并显式记录权重变化。
+    weight_a = position / (1.0 + beta.abs())
+    weight_b = -position * beta / (1.0 + beta.abs())
+    turnover = weight_a.diff().abs() + weight_b.diff().abs()
+
+    # 5) 扣除成本，保存每笔交易、持有期、尾部损失和滚动参数。
+    gross = weight_a * price_a.pct_change() + weight_b * price_b.pct_change()
+    net = gross - cost_bps / 10000.0 * turnover
+    return build_pair_ledger(net, rolling_z, beta, position)
+</code></pre>
+<h3 id="5-12-失败模式与风险边界">5.12 失败模式与风险边界</h3>
+<ul>
+<li><strong>相关性冒充协整：</strong> 高相关价格可以共同随机游走，价差不存在稳定均值。</li>
+<li><strong>全样本选对和估参：</strong> 使用未来数据筛选最稳定配对，是典型数据窥探。</li>
+<li><strong>固定 hedge ratio：</strong> 企业杠杆、商品用途和市场结构变化会使 <span class="math-inline" data-math-kind="inline">\(\beta\)</span> 漂移。</li>
+<li><strong>无限加仓：</strong> z-score 越极端不一定越安全；结构断裂时反向加仓会放大尾部损失。</li>
+<li><strong>胜率幻觉：</strong> 本地 58.62% 胜率仍对应负 CAGR 和 −30.72% MDD。</li>
+<li><strong>忽略借券和融资：</strong> 多空价差的市场 beta 较低，但资本占用、保证金和 short squeeze 仍显著。</li>
+<li><strong>半衰期误用：</strong> <span class="math-inline" data-math-kind="inline">\(\hat\phi\)</span> 接近 1 时半衰期极不稳定，不能把估计值当作硬退出时间。</li>
+<li><strong>缺少结构断裂测试：</strong> 产业、政策、并购和指数成分变化可永久改变价差中心。</li>
+<li><strong>多重检验：</strong> 数千资产对、窗口、阈值和止损组合会产生大量伪显著策略。</li>
+</ul>
+<h3 id="5-13-本章结论与后续接口">5.13 本章结论与后续接口</h3>
+<p>均值回复和统计套利的关键不是 z-score 本身，而是证明交易对象存在足够稳定的经济或统计关系，并为关系失效设置退出、仓位和组合边界。GLD–SLV 反例显示，高胜率、正中位交易和低表面波动仍可能被少数尾部损失击穿；因此协整、结构断裂、成本和最差交易必须与平均收益同时报告。</p>
+<p>下一并列章节将研究<strong>低波动、质量、规模与多因子股票模型</strong>，把单一因子收益、组合暴露、因子拥挤和因子间组合放在同一章节内。</p>
+<h3 id="本章参考文献-5">本章参考文献</h3>
+<ol>
+<li>[1] Engle, R. F. &amp; Granger, C. W. J., “Co-Integration and Error Correction: Representation, Estimation, and Testing,” <em>Econometrica</em>, 1987. <a href="https://doi.org/10.2307/1913236">https://doi.org/10.2307/1913236</a></li>
+<li>[2] Johansen, S., “Statistical Analysis of Cointegration Vectors,” <em>Journal of Economic Dynamics and Control</em>, 1988. <a href="https://doi.org/10.1016/0165-1889(88)90041-3">https://doi.org/10.1016/0165-1889(88)90041-3</a></li>
+<li>[3] Lo, A. W. &amp; MacKinlay, A. C., “Stock Market Prices Do Not Follow Random Walks,” <em>The Review of Financial Studies</em>, 1988. <a href="https://doi.org/10.1093/rfs/1.1.41">https://doi.org/10.1093/rfs/1.1.41</a></li>
+<li>[4] Gatev, E., Goetzmann, W. N. &amp; Rouwenhorst, K. G., “Pairs Trading: Performance of a Relative-Value Arbitrage Rule,” <em>The Review of Financial Studies</em>, 2006. <a href="https://doi.org/10.1093/rfs/hhj020">https://doi.org/10.1093/rfs/hhj020</a></li>
+<li>[5] Elliott, R. J., van der Hoek, J. &amp; Malcolm, W. P., “Pairs Trading,” <em>Quantitative Finance</em>, 2005. <a href="https://doi.org/10.1080/14697680500149370">https://doi.org/10.1080/14697680500149370</a></li>
+<li>[6] Avellaneda, M. &amp; Lee, J.-H., “Statistical Arbitrage in the U.S. Equities Market,” <em>Quantitative Finance</em>, 2010. <a href="https://doi.org/10.1080/14697680903124632">https://doi.org/10.1080/14697680903124632</a></li>
+<li>[7] 本地派生统计：<code>quant_finance/data/classic_strategy_mean_reversion_snapshot.json</code>；不提交供应商原始行情。</li>
+</ol>
+<h2 id="模型章节-06-低波动-质量-规模与多因子股票模型">模型章节 06：低波动、质量、规模与多因子股票模型</h2>
+<h3 id="6-1-模型定位-把-风格-变成可解释的风险暴露">6.1 模型定位：把“风格”变成可解释的风险暴露</h3>
+<p>因子模型（factor model）把资产收益分解为公共风险因子、个体残差和可估计的暴露。低波动、质量、规模和价值不是彼此独立的“神奇标签”，而是不同的排序、组合和风险约束方式。研究目标不是简单找出过去收益最高的因子，而是回答：</p>
+<ul>
+<li>因子定义是否有经济解释；</li>
+<li>排序字段是否在形成日可用；</li>
+<li>组合收益来自风险补偿、行为偏差还是数据挖掘；</li>
+<li>因子之间是否高度相关、互相抵消或在压力期同时失效；</li>
+<li>长-only 产品与论文中的多空因子是否具有相同收益和回撤。</li>
+</ul>
+<p>因子模型最适合股票横截面，但不能直接把股票 SMB/HML/RMW/CMA 套到黄金现货。黄金应继续使用实际利率、美元、通胀、风险厌恶和期限结构等宏观状态变量；跨资产组合可以用因子暴露做风险归因，但不能假设所有资产共享同一套会计因子。</p>
+<h3 id="6-2-因子组合与收益回归的数学表达">6.2 因子组合与收益回归的数学表达</h3>
+<h4 id="排序因子">排序因子</h4>
+<p>对形成日的特征 <span class="math-inline" data-math-kind="inline">\(x_{i,t}\)</span>（例如 B/M、盈利能力、投资强度或历史波动率）排序，将资产分为高组 <span class="math-inline" data-math-kind="inline">\(H_t\)</span> 与低组 <span class="math-inline" data-math-kind="inline">\(L_t\)</span>，因子收益为：</p>
+<div class="formula" data-math-kind="display">\[F_t=\sum_{i\in H_t}w_{i,t}^{H}r_{i,t}
+-\sum_{j\in L_t}w_{j,t}^{L}r_{j,t}.\]</div>
+<p><strong>变量、直觉与实现映射：</strong> <span class="math-inline" data-math-kind="inline">\(F_t\)</span> 是高特征组合减低特征组合的多空收益；<span class="math-inline" data-math-kind="inline">\(w^H,w^L\)</span> 可等权或市值加权。形成规则、分位点、行业约束和再平衡频率决定了因子本身，不能只写“买高卖低”。</p>
+<p>Fama–French 五因子常用市场、规模、价值、盈利能力和投资因子：</p>
+<div class="formula" data-math-kind="display">\[R_{i,t}^{e}
+=\alpha_i
++\beta_{M,i}MKT_t
++\beta_{S,i}SMB_t
++\beta_{H,i}HML_t
++\beta_{R,i}RMW_t
++\beta_{C,i}CMA_t
++\varepsilon_{i,t}.\]</div>
+<p><strong>变量、直觉与实现映射：</strong> <span class="math-inline" data-math-kind="inline">\(R_i^e=R_i-R_f\)</span> 是超额收益，<span class="math-inline" data-math-kind="inline">\(MKT\)</span> 是市场超额收益，SMB 是小盘减大盘，HML 是高 B/M 减低 B/M，RMW 是高盈利减低盈利，CMA 是保守投资减激进投资。回归 alpha 只是模型未解释部分，不自动等于交易后 alpha。</p>
+<h4 id="低波动与风险加权">低波动与风险加权</h4>
+<p>最简单的低波动评分是过去窗口的实现波动：</p>
+<div class="formula" data-math-kind="display">\[\hat\sigma_{i,t}
+=\sqrt{K\cdot\operatorname{Var}
+\left(r_{i,t-W+1:t}\right)},
+\qquad
+w_{i,t}^{invvol}
+=\frac{\hat\sigma_{i,t}^{-1}}
+{\sum_j\hat\sigma_{j,t}^{-1}}.\]</div>
+<p><strong>变量、直觉与实现映射：</strong> 逆波动权重降低高波动资产的名义权重；它不是最小方差组合，因为忽略协方差。最小方差优化为：</p>
+<div class="formula" data-math-kind="display">\[\min_{\mathbf w}\ \mathbf w^\top\hat\Sigma_t\mathbf w,
+\qquad
+\mathbf1^\top\mathbf w=1,\quad
+\mathbf w\in\mathcal C.\]</div>
+<p>其中 <span class="math-inline" data-math-kind="inline">\(\hat\Sigma_t\)</span> 是滚动协方差，<span class="math-inline" data-math-kind="inline">\(\mathcal C\)</span> 可包含 long-only、单名、行业和换手约束。估计误差会使无约束最小方差权重极端集中，因此收缩协方差和权重上限是模型的一部分。</p>
+<h4 id="质量与综合评分">质量与综合评分</h4>
+<p>质量因子可组合盈利能力、盈利稳定性、现金流、杠杆和应计项：</p>
+<div class="formula" data-math-kind="display">\[Q_{i,t}
+=\lambda_1z(ROIC_{i,t})
++\lambda_2z(FCF/Assets_{i,t})
+-\lambda_3z(Leverage_{i,t})
+-\lambda_4z(Accruals_{i,t}).\]</div>
+<p>多因子排序可写为：</p>
+<div class="formula" data-math-kind="display">\[S_{i,t}
+=\sum_{k=1}^{K}\lambda_k z_{i,k,t},
+\qquad
+\sum_k|\lambda_k|=1.\]</div>
+<p><strong>变量、直觉与实现映射：</strong> <span class="math-inline" data-math-kind="inline">\(z_{i,k,t}\)</span> 需在形成日按行业/规模标准化；<span class="math-inline" data-math-kind="inline">\(\lambda_k\)</span> 应由研究协议预先冻结，不能在测试集上选择。综合分数还要记录每个子因子的边际贡献，否则“多因子”只是把不可解释的调参隐藏起来。</p>
+<h3 id="6-3-四类因子的经济直觉与统计特征">6.3 四类因子的经济直觉与统计特征</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>因子</th>
+<th>典型特征</th>
+<th>可能解释</th>
+<th>主要风险</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>规模 SMB</td>
+<td>小盘相对大盘</td>
+<td>流动性、融资和风险补偿</td>
+<td>交易成本、容量、长期衰减</td>
+</tr>
+<tr>
+<td>价值 HML</td>
+<td>高 B/M 或高盈利收益率</td>
+<td>过度外推、风险补偿、资产重估</td>
+<td>价值陷阱、行业集中、长时间失效</td>
+</tr>
+<tr>
+<td>质量 RMW</td>
+<td>高盈利、稳定现金流、低杠杆</td>
+<td>经营质量与生存概率</td>
+<td>指标定义、会计修订、成长暴露</td>
+</tr>
+<tr>
+<td>投资 CMA</td>
+<td>保守投资减激进投资</td>
+<td>资本配置与预期增长</td>
+<td>周期行业、会计口径和规模相关性</td>
+</tr>
+<tr>
+<td>低波动</td>
+<td>低历史波动或低 beta</td>
+<td>杠杆约束、彩票偏好、基准约束</td>
+<td>利率、行业集中、拥挤和低波失效</td>
+</tr>
+</tbody>
+</table></div>
+<p>因子收益的统计特征包括：</p>
+<ol>
+<li><strong>非平稳的均值：</strong> 长样本正均值可被几十年的负或零收益阶段抵消。</li>
+<li><strong>因子相关性：</strong> 价值、质量、低波和规模可能有共同的行业或盈利暴露。</li>
+<li><strong>多空尾部：</strong> 因子多空组合在市场急转、融资收缩和拥挤解除时同时亏损。</li>
+<li><strong>收益不等于可交易净收益：</strong> 论文因子通常忽略税费、借券、冲击和产品管理费。</li>
+<li><strong>因子定义漂移：</strong> B/M 在无形资产密集行业中解释力下降；ROE 受回购和杠杆影响；历史波动受窗口和价格频率影响。</li>
+<li><strong>因子拥挤与容量：</strong> 越多资金使用同一公开排序，越可能降低未来净收益和提高共振回撤。</li>
+</ol>
+<h3 id="6-4-股票实现的形成-约束与回归评估">6.4 股票实现的形成、约束与回归评估</h3>
+<p>一个可复查的股票因子管线应包括：</p>
+<ol>
+<li>在点时形成日读取最新可用价格、财报、公司行动和退市状态；</li>
+<li>对负盈利、异常账面值、极端杠杆和流动性不足做事前规则过滤；</li>
+<li>行业内 winsorization 与标准化，避免行业构成替代因子本身；</li>
+<li>按分位数组合，冻结市值/等权方式和再平衡；</li>
+<li>记录因子组合 gross/net 收益、换手、行业、规模、beta 和容量；</li>
+<li>用时序回归和横截面回归检验 alpha 与因子暴露，使用 HAC 或 block bootstrap；</li>
+<li>保留失败候选和参数选择次数，不把最优因子排序当作唯一结果。</li>
+</ol>
+<p>低波动策略尤其要区分：</p>
+<ul>
+<li><strong>低波动排序：</strong> 直接选择历史波动最小资产；</li>
+<li><strong>最小方差优化：</strong> 使用协方差矩阵求最小组合方差；</li>
+<li><strong>低 beta：</strong> 对市场 beta 排序，可能与低波动但不等价；</li>
+<li><strong>波动率目标：</strong> 对整个策略加杠杆或减杠杆，不等于低波动股票因子。</li>
+</ul>
+<h3 id="6-5-黄金与跨资产的因子边界">6.5 黄金与跨资产的因子边界</h3>
+<p>黄金没有 SMB、HML 或 RMW 的企业会计字段，因此本报告不把黄金塞入股票五因子回归。黄金的跨资产因子可以使用：</p>
+<div class="formula" data-math-kind="display">\[r_{gold,t+1}
+=\alpha
++\beta_1\Delta(-y^{real}_t)
++\beta_2\Delta USD_t
++\beta_3\Delta\pi_t^e
++\beta_4\Delta Risk_t
++\varepsilon_{t+1}.\]</div>
+<p>这个宏观回归与股票质量/规模因子是不同模型，组合时应在风险归因表中单独列出。黄金可以作为低波动/质量股票组合的防御资产，但“低波动股票 + 黄金”仍可能共同暴露于美元、实际利率或流动性冲击。</p>
+<h3 id="6-6-文献证据与可支持边界">6.6 文献证据与可支持边界</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>来源</th>
+<th>支持的内容</th>
+<th>不能据此推断</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Fama &amp; French (1993)</td>
+<td>市场、规模、价值因子的共同变化框架</td>
+<td>因子收益必然稳定</td>
+</tr>
+<tr>
+<td>Fama &amp; French (2015)</td>
+<td>盈利与投资因子扩展为五因子模型</td>
+<td>五因子解释所有资产或交易后 alpha</td>
+</tr>
+<tr>
+<td>Frazzini &amp; Pedersen (2014)</td>
+<td>Betting Against Beta 与低 beta/杠杆约束解释</td>
+<td>任意低 beta ETF 都能获得超额净收益</td>
+</tr>
+<tr>
+<td>Blitz &amp; van Vliet (2007)</td>
+<td>低波动效应与组合实现讨论</td>
+<td>不消除行业集中和利率风险</td>
+</tr>
+<tr>
+<td>Novy-Marx (2013)</td>
+<td>盈利能力与价值/成长组合的关系</td>
+<td>质量定义唯一或跨时代稳定</td>
+</tr>
+<tr>
+<td>Asness, Frazzini &amp; Pedersen (2019)</td>
+<td>质量与价值组合的研究框架</td>
+<td>质量不是无风险资产</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="6-7-官方五因子统计与-etf-代理结果">6.7 官方五因子统计与 ETF 代理结果</h3>
+<h4 id="fama-french-五因子">Fama–French 五因子</h4>
+<p>官方文件基于 202605 CRSP database，SHA-256 为 <code>ddc0280b2bb8ca6c4c6ea5b68923a5549c37259bde468202108c11e812bd4241</code>，样本为 1963-07–2026-05：</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>因子</th>
+<th style="text-align:right">CAGR</th>
+<th style="text-align:right">年化波动</th>
+<th style="text-align:right">Sharpe（RF=0）</th>
+<th style="text-align:right">最大回撤</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Mkt-RF</td>
+<td style="text-align:right">6.20%</td>
+<td style="text-align:right">15.47%</td>
+<td style="text-align:right">0.47</td>
+<td style="text-align:right">−55.75%</td>
+</tr>
+<tr>
+<td>SMB</td>
+<td style="text-align:right">1.64%</td>
+<td style="text-align:right">10.46%</td>
+<td style="text-align:right">0.21</td>
+<td style="text-align:right">−56.47%</td>
+</tr>
+<tr>
+<td>HML</td>
+<td style="text-align:right">3.05%</td>
+<td style="text-align:right">10.28%</td>
+<td style="text-align:right">0.34</td>
+<td style="text-align:right">−57.79%</td>
+</tr>
+<tr>
+<td>RMW</td>
+<td style="text-align:right">2.67%</td>
+<td style="text-align:right">7.79%</td>
+<td style="text-align:right">0.38</td>
+<td style="text-align:right">−41.78%</td>
+</tr>
+<tr>
+<td>CMA</td>
+<td style="text-align:right">2.67%</td>
+<td style="text-align:right">7.17%</td>
+<td style="text-align:right">0.40</td>
+<td style="text-align:right">−27.21%</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>解释。</strong> 在该样本中 RMW/CMA 波动和 MDD 低于 SMB/HML，但这不是“质量/投资因子更安全”的证明；因子为多空收益，且同一文件的因子之间存在相关性和共同样本风险。</p>
+<h4 id="etf-代理-共同窗口-2013-08-2026-06">ETF 代理（共同窗口 2013-08–2026-06）</h4>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>代理</th>
+<th style="text-align:right">CAGR</th>
+<th style="text-align:right">年化波动</th>
+<th style="text-align:right">Sharpe（RF=0）</th>
+<th style="text-align:right">最大回撤</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>SPY</td>
+<td style="text-align:right">14.14%</td>
+<td style="text-align:right">14.49%</td>
+<td style="text-align:right">0.99</td>
+<td style="text-align:right">−23.93%</td>
+</tr>
+<tr>
+<td>SPLV（低波动）</td>
+<td style="text-align:right">9.06%</td>
+<td style="text-align:right">12.11%</td>
+<td style="text-align:right">0.78</td>
+<td style="text-align:right">−21.39%</td>
+</tr>
+<tr>
+<td>QUAL（质量）</td>
+<td style="text-align:right">13.75%</td>
+<td style="text-align:right">14.67%</td>
+<td style="text-align:right">0.96</td>
+<td style="text-align:right">−27.78%</td>
+</tr>
+<tr>
+<td>IWM（小盘）</td>
+<td style="text-align:right">10.01%</td>
+<td style="text-align:right">19.64%</td>
+<td style="text-align:right">0.59</td>
+<td style="text-align:right">−32.29%</td>
+</tr>
+<tr>
+<td>SPLV + QUAL 50/50</td>
+<td style="text-align:right">11.50%</td>
+<td style="text-align:right">12.63%</td>
+<td style="text-align:right">0.93</td>
+<td style="text-align:right">−21.26%</td>
+</tr>
+<tr>
+<td>SPLV + QUAL + IWM 等权</td>
+<td style="text-align:right">11.18%</td>
+<td style="text-align:right">14.18%</td>
+<td style="text-align:right">0.82</td>
+<td style="text-align:right">−23.07%</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>结果解释。</strong> 低波动 ETF 在该窗口的波动和 MDD 低于 SPY，但 CAGR 也明显较低；质量 ETF 的 CAGR 接近 SPY，MDD 更大；小盘 IWM 的波动和回撤最高。SPLV+QUAL 组合降低了波动和回撤，但没有超过 SPY 的 CAGR。代理产品的费用、行业权重、成立日期和指数方法不能与论文因子直接比较。</p>
+<h3 id="6-8-多因子组合与风险归因">6.8 多因子组合与风险归因</h3>
+<p>多因子组合可以使用三种方式：</p>
+<ol>
+<li><strong>独立袖套（sleeve）：</strong> 价值、质量、低波和规模各占预先登记的名义权重，易解释但忽略因子相关性。</li>
+<li><strong>风险平价因子组合：</strong> 对因子收益协方差做风险贡献平衡，避免高波因子主导组合。</li>
+<li><strong>综合排序：</strong> 将标准化因子分数合成一个股票分数，再做行业和风险约束；集中度低但因子贡献更难解释。</li>
+</ol>
+<p>组合风险归因可写为：</p>
+<div class="formula" data-math-kind="display">\[\operatorname{Var}(r_p)
+=\mathbf w_F^\top\Sigma_F\mathbf w_F
++\mathbf w_\varepsilon^\top\Sigma_\varepsilon\mathbf w_\varepsilon
++2\mathbf w_F^\top\operatorname{Cov}(F,\varepsilon)\mathbf w_\varepsilon.\]</div>
+<p><strong>变量、直觉与实现映射：</strong> <span class="math-inline" data-math-kind="inline">\(\mathbf w_F\)</span> 是因子暴露，<span class="math-inline" data-math-kind="inline">\(\Sigma_F\)</span> 是因子协方差，残差项是个股特异风险。组合优化不能只看因子平均收益；需要报告风险贡献、因子相关、最大回撤和成本敏感性。</p>
+<h3 id="6-9-实现伪代码-因子形成-约束和净收益">6.9 实现伪代码：因子形成、约束和净收益</h3>
+<pre><code class="language-python">def multifactor_portfolio(asof_date, point_in_time_data, prices):
+    # 1) 读取形成日之前可见的价值、质量、规模、投资和波动字段。
+    data = point_in_time_data(asof_date)
+
+    # 2) 行业内 winsorize/standardize，减少行业构成和极端值的伪影响。
+    value = robust_industry_zscore(data[&quot;book_to_market&quot;])
+    quality = robust_industry_zscore(data[&quot;roic&quot;]) - robust_industry_zscore(data[&quot;leverage&quot;])
+    size = -robust_zscore(data[&quot;market_cap&quot;])
+    low_vol = -robust_zscore(data[&quot;realized_volatility&quot;])
+
+    # 3) 组合分数权重必须在研究协议中冻结，不能用测试结果调节。
+    score = 0.30 * value + 0.30 * quality + 0.20 * size + 0.20 * low_vol
+
+    # 4) 先做行业、beta、单名和流动性约束，再计算目标权重。
+    target = constrained_rank_portfolio(score, data, max_sector=0.20, max_single=0.02)
+
+    # 5) 以下一交易窗口成交，扣除换手成本并记录因子/行业风险贡献。
+    realized = execute_next_period(target, prices)
+    net = realized.gross_return - realized.turnover * realized.cost_model
+    return factor_ledger(net, target, realized.exposures)
+</code></pre>
+<h3 id="6-10-失败模式与风险边界">6.10 失败模式与风险边界</h3>
+<ul>
+<li><strong>把论文多空因子当作 ETF 净收益：</strong> 因子含空头、融资、再平衡和不可见交易成本。</li>
+<li><strong>财报未来函数：</strong> 使用修订后或尚未发布数据会抬高质量、价值和盈利能力结果。</li>
+<li><strong>低波动集中行业：</strong> 低波动组合可能集中于公用事业、金融或防御消费，危机类型改变时风险会跃迁。</li>
+<li><strong>质量与成长重叠：</strong> 高 ROIC/高利润率常与成长暴露相关，不能把所有收益归为质量。</li>
+<li><strong>规模因子成本高：</strong> 小盘股票点差、容量、停牌和退市风险可能吞噬 SMB。</li>
+<li><strong>因子拥挤：</strong> 多因子 ETF 与主动产品共享筛选规则，拥挤解除会产生共振回撤。</li>
+<li><strong>协方差估计误差：</strong> 风险平价或最小方差组合对协方差窗口、收缩强度和缺失数据敏感。</li>
+<li><strong>跨资产因子错配：</strong> 不能把 HML/RMW/CMA 直接解释黄金的实际利率和美元风险。</li>
+<li><strong>多重检验和参数自由度：</strong> 因子定义、分位数、行业中性、再平衡和权重选择都必须登记。</li>
+</ul>
+<h3 id="6-11-本章结论与后续接口">6.11 本章结论与后续接口</h3>
+<p>低波动、质量、规模和多因子模型的核心贡献是把股票横截面差异转为可解释的风险暴露和组合约束，而不是提供一张永远有效的收益排行榜。官方五因子结果显示，因子长期平均收益与严重回撤并存；ETF 代理显示低波动可能降低波动但牺牲 CAGR，质量和规模结果对窗口与行业暴露敏感。</p>
+<p>下一并列章节将研究<strong>波动率目标、风险平价与动态风险管理</strong>，把单资产波动预测、组合风险贡献、杠杆调整和危机去杠杆放在同一章节。</p>
+<h3 id="本章参考文献-6">本章参考文献</h3>
+<ol>
+<li>[1] Fama, E. F. &amp; French, K. R., “Common Risk Factors in the Returns on Stocks and Bonds,” <em>Journal of Financial Economics</em>, 1993. <a href="https://doi.org/10.1016/0304-405X(93)90023-5">https://doi.org/10.1016/0304-405X(93)90023-5</a></li>
+<li>[2] Fama, E. F. &amp; French, K. R., “A Five-Factor Asset Pricing Model,” <em>Journal of Financial Economics</em>, 2015. <a href="https://doi.org/10.1016/j.jfineco.2014.10.010">https://doi.org/10.1016/j.jfineco.2014.10.010</a></li>
+<li>[3] Frazzini, A. &amp; Pedersen, L. H., “Betting against Beta,” <em>Journal of Financial Economics</em>, 2014. <a href="https://doi.org/10.1093/rfs/hht046">https://doi.org/10.1093/rfs/hht046</a></li>
+<li>[4] Blitz, D. &amp; van Vliet, P., “The Volatility Effect,” <em>The Journal of Portfolio Management</em>, 2007. <a href="https://doi.org/10.3905/jpm.2007.698039">https://doi.org/10.3905/jpm.2007.698039</a></li>
+<li>[5] Novy-Marx, R., “The Other Side of Value: The Gross Profitability Premium,” <em>Journal of Financial Economics</em>, 2013. <a href="https://doi.org/10.1016/j.jfineco.2013.01.003">https://doi.org/10.1016/j.jfineco.2013.01.003</a></li>
+<li>[6] Asness, C., Frazzini, A. &amp; Pedersen, L. H., “Quality Minus Junk,” <em>Review of Accounting Studies</em>, 2019. <a href="https://doi.org/10.1007/s11142-019-09544-0">https://doi.org/10.1007/s11142-019-09544-0</a></li>
+<li>[7] Kenneth R. French, “Data Library: Five Factors 2×3.” <a href="https://mba.tuck.dartmouth.edu/pages/faculty/ken.french/data_library.html">https://mba.tuck.dartmouth.edu/pages/faculty/ken.french/data_library.html</a></li>
+<li>[8] 本地派生统计：<code>quant_finance/data/classic_strategy_multifactor_snapshot.json</code>；不提交供应商原始行情。</li>
+</ol>
+<h2 id="模型章节-07-波动率目标-风险平价与动态风险管理">模型章节 07：波动率目标、风险平价与动态风险管理</h2>
+<h3 id="7-1-模型定位-先决定-承受多少风险-再决定名义仓位">7.1 模型定位：先决定“承受多少风险”，再决定名义仓位</h3>
+<p>波动率目标（volatility targeting）和风险平价（risk parity）都把风险估计放在资产选择之前，但两者解决的问题不同：</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>模型</th>
+<th>主要问题</th>
+<th>输出</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>波动率目标</td>
+<td>单个策略或组合应承受多少年化波动</td>
+<td>总杠杆/去杠杆倍数</td>
+</tr>
+<tr>
+<td>逆波动加权</td>
+<td>如何让高波动资产少占名义权重</td>
+<td>资产名义权重</td>
+</tr>
+<tr>
+<td>风险平价</td>
+<td>如何让各资产对组合风险贡献接近目标预算</td>
+<td>资产权重，使 <span class="math-inline" data-math-kind="inline">\(RC_i\approx b_i\sigma_p\)</span></td>
+</tr>
+<tr>
+<td>最小方差</td>
+<td>在约束下最小化组合方差</td>
+<td>依赖协方差矩阵的最优权重</td>
+</tr>
+<tr>
+<td>动态去杠杆</td>
+<td>回撤、波动或压力状态发生时如何降低风险</td>
+<td>状态依赖的仓位上限</td>
+</tr>
+</tbody>
+</table></div>
+<p>这些模型不是收益预测器。它们通常假设收益信号已经存在，只改变暴露尺度；若预测波动错误、相关性在危机期跃迁或现金收益被忽略，风险管理层可能降低收益而没有按目标降低回撤。</p>
+<h3 id="7-2-波动率预测与波动率目标">7.2 波动率预测与波动率目标</h3>
+<p>最简单的滚动波动率预测为：</p>
+<div class="formula" data-math-kind="display">\[\hat\sigma_{t,W}
+=\sqrt{K\cdot\frac1{W-1}
+\sum_{j=1}^{W}(r_{t-j}-\bar r_{t,W})^2}.\]</div>
+<p><strong>变量、直觉与实现映射：</strong> <span class="math-inline" data-math-kind="inline">\(W\)</span> 是观察窗口，<span class="math-inline" data-math-kind="inline">\(K\)</span> 是年化因子；只使用 <span class="math-inline" data-math-kind="inline">\(t-1\)</span> 及以前的收益。短窗口响应快但噪声大，长窗口稳定但在危机初期反应慢。</p>
+<p>EWMA（指数加权移动平均）为：</p>
+<div class="formula" data-math-kind="display">\[\hat\sigma_t^2
+=(1-\lambda)r_{t-1}^2+\lambda\hat\sigma_{t-1}^2,
+\qquad 0&lt;\lambda&lt;1.\]</div>
+<p><strong>变量、直觉与实现映射：</strong> <span class="math-inline" data-math-kind="inline">\(\lambda\)</span> 越大，旧信息衰减越慢；EWMA 保证预测方差非负，但仍面临衰减参数和初值选择。GARCH(1,1) 在此基础上增加常数项与长期方差约束：</p>
+<div class="formula" data-math-kind="display">\[\sigma_t^2=\omega+\alpha r_{t-1}^2+\beta\sigma_{t-1}^2,
+\qquad
+\omega&gt;0,\ \alpha,\beta\ge0,\ \alpha+\beta&lt;1.\]</div>
+<p>对目标年化波动 <span class="math-inline" data-math-kind="inline">\(\sigma^*\)</span>，总仓位倍数为：</p>
+<div class="formula" data-math-kind="display">\[\ell_t
+=\operatorname{clip}\!\left(
+\frac{\sigma^*}{\hat\sigma_t},
+0,\ell_{\max}\right),
+\qquad
+r_{p,t+1}^{VT}
+=\ell_t r_{p,t+1}
++(1-\ell_t)r_{f,t+1}.\]</div>
+<p><strong>变量、直觉与实现映射：</strong> <span class="math-inline" data-math-kind="inline">\(\ell_t&lt;1\)</span> 表示去杠杆并持有现金，<span class="math-inline" data-math-kind="inline">\(\ell_t&gt;1\)</span> 表示借入资金放大风险资产；杠杆上限、保证金、融资利率和交易成本必须写入协议。实际波动不会恰好等于 <span class="math-inline" data-math-kind="inline">\(\sigma^*\)</span>，因为预测误差、跳跃、相关性变化和滞后都会产生偏离。</p>
+<h3 id="7-3-风险平价与风险贡献">7.3 风险平价与风险贡献</h3>
+<p>组合波动率为：</p>
+<div class="formula" data-math-kind="display">\[\sigma_p(\mathbf w)
+=\sqrt{\mathbf w^\top\Sigma\mathbf w}.\]</div>
+<p>资产 <span class="math-inline" data-math-kind="inline">\(i\)</span> 的边际风险贡献（MRC）与总风险贡献（RC）为：</p>
+<div class="formula" data-math-kind="display">\[MRC_i=\frac{\partial\sigma_p}{\partial w_i}
+=\frac{(\Sigma\mathbf w)_i}{\sigma_p},
+\qquad
+RC_i=w_i\,MRC_i.\]</div>
+<p><strong>变量、直觉与实现映射：</strong> <span class="math-inline" data-math-kind="inline">\(RC_i\)</span> 衡量资产 <span class="math-inline" data-math-kind="inline">\(i\)</span> 对组合总波动的贡献，<span class="math-inline" data-math-kind="inline">\(\sum_iRC_i=\sigma_p\)</span>。风险平价指定预算 <span class="math-inline" data-math-kind="inline">\(b_i\)</span>：</p>
+<div class="formula" data-math-kind="display">\[RC_i=b_i\sigma_p,\qquad
+\sum_i b_i=1.\]</div>
+<p>两资产且相关性相近时，逆波动权重 <span class="math-inline" data-math-kind="inline">\(w_i\propto1/\hat\sigma_i\)</span> 接近风险平价；相关性不同时，必须用协方差矩阵求解，不能把逆波动加权误写成精确 ERC（equal risk contribution）。</p>
+<p>一个带约束的风险平价目标可写为：</p>
+<div class="formula" data-math-kind="display">\[\min_{\mathbf w}
+\sum_i\left(
+\frac{RC_i(\mathbf w)}{\sigma_p(\mathbf w)}-b_i
+\right)^2
++\gamma\|\mathbf w-\mathbf w_{t-1}\|_1,\]</div>
+<div class="formula" data-math-kind="display">\[\mathbf1^\top\mathbf w=1,\quad
+\mathbf w\in\mathcal C.\]</div>
+<p><strong>变量、直觉与实现映射：</strong> 第一项逼近风险预算，第二项惩罚换手；<span class="math-inline" data-math-kind="inline">\(\mathcal C\)</span> 可包括 long-only、单名上限、杠杆和行业约束。协方差估计错误会通过非线性优化变成权重集中，因此收缩、平滑和压力测试是模型的一部分，而非事后修补。</p>
+<h3 id="7-4-动态风险管理的统计特征">7.4 动态风险管理的统计特征</h3>
+<p>动态风险模型的核心统计难点是：</p>
+<ol>
+<li><strong>波动聚集：</strong> 大波动往往成簇出现，固定杠杆会在危机期承担过高风险。</li>
+<li><strong>预测滞后：</strong> 使用过去收益估计未来波动，突然跳跃时无法提前去杠杆。</li>
+<li><strong>负相关与相关性跃迁：</strong> 股票和黄金在正常时期可能分散，但危机时相关性、美元和流动性会同时变化。</li>
+<li><strong>波动率拖累：</strong> 频繁缩放可能在高波动后低位减仓、低波动后高位加仓，损失复合收益。</li>
+<li><strong>杠杆与融资：</strong> 目标波动低不代表资本安全；杠杆、保证金、融资利率和流动性决定尾部损失。</li>
+<li><strong>估计误差放大：</strong> 风险平价/最小方差对协方差矩阵高度敏感，收缩方法改变的不是排版而是组合行为。</li>
+<li><strong>目标与实现偏离：</strong> 目标 10% 只是一项约束，实际收益波动可能因为滞后、跳跃和上限长期高于或低于目标。</li>
+</ol>
+<p>因此应额外报告：</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>指标</th>
+<th>目的</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>实际年化波动与目标差距</td>
+<td>检查风险目标是否实现</td>
+</tr>
+<tr>
+<td>平均杠杆/现金权重</td>
+<td>识别资金使用与机会成本</td>
+</tr>
+<tr>
+<td>杠杆上限触发比例</td>
+<td>识别模型是否经常受约束</td>
+</tr>
+<tr>
+<td>去杠杆事件与恢复期</td>
+<td>检查危机路径</td>
+</tr>
+<tr>
+<td>年化换手和成本占比</td>
+<td>动态权重的可实现性</td>
+</tr>
+<tr>
+<td>风险贡献和相关性</td>
+<td>判断分散化是否真实</td>
+</tr>
+<tr>
+<td>压力场景损失</td>
+<td>估计跳跃、相关性上升和融资收紧风险</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="7-5-股票-黄金与跨资产风险管理">7.5 股票、黄金与跨资产风险管理</h3>
+<p>股票单资产波动目标容易解释，但多资产组合必须同时估计协方差。黄金可能降低正常期组合波动，也可能在美元冲击、实际利率跃升或 ETF 流动性压力下与股票同时下跌。风险平价不能依赖历史相关性永远稳定。</p>
+<p>本章采用 SPY/GLD 两资产作为机制示例：</p>
+<ul>
+<li>固定 50/50 作为名义基准；</li>
+<li>逆波动权重作为近似风险平价；</li>
+<li>以 12 个月滚动组合波动估计 10% 目标；</li>
+<li>杠杆上限 1.5；</li>
+<li>空闲资金收益设为零；</li>
+<li>每次总换手扣 10 bps。</li>
+</ul>
+<p>该协议没有加入债券、现金、外汇或期货保证金，因此不能代表机构风险平价组合。</p>
+<h3 id="7-6-文献证据与可支持边界">7.6 文献证据与可支持边界</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>来源</th>
+<th>支持的内容</th>
+<th>不能据此推断</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Engle (1982)</td>
+<td>ARCH 条件异方差与波动聚集</td>
+<td>简单 GARCH 总能准确预测危机</td>
+</tr>
+<tr>
+<td>Bollerslev (1986)</td>
+<td>GARCH 条件方差递推</td>
+<td>参数稳定和未来收益优势</td>
+</tr>
+<tr>
+<td>Moreira &amp; Muir (2017)</td>
+<td>波动率管理组合的研究框架</td>
+<td>任意波动目标都提高净收益</td>
+</tr>
+<tr>
+<td>Maillard, Roncalli &amp; Teïletche (2010)</td>
+<td>等风险贡献组合的定义与性质</td>
+<td>风险平价一定优于 60/40</td>
+</tr>
+<tr>
+<td>Barroso &amp; Santa-Clara (2015)</td>
+<td>动量波动管理和风险调整</td>
+<td>只改变波动便能消除所有崩溃</td>
+</tr>
+<tr>
+<td>Frazzini &amp; Pedersen (2014)</td>
+<td>beta、杠杆约束与低风险资产定价</td>
+<td>低风险策略无融资和容量风险</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="7-7-本地结果-固定权重-风险平价与波动目标">7.7 本地结果：固定权重、风险平价与波动目标</h3>
+<p>本节使用 <code>quant_finance/data/classic_strategy_risk_management_snapshot.json</code>。所有策略均为月度，使用滞后 12 个月风险估计，排除未完成月份，现金收益设为零。</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>策略</th>
+<th style="text-align:right">净 CAGR</th>
+<th style="text-align:right">实际年化波动</th>
+<th style="text-align:right">Sharpe（RF=0）</th>
+<th style="text-align:right">最大回撤</th>
+<th style="text-align:right">年化换手</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>固定 50/50</td>
+<td style="text-align:right">11.33%</td>
+<td style="text-align:right">11.98%</td>
+<td style="text-align:right">0.96</td>
+<td style="text-align:right">−25.62%</td>
+<td style="text-align:right">0.20</td>
+</tr>
+<tr>
+<td>逆波动风险平价</td>
+<td style="text-align:right">11.52%</td>
+<td style="text-align:right">11.76%</td>
+<td style="text-align:right">0.99</td>
+<td style="text-align:right">−28.49%</td>
+<td style="text-align:right">0.36</td>
+</tr>
+<tr>
+<td>固定 50/50 + 10% 波动目标</td>
+<td style="text-align:right">9.26%</td>
+<td style="text-align:right">11.69%</td>
+<td style="text-align:right">0.82</td>
+<td style="text-align:right">−26.47%</td>
+<td style="text-align:right">0.78</td>
+</tr>
+<tr>
+<td>风险平价 + 10% 波动目标</td>
+<td style="text-align:right">9.84%</td>
+<td style="text-align:right">11.58%</td>
+<td style="text-align:right">0.87</td>
+<td style="text-align:right">−28.94%</td>
+<td style="text-align:right">0.85</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>结果解释。</strong> 逆波动风险平价略提高 CAGR 和 Sharpe，但最大回撤反而高于固定 50/50；10% 波动目标没有把实际波动压到 10%，反而因滞后和零现金收益降低了 CAGR。该结果不证明风险管理无效，而是证明其效果依赖目标、预测、现金收益、融资和资产集合，不能只看曲线平滑程度。</p>
+<p><strong>目标偏离。</strong> 固定波动目标策略平均杠杆约 0.94，约 6.2% 权重留在零收益现金；风险平价波动目标平均杠杆约 0.96，约 3.9% 现金。由于局部样本波动和目标估计不同，实际波动仍处在约 11.6%–11.7%。</p>
+<h3 id="7-8-与其他策略的组合">7.8 与其他策略的组合</h3>
+<ol>
+<li><strong>趋势 + 波动目标：</strong> 趋势决定方向，波动模型决定名义杠杆；需防止两个模块同时在危机初期去杠杆。</li>
+<li><strong>价值/质量 + 风险平价：</strong> 因子决定股票选择，风险平价限制股票、黄金和债券的风险贡献。</li>
+<li><strong>均值回复 + 动态限仓：</strong> 对价差设置残差波动、最大持有期和结构断裂止损。</li>
+<li><strong>主观宏观观点 + Black–Litterman：</strong> 观点改变预期收益，但风险协方差和杠杆上限仍需独立估计。</li>
+<li><strong>风险预算 + 压力测试：</strong> 先设定正常期预算，再对相关性升高、波动跳跃、现金利率下降和融资收紧做压力情景。</li>
+</ol>
+<h3 id="7-9-实现伪代码-滞后风险估计与风险贡献">7.9 实现伪代码：滞后风险估计与风险贡献</h3>
+<pre><code class="language-python">def risk_managed_portfolio(returns, target_vol=0.10, lookback=12, max_leverage=1.5):
+    # 1) 用截至上月的收益估计波动和协方差，禁止当前月信息泄漏。
+    forecast_cov = lagged_rolling_covariance(returns, lookback)
+
+    # 2) 先求风险平价或约束最小方差的资产权重。
+    base_weights = solve_risk_budget(forecast_cov, budgets=[0.5, 0.5])
+
+    # 3) 计算组合预测波动，再应用目标波动和杠杆上限。
+    forecast_vol = portfolio_volatility(base_weights, forecast_cov)
+    scale = min(max_leverage, target_vol / max(forecast_vol, 1e-8))
+    asset_weights = scale * base_weights
+    cash_weight = 1.0 - asset_weights.sum()
+
+    # 4) 对上一期持仓漂移与本期目标权重计算换手，并扣除成本。
+    turnover = rebalance_turnover(asset_weights, cash_weight, returns)
+    net_return = (asset_weights * returns.current).sum() - turnover * cost_model
+
+    # 5) 记录实际波动、风险贡献、现金、杠杆、压力损失和 MDD。
+    return append_risk_ledger(net_return, asset_weights, cash_weight, forecast_vol)
+</code></pre>
+<h3 id="7-10-失败模式与风险边界">7.10 失败模式与风险边界</h3>
+<ul>
+<li><strong>把目标波动当作保证：</strong> 跳跃、相关性跃迁和估计滞后使实际波动偏离目标。</li>
+<li><strong>风险平价等于逆波动：</strong> 相关性不相等时，逆波动不保证风险贡献相等。</li>
+<li><strong>忽略现金和融资利率：</strong> 去杠杆期间的现金收益直接影响 CAGR；杠杆期间融资利率会侵蚀收益。</li>
+<li><strong>忽略再平衡漂移：</strong> 固定权重也有交易成本，动态权重的换手可能显著更高。</li>
+<li><strong>风险模型过度平滑：</strong> 长窗口在危机初期反应慢，短窗口则噪声和换手高。</li>
+<li><strong>杠杆上限未压力测试：</strong> 上限触发时，目标波动模型可能失去原先风险控制能力。</li>
+<li><strong>协方差未来函数：</strong> 使用包含当前或未来收益的矩阵会高估去杠杆及时性。</li>
+<li><strong>把更低波动叫 alpha：</strong> 风险缩放改变的是暴露路径，不自动产生新的预测信息。</li>
+</ul>
+<h3 id="7-11-本章结论与后续接口">7.11 本章结论与后续接口</h3>
+<p>波动率目标与风险平价是风险预算模型，不是收益保证模型。SPY/GLD 示例显示，逆波动风险平价略改善 Sharpe，但可能扩大最大回撤；10% 波动目标因滞后、零现金收益和杠杆限制未达到目标，且 CAGR 下降。正式研究必须报告目标偏离、现金/融资、换手、风险贡献和压力损失，而不是只展示更平滑的净值曲线。</p>
+<p>下一并列章节将研究<strong>Carry、期限结构与宏观跨资产模型</strong>，重点讨论期货展期收益、利差、美元/实际利率和黄金等资产的主观宏观组合。</p>
+<h3 id="本章参考文献-7">本章参考文献</h3>
+<ol>
+<li>[1] Engle, R. F., “Autoregressive Conditional Heteroscedasticity with Estimates of the Variance of United Kingdom Inflation,” <em>Econometrica</em>, 1982. <a href="https://doi.org/10.2307/1912773">https://doi.org/10.2307/1912773</a></li>
+<li>[2] Bollerslev, T., “Generalized Autoregressive Conditional Heteroskedasticity,” <em>Journal of Econometrics</em>, 1986. <a href="https://doi.org/10.1016/0304-4076(86)90063-1">https://doi.org/10.1016/0304-4076(86)90063-1</a></li>
+<li>[3] Moreira, A. &amp; Muir, T., “Volatility-Managed Portfolios,” <em>The Journal of Finance</em>, 2017. <a href="https://doi.org/10.1111/jofi.12513">https://doi.org/10.1111/jofi.12513</a></li>
+<li>[4] Maillard, S., Roncalli, T. &amp; Teïletche, J., “The Properties of Equally Weighted Risk Contribution Portfolios,” <em>The Journal of Portfolio Management</em>, 2010. <a href="https://doi.org/10.3905/jpm.2010.36.4.060">https://doi.org/10.3905/jpm.2010.36.4.060</a></li>
+<li>[5] Barroso, P. &amp; Santa-Clara, P., “Momentum Has Its Moments,” <em>Journal of Financial Economics</em>, 2015. <a href="https://doi.org/10.1016/j.jfineco.2015.01.007">https://doi.org/10.1016/j.jfineco.2015.01.007</a></li>
+<li>[6] Frazzini, A. &amp; Pedersen, L. H., “Betting against Beta,” <em>Journal of Financial Economics</em>, 2014. <a href="https://doi.org/10.1093/rfs/hht046">https://doi.org/10.1093/rfs/hht046</a></li>
+<li>[7] 本地派生统计：<code>quant_finance/data/classic_strategy_risk_management_snapshot.json</code>；不提交供应商原始行情。</li>
+</ol>
+<h2 id="模型章节-08-carry-期限结构与宏观跨资产模型">模型章节 08：Carry、期限结构与宏观跨资产模型</h2>
+<h3 id="8-1-模型定位-收益来自持有结构-而不只是价格方向">8.1 模型定位：收益来自持有结构，而不只是价格方向</h3>
+<p>Carry（持有收益）描述在价格不变或风险状态不变时，仅仅因为持有某项资产、合约或利差而获得的预期收益。期限结构（term structure）则描述同一标的不同到期合约之间的价格关系。两者经常被合并讨论，但概念并不相同：</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>市场</th>
+<th>Carry 的典型来源</th>
+<th>主要风险</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>商品/黄金期货</td>
+<td>近月与远月价差、便利收益、库存稀缺、抵押品利息</td>
+<td>展期跳价、基差扩大、保证金和流动性</td>
+</tr>
+<tr>
+<td>外汇</td>
+<td>远期点数、两国短期利率差</td>
+<td>汇率崩溃、融资货币拥挤、资本管制</td>
+</tr>
+<tr>
+<td>债券</td>
+<td>票息、融资利率、收益率曲线 roll-down</td>
+<td>利率跳升、曲线形状变化、久期损失</td>
+</tr>
+<tr>
+<td>股票</td>
+<td>股息率、回购收益、估值与融资差</td>
+<td>盈利下修、股息削减、股价跳跃</td>
+</tr>
+<tr>
+<td>黄金现货/ETF</td>
+<td>没有固定票息；持有收益取决于实际利率、美元、租借/便利收益和 ETF 费用</td>
+<td>实际利率上升、美元走强、危机期流动性折价</td>
+</tr>
+</tbody>
+</table></div>
+<p>Carry 因此是<strong>收益来源的会计分解</strong>，不是无风险套利。Koijen 等人的跨资产研究把 carry 作为跨市场可比较的预测变量；商品研究则强调库存和便利收益会改变期货风险溢价。文献结论支持“carry 是可研究的风险暴露”，不支持把历史平均 carry 当作固定票息或未来保证收益。[1][2]</p>
+<h3 id="8-2-期货收益-展期收益与远期点数的数学表达">8.2 期货收益、展期收益与远期点数的数学表达</h3>
+<p>对连续持有的期货合约，单期总收益可以近似分解为：</p>
+<div class="formula" data-math-kind="display">\[r^{\mathrm{fut}}_{t+1}
+\approx r^{\mathrm{spot}}_{t+1}
+      +r^{\mathrm{roll}}_{t+1}
+      +r^{\mathrm{collateral}}_{t+1}
+      -r^{\mathrm{fee}}_{t+1}.\]</div>
+<p><strong>变量与证据边界：</strong> <span class="math-inline" data-math-kind="inline">\(r^{\mathrm{spot}}\)</span> 是现货价格变化，<span class="math-inline" data-math-kind="inline">\(r^{\mathrm{roll}}\)</span> 是换月时从近月合约切换到远月合约产生的收益，<span class="math-inline" data-math-kind="inline">\(r^{\mathrm{collateral}}\)</span> 是保证金/抵押品利息，<span class="math-inline" data-math-kind="inline">\(r^{\mathrm{fee}}\)</span> 是管理与交易成本。该式是收益归因近似，不是连续合约供应商的精确结算恒等式；本地数据没有保存逐合约换月表，因此只能估计 proxy。</p>
+<p>若在时点 <span class="math-inline" data-math-kind="inline">\(t\)</span> 从近月合约 <span class="math-inline" data-math-kind="inline">\(F_{t}^{(1)}\)</span> 换到下一合约 <span class="math-inline" data-math-kind="inline">\(F_{t}^{(2)}\)</span>，在价格单位一致时，常用的对数展期近似为：</p>
+<div class="formula" data-math-kind="display">\[r^{\mathrm{roll}}_t
+\approx \ln\!\left(\frac{F_t^{(1)}}{F_t^{(2)}}\right).\]</div>
+<p><strong>直觉：</strong> 当远月价格低于近月（backwardation，现货升水）时，上式为正；当远月价格高于近月（contango，期货升水）时，上式为负。实际收益还取决于换月比例、时间间隔、价格跳变和交易成本。没有近月/次近月的同步观测时，不能把连续前月价格收益直接称为 roll yield。</p>
+<p>外汇远期的 carry 常用远期点数或利差表示。覆盖利率平价（covered interest parity, CIP）的基准关系为：</p>
+<div class="formula" data-math-kind="display">\[\frac{F_t}{S_t}
+\approx \frac{1+r_{d,t}\Delta}{1+r_{f,t}\Delta},
+\qquad
+c^{\mathrm{FX}}_t
+=\ln\!\left(\frac{F_t}{S_t}\right),\]</div>
+<p>其中 <span class="math-inline" data-math-kind="inline">\(S_t\)</span> 是即期汇率，<span class="math-inline" data-math-kind="inline">\(F_t\)</span> 是同期限远期汇率，<span class="math-inline" data-math-kind="inline">\(r_d,r_f\)</span> 分别是计价货币和基准货币短期利率，<span class="math-inline" data-math-kind="inline">\(\Delta\)</span> 为年化期限。CIP 是定价基线；跨货币 basis、融资约束和风险溢价使可交易 carry 不等于简单利差。[3]</p>
+<p>债券 carry 与 roll-down 可作局部近似：</p>
+<div class="formula" data-math-kind="display">\[c^{\mathrm{bond}}_t
+\approx y_t-r^{\mathrm{fund}}_t
+       -D_t\,\Delta y_t^{\mathrm{roll}},\]</div>
+<p>其中 <span class="math-inline" data-math-kind="inline">\(y_t\)</span> 是票息/到期收益率，<span class="math-inline" data-math-kind="inline">\(r^{\mathrm{fund}}_t\)</span> 是融资成本，<span class="math-inline" data-math-kind="inline">\(D_t\)</span> 是修正久期，<span class="math-inline" data-math-kind="inline">\(\Delta y_t^{\mathrm{roll}}\)</span> 表示沿收益率曲线滚动到更短期限的收益率变化。该式只适合小幅平移和局部曲线；大幅利率跳跃时凸性和曲率项不能忽略。</p>
+<h3 id="8-3-黄金与宏观跨资产的-carry-解释">8.3 黄金与宏观跨资产的 carry 解释</h3>
+<p>黄金不是有固定票息的债券。对黄金 ETF 或现货多头，实际持有收益可拆为：</p>
+<div class="formula" data-math-kind="display">\[r^{\mathrm{gold}}_t
+\approx r^{\mathrm{USD\ price}}_t
+      -r^{\mathrm{real\ rate\ drag}}_t
+      -r^{\mathrm{ETF\ fee}}_t
+      +r^{\mathrm{convenience/lease}}_t.\]</div>
+<p><strong>变量与统计含义：</strong> <span class="math-inline" data-math-kind="inline">\(r^{\mathrm{real\ rate\ drag}}\)</span> 不是会计上直接扣除的一笔费用，而是实际利率变化对无息资产估值的机会成本代理；便利收益/租借收益在公开 ETF 价格中无法单独识别。Baur–Lucey 将黄金的 hedge 与 safe haven 区分为正常期和极端下跌期条件，不应把黄金的防御属性误写成稳定 carry。[4]</p>
+<p>宏观 carry 组合通常同时观察：</p>
+<ol>
+<li><strong>实际利率：</strong> FRED 的 TIPS 实际收益率序列可作为黄金机会成本和债券曲线状态变量；必须记录发布时间和修订边界。</li>
+<li><strong>美元：</strong> 美元指数或贸易加权美元影响以美元计价黄金和非美元资产的共同风险暴露。</li>
+<li><strong>通胀与增长：</strong> 通胀上行、增长下行和流动性收紧可能使商品 carry、债券 roll-down 与股票股息 carry 同时失效。</li>
+<li><strong>期限结构：</strong> contango/backwardation 是商品库存、便利收益和融资条件的混合信号，不宜只按价格斜率解释。</li>
+</ol>
+<h3 id="8-4-计量模型-横截面-carry-排名与宏观过滤">8.4 计量模型：横截面 carry 排名与宏观过滤</h3>
+<p>设 <span class="math-inline" data-math-kind="inline">\(c_{i,t}\)</span> 为资产 <span class="math-inline" data-math-kind="inline">\(i\)</span> 的 carry 估计，常见横截面排名规则为：</p>
+<div class="formula" data-math-kind="display">\[\operatorname{rank}_{i,t}=\operatorname{rank}\left(
+\frac{c_{i,t}-\operatorname{median}_j(c_{j,t})}
+{\operatorname{MAD}_j(c_{j,t})+\varepsilon}
+\right),\]</div>
+<p>选取最高的 <span class="math-inline" data-math-kind="inline">\(K\)</span> 个资产做多，或同时做多高 carry、做空低 carry。MAD（median absolute deviation，中位数绝对偏差）比样本标准差更不易受极端价差影响。</p>
+<p>信号必须滞后：</p>
+<div class="formula" data-math-kind="display">\[w_{i,t+1}
+=\mathcal{W}\!\left(c_{i,t-L+1:t}\right),
+\qquad
+r_{p,t+1}=\sum_i w_{i,t+1}r_{i,t+1}-\kappa\,\mathrm{Turnover}_{t+1},\]</div>
+<p>其中 <span class="math-inline" data-math-kind="inline">\(L\)</span> 是 carry 平滑窗口，<span class="math-inline" data-math-kind="inline">\(\mathcal W\)</span> 是排序、风险缩放和约束函数，<span class="math-inline" data-math-kind="inline">\(\kappa\)</span> 是单位换手成本。若使用远期报价或库存数据，必须以当时已发布的信息构造 <span class="math-inline" data-math-kind="inline">\(c_{i,t}\)</span>，不能使用事后修订。</p>
+<p>宏观过滤器可以把 carry 暴露与状态变量结合：</p>
+<div class="formula" data-math-kind="display">\[w_{i,t+1}=w^{\mathrm{carry}}_{i,t+1}
+\cdot g(z_t),
+\qquad
+g(z_t)=\operatorname{clip}\left(
+1-\beta\,\mathbf{1}\{z_t\in\mathcal S_{\mathrm{stress}}\},
+g_{\min},1\right),\]</div>
+<p>其中 <span class="math-inline" data-math-kind="inline">\(z_t\)</span> 可包含实际利率变化、美元趋势、隐含波动率、期限结构斜率和流动性指标；<span class="math-inline" data-math-kind="inline">\(\mathcal S_{\mathrm{stress}}\)</span> 是压力状态集合。该过滤器是风险治理层，不应在回测中把未来危机标签直接当作信号。</p>
+<h3 id="8-5-本地证据-四资产-carry-basis-proxy-回测">8.5 本地证据：四资产 carry/basis proxy 回测</h3>
+<p>本节使用 <code>quant_finance/data/classic_strategy_carry_snapshot.json</code>。数据来自 Yahoo Finance chart API，资产代理为 GC=F/GLD、CL=F/USO、ZB=F/TLT 和 6E=F/UUP；共同样本为 2007-01 至 2026-06 的月频数据。连续近月期货月收益减去 ETF 复权月收益定义为 <strong>basis/roll proxy</strong>。策略信号使用过去 3 个月 proxy 的均值，下一月在 ETF 代理上执行，扣除 10 bps 单向绝对换手成本，现金收益设为零。</p>
+<p>各资产 proxy 的描述统计如下：</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>资产</th>
+<th style="text-align:right">年化 proxy 均值</th>
+<th style="text-align:right">年化 proxy 波动</th>
+<th style="text-align:right">iid 描述性 t 值</th>
+<th style="text-align:right">proxy 为正月份占比</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>黄金</td>
+<td style="text-align:right">0.48%</td>
+<td style="text-align:right">2.15%</td>
+<td style="text-align:right">0.90</td>
+<td style="text-align:right">56.1%</td>
+</tr>
+<tr>
+<td>原油</td>
+<td style="text-align:right">7.67%</td>
+<td style="text-align:right">17.49%</td>
+<td style="text-align:right">1.77</td>
+<td style="text-align:right">56.6%</td>
+</tr>
+<tr>
+<td>长期美债</td>
+<td style="text-align:right">−3.90%</td>
+<td style="text-align:right">6.50%</td>
+<td style="text-align:right">−2.43</td>
+<td style="text-align:right">39.8%</td>
+</tr>
+<tr>
+<td>美元 ETF（反向欧元代理）</td>
+<td style="text-align:right">−2.87%</td>
+<td style="text-align:right">17.04%</td>
+<td style="text-align:right">−0.68</td>
+<td style="text-align:right">48.5%</td>
+</tr>
+</tbody>
+</table></div>
+<p>这里的 t 值假定月度观测独立，仅作描述性提示；没有进行 Newey–West/HAC 修正，也没有做多重检验校正。</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>组合/规则</th>
+<th style="text-align:right">净年化算术平均</th>
+<th style="text-align:right">净 CAGR</th>
+<th style="text-align:right">年化波动</th>
+<th style="text-align:right">Sharpe（RF=0）</th>
+<th style="text-align:right">最大回撤</th>
+<th style="text-align:right">年化换手</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>四资产等权 ETF 基准</td>
+<td style="text-align:right">5.43%</td>
+<td style="text-align:right">4.90%</td>
+<td style="text-align:right">11.32%</td>
+<td style="text-align:right">0.48</td>
+<td style="text-align:right">−27.96%</td>
+<td style="text-align:right">0.06</td>
+</tr>
+<tr>
+<td>Top-2 相对 carry proxy</td>
+<td style="text-align:right">1.58%</td>
+<td style="text-align:right">−0.21%</td>
+<td style="text-align:right">18.25%</td>
+<td style="text-align:right">0.09</td>
+<td style="text-align:right">−63.06%</td>
+<td style="text-align:right">5.66</td>
+</tr>
+<tr>
+<td>Top-2 正 carry proxy（否则现金）</td>
+<td style="text-align:right">5.89%</td>
+<td style="text-align:right">4.63%</td>
+<td style="text-align:right">16.98%</td>
+<td style="text-align:right">0.35</td>
+<td style="text-align:right">−43.44%</td>
+<td style="text-align:right">8.22</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>结果解释。</strong> 在这个代理协议中，简单相对排名没有改善组合收益，且回撤和换手显著上升；正 carry 过滤降低了部分负暴露，但仍未超过等权基准的风险调整结果。该失败结果有重要信息：连续合约构造误差、ETF 跟踪差、零现金收益和高频排名都会把理论 carry 溢价转化为交易成本与模型风险。它不能证明 carry 无效，也不能支持对真实期货策略的结论。</p>
+<h3 id="8-6-与趋势-价值和风险预算的组合方式">8.6 与趋势、价值和风险预算的组合方式</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>组合方式</th>
+<th>机制</th>
+<th>主要收益/风险交换</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Carry + 趋势</td>
+<td>carry 提供持有收益，趋势在期限结构反转时减仓</td>
+<td>可能降低 contango 崩溃，但信号冲突时换手增加</td>
+</tr>
+<tr>
+<td>Carry + 价值</td>
+<td>用长期估值约束极端高/低 carry</td>
+<td>降低拥挤风险，牺牲短期响应速度</td>
+</tr>
+<tr>
+<td>Carry + 风险平价</td>
+<td>先按 carry 选资产，再按协方差分配风险</td>
+<td>限制油/外汇高波动资产主导组合</td>
+</tr>
+<tr>
+<td>黄金 carry proxy + 实际利率过滤</td>
+<td>实际利率快速上升时降低无息黄金名义权重</td>
+<td>可能错过实际利率与黄金同涨的流动性阶段</td>
+</tr>
+<tr>
+<td>多空 carry</td>
+<td>做多高 carry、做空低 carry</td>
+<td>对融资、借券、保证金和尾部相关性最敏感</td>
+</tr>
+</tbody>
+</table></div>
+<p>组合层仍应使用：</p>
+<div class="formula" data-math-kind="display">\[\max_{\mathbf w}\quad
+\mathbf w^\top\hat{\boldsymbol\mu}
+-\frac{\lambda}{2}\mathbf w^\top\hat\Sigma\mathbf w
+-\eta\lVert\mathbf w-\mathbf w_{t-1}\rVert_1,\]</div>
+<p>并增加单资产、单市场、单期限结构和杠杆上限。carry 的估计收益 <span class="math-inline" data-math-kind="inline">\(\hat{\boldsymbol\mu}\)</span> 往往比协方差估计更不稳定，不能让优化器把一个噪声均值放大成极端仓位。</p>
+<h3 id="8-7-主观宏观模型与可形式化边界">8.7 主观宏观模型与可形式化边界</h3>
+<p>主观宏观交易常从“实际利率下降、美元走弱、库存紧张、增长回升”等叙事出发。可审计的记录应至少包括：</p>
+<ol>
+<li>观点方向和时间尺度（例如 1–3 个月或 1–3 年）；</li>
+<li>支撑变量与发布日期（利率、通胀、库存、曲线斜率、美元）；</li>
+<li>预期 carry、预期价格变化和尾部情景的拆分；</li>
+<li>初始仓位、最大损失、止盈/止损、流动性和保证金上限；</li>
+<li>观点失效条件和复盘日期。</li>
+</ol>
+<p>若缺少点时数据和逐笔交易账本，只能报告“主观判断框架”，不能给出与机械策略同口径的长期平均收益。把宏观叙事转成 <span class="math-inline" data-math-kind="inline">\(g(z_t)\)</span> 过滤器后，仍需独立样本外验证，避免事后挑选危机状态。</p>
+<h3 id="8-8-实现伪代码-carry-proxy-状态过滤与风险约束">8.8 实现伪代码：carry proxy、状态过滤与风险约束</h3>
+<pre><code class="language-python">def carry_portfolio(front_futures, etf_prices, macro_state, lookback=3, top_k=2):
+    # 1) 对齐连续近月期货与 ETF 的点时月末价格；排除未完成月份。
+    months = common_completed_months(front_futures, etf_prices)
+
+    # 2) 计算 futures-minus-ETF basis/roll proxy；不能把它标成纯 roll yield。
+    proxy = monthly_return(front_futures, months) - monthly_return(etf_prices, months)
+
+    # 3) 在 t 月末仅使用过去 lookback 个月的 proxy 排名，禁止未来函数。
+    score = trailing_mean(proxy, lookback).shift(1)
+    selected = top_k_assets(score, k=top_k, positive_only=True)
+
+    # 4) 将宏观压力状态转成名义权重上限，而不是直接使用未来危机标签。
+    weights = equal_weight(selected)
+    weights = apply_state_filter(weights, macro_state.shift(1))
+    weights = risk_budget_and_leverage_cap(weights, covariance_lagged=True)
+
+    # 5) 用 ETF 或真实期货总收益执行；计算换手、融资、保证金和展期成本。
+    gross = execute_next_month(weights, etf_prices)
+    net = gross - turnover(weights) * cost_model - financing_cost(weights)
+    return ledger(net, proxy, weights, macro_state)
+</code></pre>
+<h3 id="8-9-统计特征-容量与失败边界">8.9 统计特征、容量与失败边界</h3>
+<ul>
+<li><strong>Carry 与价格方向不同：</strong> 正 carry 可以和现货下跌同时发生；收益分解必须分别报告现货、展期、抵押品和费用。</li>
+<li><strong>Contango 不是永远负收益：</strong> 期货升水可能补偿库存、便利收益或灾难风险；简单反向做空 contango 会暴露跳涨风险。</li>
+<li><strong>连续合约偏差：</strong> 不同供应商的换月日、价格拼接和复权方法会改变 roll proxy，必须保存合约级数据或至少记录供应商规则。</li>
+<li><strong>黄金没有固定 carry：</strong> 不能用债券票息公式直接套用黄金；实际利率和美元关系是状态依赖的统计关系。</li>
+<li><strong>高换手与容量：</strong> carry 排名对微小价差敏感，换月、保证金和 bid–ask 成本可能超过名义溢价。</li>
+<li><strong>融资与保证金：</strong> 多空 carry 需要借券和融资；压力期保证金上调会迫使拥挤仓位同时平仓。</li>
+<li><strong>利差崩溃：</strong> 外汇 carry 的收益常集中在平稳期，极端风险可能呈负偏度和跳跃损失。</li>
+<li><strong>宏观过滤过拟合：</strong> 实际利率、美元、VIX、库存和曲线变量的选择应预先登记，并使用 purging/embargo 或 walk-forward。</li>
+<li><strong>统计显著性不足：</strong> 本节 proxy 的 iid t 值不是 HAC 显著性；局部正均值不能证明风险溢价普遍存在。</li>
+</ul>
+<h3 id="8-10-本章结论与后续接口">8.10 本章结论与后续接口</h3>
+<p>Carry/期限结构模型把“持有资产的结构性收益”和“价格方向收益”分开，是股票股息、债券 roll-down、外汇远期点数、商品展期和黄金宏观机会成本之间的共同语言。SPY/GLD 等股票—黄金组合不能直接替代期货 carry；本节四资产 proxy 实验明确显示，未经合约级展期、抵押品利息和融资建模的 carry 排名可能出现高换手、低 CAGR 和极端回撤。</p>
+<p>下一并列章节将研究<strong>主观宏观与事件驱动模型</strong>，把宏观叙事、事件窗口、仓位上限和不可回测的证据边界单独展开。</p>
+<h3 id="本章参考文献-8">本章参考文献</h3>
+<ol>
+<li>[1] Koijen, R. S., Moskowitz, T. J., Pedersen, L. H. &amp; Vrugt, E. B., “Carry,” <em>Journal of Financial Economics</em>, 2018. <a href="https://doi.org/10.1016/j.jfineco.2017.11.002">https://doi.org/10.1016/j.jfineco.2017.11.002</a></li>
+<li>[2] Gorton, G., Hayashi, F. &amp; Rouwenhorst, K. G., “The Fundamentals of Commodity Futures Returns,” <em>Review of Finance</em>, 2013. <a href="https://doi.org/10.1093/rof/rfs019">https://doi.org/10.1093/rof/rfs019</a></li>
+<li>[3] Lustig, H., Roussanov, N. &amp; Verdelhan, A., “Common Risk Factors in Currency Markets,” <em>Review of Financial Studies</em>, 2011. <a href="https://doi.org/10.1093/rfs/hhq138">https://doi.org/10.1093/rfs/hhq138</a></li>
+<li>[4] Baur, D. G. &amp; Lucey, B. M., “Is Gold a Hedge or a Safe Haven?,” <em>Financial Review</em>, 2010. <a href="https://doi.org/10.1016/j.frl.2010.03.001">https://doi.org/10.1016/j.frl.2010.03.001</a></li>
+<li>[5] Szymanowska, M., de Roon, F., Nijman, T. &amp; van den Goorbergh, R., “An Anatomy of Commodity Futures Risk Premia,” <em>Journal of Finance</em>, 2014. <a href="https://doi.org/10.1111/jofi.12146">https://doi.org/10.1111/jofi.12146</a></li>
+<li>[6] CME Group, “Gold Futures Contract Specifications.” <a href="https://www.cmegroup.com/markets/metals/precious/gold.contractSpecs.html">https://www.cmegroup.com/markets/metals/precious/gold.contractSpecs.html</a></li>
+<li>[7] Federal Reserve Bank of St. Louis, “FRED: 10-Year TIPS Yield (DFII10) and Trade Weighted U.S. Dollar Index.” <a href="https://fred.stlouisfed.org/">https://fred.stlouisfed.org/</a></li>
+<li>[8] 本地派生统计：<code>quant_finance/data/classic_strategy_carry_snapshot.json</code>；连续期货与 ETF 差值仅为 basis/roll proxy，不提交供应商原始行情。</li>
+</ol>
+<h2 id="模型章节-09-主观宏观与事件驱动模型">模型章节 09：主观宏观与事件驱动模型</h2>
+<h3 id="9-1-模型定位-把叙事-信息到达和仓位治理分开">9.1 模型定位：把叙事、信息到达和仓位治理分开</h3>
+<p>主观宏观（discretionary macro）以经济周期、货币政策、通胀、增长、美元、实际利率和地缘风险形成交易观点；事件驱动（event-driven）则把财报、并购、监管、FOMC、CPI 或突发事件的<strong>信息到达时点</strong>作为交易触发器。两者都可能使用股票和黄金，但与机械趋势/因子模型的证据结构不同：</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>维度</th>
+<th>主观宏观</th>
+<th>事件驱动</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>信号</td>
+<td>对经济状态的解释和情景概率</td>
+<td>事件实际值与预期值的意外差</td>
+</tr>
+<tr>
+<td>持有期</td>
+<td>周、月到数年</td>
+<td>分钟、日到数周</td>
+</tr>
+<tr>
+<td>数学对象</td>
+<td>状态、观点概率、仓位上限</td>
+<td>abnormal return、CAR、事件后漂移</td>
+</tr>
+<tr>
+<td>收益证据</td>
+<td>通常依赖完整交易账本</td>
+<td>可用事件研究估计平均异常收益</td>
+</tr>
+<tr>
+<td>主要风险</td>
+<td>叙事漂移、仓位过大、相关性跃迁</td>
+<td>泄漏、抢跑、跳空、执行和事件取消</td>
+</tr>
+</tbody>
+</table></div>
+<p>主观模型可以结构化，却不能因为写出了一个评分函数就自动变成可复现的计量策略。若观点、概率、修正时间和交易价格没有逐点存档，应把结果标为“不可回测的决策框架”，不与机械策略的 CAGR 排行混合。</p>
+<h3 id="9-2-事件研究的统计学表达">9.2 事件研究的统计学表达</h3>
+<p>事件研究（event study）先定义事件时点 <span class="math-inline" data-math-kind="inline">\(\tau\)</span>、估计窗口和事件窗口。对股票 <span class="math-inline" data-math-kind="inline">\(i\)</span> 的市场模型为：</p>
+<div class="formula" data-math-kind="display">\[r_{i,t}=\alpha_i+\beta_i r_{m,t}+\varepsilon_{i,t},
+\qquad t\in\mathcal E_i,\]</div>
+<p>事件日的异常收益（abnormal return, AR）为：</p>
+<div class="formula" data-math-kind="display">\[AR_{i,\tau+h}
+=r_{i,\tau+h}
+-\left(\hat\alpha_i+\hat\beta_i r_{m,\tau+h}\right),
+\qquad h\in[\!-​H_1,H_2].\]</div>
+<p><strong>变量与实现映射：</strong> <span class="math-inline" data-math-kind="inline">\(\mathcal E_i\)</span> 是事件前的估计窗口，<span class="math-inline" data-math-kind="inline">\([-H_1,H_2]\)</span> 是事件窗口；<span class="math-inline" data-math-kind="inline">\(\hat\alpha_i,\hat\beta_i\)</span> 只能使用事件前信息估计。单事件累计异常收益为：</p>
+<div class="formula" data-math-kind="display">\[CAR_i(\tau;H_1,H_2)
+=\sum_{h=-H_1}^{H_2}AR_{i,\tau+h}.\]</div>
+<p>对 <span class="math-inline" data-math-kind="inline">\(N\)</span> 个同类事件，平均异常收益与累计平均异常收益为：</p>
+<div class="formula" data-math-kind="display">\[AAR_h=\frac1N\sum_{i=1}^{N}AR_{i,\tau_i+h},
+\qquad
+CAAR=\sum_{h=-H_1}^{H_2}AAR_h.\]</div>
+<p>事件研究关注的是<strong>窗口内平均异常收益</strong>，不是长期 CAGR；如果事件窗口为 <span class="math-inline" data-math-kind="inline">\([-1,+1]\)</span> 日，不能把 3 日 CAR 年化后当成可持续收益。</p>
+<h3 id="9-3-宏观意外与跨资产响应">9.3 宏观意外与跨资产响应</h3>
+<p>宏观事件交易的核心变量是意外（surprise），而不是公告绝对水平：</p>
+<div class="formula" data-math-kind="display">\[s_t=\frac{A_t-E_t}{\hat\sigma_{E,t}},\]</div>
+<p>其中 <span class="math-inline" data-math-kind="inline">\(A_t\)</span> 是实际公布值，<span class="math-inline" data-math-kind="inline">\(E_t\)</span> 是公告前调查或市场隐含预期，<span class="math-inline" data-math-kind="inline">\(\hat\sigma_{E,t}\)</span> 是预期分布的尺度。对未来 <span class="math-inline" data-math-kind="inline">\(h\)</span> 个交易日的股票或黄金收益，可估计：</p>
+<div class="formula" data-math-kind="display">\[r_{a,t:t+h}
+=\alpha_h+\beta_h s_t
++\gamma_h^\top X_t+u_{t,h},\]</div>
+<p>其中 <span class="math-inline" data-math-kind="inline">\(a\in\{\mathrm{SPY},\mathrm{GLD}\}\)</span>，<span class="math-inline" data-math-kind="inline">\(X_t\)</span> 包含美元、实际利率、波动率和流动性控制变量。跨资产系数 <span class="math-inline" data-math-kind="inline">\(\beta_h\)</span> 不必同号：偏鹰派的利率意外通常压低长久期股票和黄金，但增长/通胀意外可能同时推高商品和周期股票。</p>
+<p>事件相互靠近时，误差项重叠，普通 t 值会低估不确定性。应使用事件聚类、HAC、wild bootstrap 或按公告日 block bootstrap；多种窗口、资产和 surprise 定义还需要 White Reality Check 或 Deflated Sharpe/多重检验控制。[1][2]</p>
+<h3 id="9-4-主观宏观的状态-观点-仓位框架">9.4 主观宏观的状态—观点—仓位框架</h3>
+<p>一个可审计的主观宏观观点可以写成情景集合 <span class="math-inline" data-math-kind="inline">\(\mathcal S=\{s_1,\ldots,s_K\}\)</span>：</p>
+<div class="formula" data-math-kind="display">\[\pi_k=P(s_k\mid\mathcal I_t),
+\qquad
+\mu_{a,k}=E[r_{a,t:t+H}\mid s_k],
+\qquad
+\bar\mu_a=\sum_{k=1}^{K}\pi_k\mu_{a,k}.\]</div>
+<p><strong>直觉：</strong> 交易者先记录信息集 <span class="math-inline" data-math-kind="inline">\(\mathcal I_t\)</span>、情景概率 <span class="math-inline" data-math-kind="inline">\(\pi_k\)</span> 和每个资产在情景下的收益，而不是直接写“看多黄金”。仓位再由风险预算限制：</p>
+<div class="formula" data-math-kind="display">\[w_{a,t}
+=\operatorname{clip}\left(
+\frac{q_t\,\bar\mu_a}{\hat\sigma_{a,t}^2},
+-w_{a,\max},w_{a,\max}\right),
+\qquad
+\sum_a|w_{a,t}|\le L_{\max}.\]</div>
+<p><span class="math-inline" data-math-kind="inline">\(q_t\)</span> 是观点置信度，<span class="math-inline" data-math-kind="inline">\(\hat\sigma\)</span> 是滞后风险估计；公式只是把主观判断映射到透明的仓位预算，并不证明 <span class="math-inline" data-math-kind="inline">\(\bar\mu_a\)</span> 可被准确估计。每次观点更新要记录 <span class="math-inline" data-math-kind="inline">\(\Delta\pi_k\)</span>、仓位变动、失效条件和事后结果。</p>
+<h3 id="9-5-股票-黄金与事件类型">9.5 股票、黄金与事件类型</h3>
+<h4 id="fomc-通胀和实际利率事件">FOMC、通胀和实际利率事件</h4>
+<p>FOMC 利率决策和 CPI/PCE 公布的关键是 surprise 与政策路径，而不是“降息必然利好股票”。Bernanke–Kuttner 的事件研究估计，意外的 25bp 联邦基金目标利率下降与广义股票价格约 1% 的正向反应相关；这是事件窗口统计，不是长期年化收益。[3] 黄金还同时受美元、实际利率和避险需求影响，单一利率方向无法解释全部事件日变化。</p>
+<h4 id="财报-盈利预期与公司行动">财报、盈利预期与公司行动</h4>
+<p>股票事件驱动可以将实际 EPS、收入、指引和分析师预期构成 surprise；必须区分公告前泄漏、盘前/盘后公告、跳空成交和后续漂移。并购套利还要加入交易完成概率、失败损失、时间价值和监管条件，不能只看宣布日价差。</p>
+<h4 id="地缘风险与黄金">地缘风险与黄金</h4>
+<p>地缘事件往往造成黄金、美元和波动率同时跳变。黄金的 safe-haven 定义需要条件化于股票市场极端下跌，而不是简单计算全样本相关系数。[4] 主观交易应记录事件分类、初始暴露、止损和流动性状态；否则事后很容易把任何上涨都解释成“避险”。</p>
+<h3 id="9-6-收益率-回撤与证据分层">9.6 收益率、回撤与证据分层</h3>
+<p>事件策略的核心统计量是 AAR、CAAR、窗口胜率、跳空损失和持有期 P&amp;L；主观宏观若没有完整交易账本，则没有可核验的长期平均收益或最大回撤。本报告因此把可比数字分为三层：</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>证据层</th>
+<th>可报告数字</th>
+<th>本节状态</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>文献事件窗口</td>
+<td>Bernanke–Kuttner：意外 25bp 降息与广义股票约 +1% 事件响应；单位为事件窗口，不年化</td>
+<td>有来源，可复核论文设定</td>
+</tr>
+<tr>
+<td>本地机械基准</td>
+<td>SPY CAGR 10.79%、MDD −50.78%；GLD CAGR 10.22%、MDD −42.91%；50/50 CAGR 11.23%、MDD −25.60%</td>
+<td>来自基准快照，不是事件策略结果</td>
+</tr>
+<tr>
+<td>主观宏观/事件组合</td>
+<td>长期 CAGR、Sharpe、MDD、交易级成本</td>
+<td>⚠️ 未找到完整点时观点、公告预期和成交账本，不能伪造</td>
+</tr>
+</tbody>
+</table></div>
+<p>本地基准仅用于校准量纲，取自 <code>quant_finance/data/classic_strategy_baseline_snapshot.json</code>；不能把基准收益误写成事件模型 alpha。任何事件策略若要报告 CAGR/MDD，必须保存事件清单、预期值版本、信号生成时间、下一可成交价格、持仓、成本和未成交订单。</p>
+<h3 id="9-7-主观与计量的组合方式">9.7 主观与计量的组合方式</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>组合</th>
+<th>结构</th>
+<th>风险控制</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>主观宏观观点 + Black–Litterman</td>
+<td>将情景观点转为收益分布，再与市场均衡收益融合</td>
+<td>观点置信度、单资产上限、协方差收缩</td>
+</tr>
+<tr>
+<td>事件信号 + 趋势过滤</td>
+<td>事件只在长期趋势方向一致时执行</td>
+<td>防止逆势跳空，代价是错过快速反转</td>
+</tr>
+<tr>
+<td>FOMC/CPI 事件 + 黄金/股票对冲</td>
+<td>以实际利率和美元状态决定 SPY/GLD 相对仓位</td>
+<td>控制美元集中暴露与隔夜跳空</td>
+</tr>
+<tr>
+<td>事件策略 + 风险平价</td>
+<td>事件头寸作为卫星仓位，核心组合承担基础风险预算</td>
+<td>单事件风险预算、最大持有期和日内止损</td>
+</tr>
+<tr>
+<td>主观观点 + 机械退出</td>
+<td>入场可主观，退出和限仓规则机械化</td>
+<td>观点失效条件必须在入场前写明</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="9-8-实现伪代码-事件窗口与主观观点账本">9.8 实现伪代码：事件窗口与主观观点账本</h3>
+<pre><code class="language-python">def event_macro_trade(event, prices, expectations, risk_model):
+    # 1) 冻结事件的实际值、预期值、发布时间和可交易时间戳。
+    surprise = standardize(event.actual - expectations.asof(event.release_time))
+
+    # 2) 估计窗口只用公告前数据，计算 beta、AR、CAR 和事件簇标签。
+    model = fit_market_model(prices.before(event.release_time))
+    abnormal = realized_return(prices, event.window) - model.expected_return(event.window)
+    record_event_statistics(event.id, surprise, abnormal)
+
+    # 3) 主观层记录情景概率、观点置信度、失效条件和最大持仓期。
+    scenarios = analyst_scenario_ledger(event, surprise)
+    raw_view = scenario_weighted_view(scenarios)
+
+    # 4) 风险层把观点映射到 SPY/GLD 权重，加入波动、相关性和杠杆约束。
+    weights = risk_model.size(raw_view, prices.lagged_returns)
+    weights = clip_by_event_limit(weights, max_loss=event.max_loss)
+
+    # 5) 下一根可成交价格执行，记录滑点、跳空、撤单、持有期和退出原因。
+    fill = execute_next_tradable_bar(weights, prices, event.execution_window)
+    return settle_and_review(fill, event.invalidating_conditions)
+</code></pre>
+<h3 id="9-9-失败模式与风险边界">9.9 失败模式与风险边界</h3>
+<ul>
+<li><strong>把叙事当作统计显著性：</strong> “通胀上升利好黄金”是条件命题，必须明确实际利率、美元和风险状态。</li>
+<li><strong>事件泄漏：</strong> 使用事后修订的预期、新闻摘要时间或收盘价会产生未来函数。</li>
+<li><strong>公告时间与价格不可成交：</strong> 盘前、盘后和夜盘事件不能用同一收盘价假设；跳空时止损不等于成交价。</li>
+<li><strong>事件重叠：</strong> CPI、FOMC、财报和地缘事件窗口重叠，不能把同一异常收益重复归因。</li>
+<li><strong>小样本与选择偏差：</strong> 只挑成功事件会产生幸存者偏差；应登记全部候选和取消事件。</li>
+<li><strong>主观仓位漂移：</strong> 置信度上升而风险预算未调整会造成隐含杠杆；每次观点变动都要记录权重和理由。</li>
+<li><strong>并购/事件完成风险：</strong> 交易失败、监管延迟和融资条件会产生非对称损失。</li>
+<li><strong>黄金避险误读：</strong> 极端风险时美元流动性和保证金需求可能压制黄金，safe haven 不是无条件保护。</li>
+<li><strong>无法形成长期统计：</strong> 没有点时账本时，报告应保留“未核验”而不是给出看似精确的 CAGR、Sharpe 或 MDD。</li>
+</ul>
+<h3 id="9-10-本章结论与后续接口">9.10 本章结论与后续接口</h3>
+<p>主观宏观与事件驱动模型的可复核核心不是预测故事，而是信息集、意外定义、事件窗口、情景概率、仓位上限和成交账本。事件研究能够估计短窗口平均异常收益；它不能直接推出长期 CAGR。SPY/GLD 基准数据显示股票、黄金及其组合的长期回撤量级，但在缺少点时事件预期与交易账本时，本节不把这些数字冒充事件策略表现。</p>
+<p>下一并列章节将研究<strong>组合构建、策略集成与综合比较</strong>，统一比较前述模型的收益、回撤、换手、容量和证据等级。</p>
+<h3 id="本章参考文献-9">本章参考文献</h3>
+<ol>
+<li>[1] MacKinlay, A. C., “Event Studies in Economics and Finance,” <em>Journal of Economic Literature</em>, 1997. <a href="https://doi.org/10.2307/2729691">https://doi.org/10.2307/2729691</a></li>
+<li>[2] Rigobon, R. &amp; Sack, B., “The Impact of Monetary Policy on Asset Prices,” <em>Journal of Monetary Economics</em>, 2004. <a href="https://doi.org/10.1016/j.jmoneco.2004.02.004">https://doi.org/10.1016/j.jmoneco.2004.02.004</a></li>
+<li>[3] Bernanke, B. S. &amp; Kuttner, K. N., “What Explains the Stock Market’s Reaction to Federal Reserve Policy?,” <em>Journal of Finance</em>, 2005. <a href="https://doi.org/10.1111/j.1540-6261.2005.00760.x">https://doi.org/10.1111/j.1540-6261.2005.00760.x</a></li>
+<li>[4] Glick, R. &amp; Leduc, S., “Central Bank Announcements of Asset Purchases and the Impact on Global Financial and Commodity Markets,” <em>Journal of International Money and Finance</em>, 2012. <a href="https://doi.org/10.1016/j.jimonfin.2012.05.001">https://doi.org/10.1016/j.jimonfin.2012.05.001</a></li>
+<li>[5] Baur, D. G. &amp; Lucey, B. M., “Is Gold a Hedge or a Safe Haven?,” <em>Financial Review</em>, 2010. <a href="https://doi.org/10.1016/j.frl.2010.03.001">https://doi.org/10.1016/j.frl.2010.03.001</a></li>
+<li>[6] Kuttner, K. N., “Monetary Policy Surprises and Interest Rates: Evidence from the Federal Funds Futures Market,” <em>Journal of Monetary Economics</em>, 2001. <a href="https://doi.org/10.1016/S0304-3932(01)00055-1">https://doi.org/10.1016/S0304-3932(01)00055-1</a></li>
+<li>[7] 本地基准统计：<code>quant_finance/data/classic_strategy_baseline_snapshot.json</code>；主观宏观/事件策略长期 P&amp;L 尚未核验。</li>
+</ol>
+<h2 id="模型章节-10-组合构建-策略集成与综合比较">模型章节 10：组合构建、策略集成与综合比较</h2>
+<h3 id="10-1-模型定位-组合不是把排行榜简单相加">10.1 模型定位：组合不是把排行榜简单相加</h3>
+<p>前九章的模型解决的是不同层次的问题：价值/质量与 carry 提供收益解释，趋势与动量提供方向信号，均值回复提供相对价值，波动率目标与风险平价控制暴露，主观宏观与事件模型提供状态判断。组合构建的任务是把这些信号放在同一个资本、风险、换手和证据约束下。</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>组合层方法</th>
+<th>输入</th>
+<th>输出</th>
+<th>典型风险</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>固定权重/等权</td>
+<td>预先给定的资产或策略权重</td>
+<td>稳定、透明的名义配置</td>
+<td>权重不等于风险，危机时集中度可能升高</td>
+</tr>
+<tr>
+<td>均值—方差</td>
+<td>预期收益 <span class="math-inline" data-math-kind="inline">\(\hat{\boldsymbol\mu}\)</span>、协方差 <span class="math-inline" data-math-kind="inline">\(\hat\Sigma\)</span></td>
+<td>最大化风险调整收益的权重</td>
+<td>预期收益估计误差和极端权重</td>
+</tr>
+<tr>
+<td>最小方差</td>
+<td>协方差 <span class="math-inline" data-math-kind="inline">\(\hat\Sigma\)</span></td>
+<td>在约束下最小化波动</td>
+<td>历史相关性不稳定、集中到低波资产</td>
+</tr>
+<tr>
+<td>风险平价</td>
+<td>风险预算 (b_i)、协方差</td>
+<td>各资产风险贡献接近预算</td>
+<td>协方差估计和杠杆/融资风险</td>
+</tr>
+<tr>
+<td>Black–Litterman</td>
+<td>市场均衡收益、主观观点和置信度</td>
+<td>收缩后的后验预期收益</td>
+<td>观点矩阵、置信度和先验敏感</td>
+</tr>
+<tr>
+<td>策略集成</td>
+<td>多个策略净收益序列</td>
+<td>等权、风险加权或状态切换的策略组合</td>
+<td>信号相关性跃迁、重复暴露和叠加成本</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="10-2-均值-方差-最小方差与约束">10.2 均值—方差、最小方差与约束</h3>
+<p>Markowitz 的均值—方差组合可写成：</p>
+<div class="formula" data-math-kind="display">\[\max_{\mathbf w}
+\quad \mathbf w^\top\hat{\boldsymbol\mu}
+-\frac{\lambda}{2}\mathbf w^\top\hat\Sigma\mathbf w
+-\eta\lVert\mathbf w-\mathbf w_{t-1}\rVert_1,\]</div>
+<div class="formula" data-math-kind="display">\[\mathbf1^\top\mathbf w=1,
+\qquad
+\mathbf w\in\mathcal C.\]</div>
+<p>其中 <span class="math-inline" data-math-kind="inline">\(\hat{\boldsymbol\mu}\)</span> 是预期收益，<span class="math-inline" data-math-kind="inline">\(\hat\Sigma\)</span> 是协方差，<span class="math-inline" data-math-kind="inline">\(\lambda\)</span> 是风险厌恶，<span class="math-inline" data-math-kind="inline">\(\eta\)</span> 是换手惩罚，<span class="math-inline" data-math-kind="inline">\(\mathcal C\)</span> 可包含 long-only、单资产上限、杠杆和行业中性约束。最小方差特例令目标收益项为零：</p>
+<div class="formula" data-math-kind="display">\[\min_{\mathbf w\in\mathcal C}
+\quad \mathbf w^\top\hat\Sigma\mathbf w
++\eta\lVert\mathbf w-\mathbf w_{t-1}\rVert_1.\]</div>
+<p><strong>实现含义：</strong> 组合优化器不应直接使用全样本平均收益；应将估计窗口、收缩协方差、点时信号和交易成本写入配置。若 <span class="math-inline" data-math-kind="inline">\(\hat{\boldsymbol\mu}\)</span> 的标准误与均值同量级，最小方差或等权通常比未约束均值—方差更稳健。[1][2]</p>
+<h3 id="10-3-风险平价-风险预算与策略级分配">10.3 风险平价、风险预算与策略级分配</h3>
+<p>资产组合波动率和风险贡献为：</p>
+<div class="formula" data-math-kind="display">\[\sigma_p=\sqrt{\mathbf w^\top\Sigma\mathbf w},
+\qquad
+RC_i=w_i\frac{(\Sigma\mathbf w)_i}{\sigma_p}.\]</div>
+<p>风险预算 (b_i) 要求：</p>
+<div class="formula" data-math-kind="display">\[RC_i=b_i\sigma_p,
+\qquad \sum_i b_i=1.\]</div>
+<p>若把“趋势、价值、carry、均值回复、宏观事件”作为策略资产，同样可以定义策略级风险贡献 (RC_s)。但策略收益的相关性不是资产相关性的简单替代：两个不同名称的策略可能同时持有股票 beta、美元或短波动暴露。组合前需做收益相关、因子暴露和压力场景的三重检查。</p>
+<h3 id="10-4-black-litterman-把主观观点限制在可解释的范围">10.4 Black–Litterman：把主观观点限制在可解释的范围</h3>
+<p>市场均衡收益的逆向优化先验为：</p>
+<div class="formula" data-math-kind="display">\[\boldsymbol\Pi=\delta\Sigma\mathbf w_{\mathrm{mkt}},\]</div>
+<p>其中 <span class="math-inline" data-math-kind="inline">\(\delta\)</span> 是风险厌恶系数，<span class="math-inline" data-math-kind="inline">\(\mathbf w_{\mathrm{mkt}}\)</span> 是市场组合权重。给定观点：</p>
+<div class="formula" data-math-kind="display">\[P\mathbf r=\mathbf q+\boldsymbol\varepsilon,
+\qquad
+\boldsymbol\varepsilon\sim N(0,\Omega),\]</div>
+<p>后验预期收益为：</p>
+<div class="formula" data-math-kind="display">\[E[\mathbf r\mid\mathbf q]
+=\left[(\tau\Sigma)^{-1}+P^\top\Omega^{-1}P\right]^{-1}
+\left[(\tau\Sigma)^{-1}\boldsymbol\Pi+P^\top\Omega^{-1}\mathbf q\right].\]</div>
+<p><strong>变量与风险边界：</strong> <span class="math-inline" data-math-kind="inline">\(P\)</span> 将观点映射到资产，<span class="math-inline" data-math-kind="inline">\(\mathbf q\)</span> 是观点收益，<span class="math-inline" data-math-kind="inline">\(\Omega\)</span> 是观点不确定性，<span class="math-inline" data-math-kind="inline">\(\tau\)</span> 控制先验不确定性。较大的 <span class="math-inline" data-math-kind="inline">\(\Omega\)</span> 会收缩观点影响；若把主观宏观观点设成零方差，优化器会产生不现实的极端仓位。Black–Litterman 是观点治理工具，不是预测准确性的证明。[3]</p>
+<h3 id="10-5-策略集成-等权-风险权重与状态切换">10.5 策略集成：等权、风险权重与状态切换</h3>
+<p>设 <span class="math-inline" data-math-kind="inline">\(R_{s,t}\)</span> 是策略 <span class="math-inline" data-math-kind="inline">\(s\)</span> 的净收益，固定等权集成为：</p>
+<div class="formula" data-math-kind="display">\[R^{\mathrm{ens}}_{t}=\sum_{s=1}^{S}\alpha_sR_{s,t},
+\qquad
+\alpha_s=\frac1S.\]</div>
+<p>风险加权集成使用策略协方差：</p>
+<div class="formula" data-math-kind="display">\[\min_{\boldsymbol\alpha}
+\quad \boldsymbol\alpha^\top\hat\Sigma_R\boldsymbol\alpha,
+\qquad
+\mathbf1^\top\boldsymbol\alpha=1,
+\quad 0\le\alpha_s\le\alpha_{\max}.\]</div>
+<p>状态切换集成可写为：</p>
+<div class="formula" data-math-kind="display">\[\alpha_{s,t}=\frac{\exp(\theta_s^\top z_t)}
+{\sum_j\exp(\theta_j^\top z_t)},\]</div>
+<p>其中 <span class="math-inline" data-math-kind="inline">\(z_t\)</span> 是滞后风险、趋势、实际利率、美元和流动性状态。状态切换增加参数自由度，必须使用冻结的训练/验证/测试切分和失败账本；在本报告中只将它作为扩展框架，不把未执行的状态模型当作结果。</p>
+<h3 id="10-6-统一-spy-gld-组合实验">10.6 统一 SPY/GLD 组合实验</h3>
+<p>本节使用 <a href="data/classic_strategy_integration_snapshot.json">classic_strategy_integration_snapshot.json</a>。为解决前述章节样本窗口不一致的问题，重新使用同一份 SPY/GLD 月频复权价格面板，样本为 2006-01 至 2026-06，所有信号使用滞后 12 个月信息，现金收益为零，每个 constituent 目标权重换手扣 10 bps。集成收益是 constituent 净收益的固定等权平均，未额外模拟策略层再平衡成本，因此集成结果偏向机制示例而非可交易报价。</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>组合/策略</th>
+<th style="text-align:right">净年化算术平均</th>
+<th style="text-align:right">净 CAGR</th>
+<th style="text-align:right">年化波动</th>
+<th style="text-align:right">Sharpe（RF=0）</th>
+<th style="text-align:right">最大回撤</th>
+<th style="text-align:right">年化换手</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>50/50 买入并持有</td>
+<td style="text-align:right">11.06%</td>
+<td style="text-align:right">10.82%</td>
+<td style="text-align:right">12.13%</td>
+<td style="text-align:right">0.91</td>
+<td style="text-align:right">−25.60%</td>
+<td style="text-align:right">0.05</td>
+</tr>
+<tr>
+<td>SPY/GLD SMA12 趋势</td>
+<td style="text-align:right">8.40%</td>
+<td style="text-align:right">8.28%</td>
+<td style="text-align:right">9.27%</td>
+<td style="text-align:right">0.91</td>
+<td style="text-align:right">−12.01%</td>
+<td style="text-align:right">1.45</td>
+</tr>
+<tr>
+<td>逆波动风险平价</td>
+<td style="text-align:right">11.27%</td>
+<td style="text-align:right">11.08%</td>
+<td style="text-align:right">11.99%</td>
+<td style="text-align:right">0.94</td>
+<td style="text-align:right">−28.51%</td>
+<td style="text-align:right">0.64</td>
+</tr>
+<tr>
+<td>10% 波动目标</td>
+<td style="text-align:right">9.89%</td>
+<td style="text-align:right">9.67%</td>
+<td style="text-align:right">11.21%</td>
+<td style="text-align:right">0.88</td>
+<td style="text-align:right">−21.39%</td>
+<td style="text-align:right">0.64</td>
+</tr>
+<tr>
+<td>四策略等权集成</td>
+<td style="text-align:right">10.16%</td>
+<td style="text-align:right">10.03%</td>
+<td style="text-align:right">10.63%</td>
+<td style="text-align:right">0.96</td>
+<td style="text-align:right">−20.44%</td>
+<td style="text-align:right">0.00*</td>
+</tr>
+<tr>
+<td>趋势 + 波动目标防御集成</td>
+<td style="text-align:right">9.15%</td>
+<td style="text-align:right">9.04%</td>
+<td style="text-align:right">9.64%</td>
+<td style="text-align:right">0.95</td>
+<td style="text-align:right">−14.58%</td>
+<td style="text-align:right">0.00*</td>
+</tr>
+</tbody>
+</table></div>
+<p><code>*</code> 集成层未再扣策略权重换手成本；四个 constituent 已扣各自 10 bps 成本。结果显示，等权集成牺牲少量 CAGR 换取更低波动和回撤；趋势+波动目标组合进一步降低回撤，但收益也下降。风险平价的 Sharpe 改善并未自动带来更低 MDD，说明相关性和估计误差仍然重要。</p>
+<h3 id="10-7-综合比较矩阵与选择建议">10.7 综合比较矩阵与选择建议</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>目标</th>
+<th>首选模型</th>
+<th>可搭配模型</th>
+<th>必须监控</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>长期资本增长</td>
+<td>买入并持有、价值/质量</td>
+<td>黄金配置、风险预算</td>
+<td>估值、集中度、MDD、再平衡成本</td>
+</tr>
+<tr>
+<td>危机防御</td>
+<td>趋势、波动目标</td>
+<td>黄金、风险平价</td>
+<td>信号滞后、现金收益、跳跃风险</td>
+</tr>
+<tr>
+<td>捕捉风险溢价</td>
+<td>动量、carry、价值</td>
+<td>多因子、策略等权</td>
+<td>换手、拥挤、崩溃偏度、容量</td>
+</tr>
+<tr>
+<td>低换手执行</td>
+<td>固定权重、慢速价值</td>
+<td>低频趋势、Black–Litterman</td>
+<td>点差、税费、权重漂移</td>
+</tr>
+<tr>
+<td>主观信息整合</td>
+<td>宏观观点 + BL</td>
+<td>事件窗口 + 机械退出</td>
+<td>观点置信度、信息时间戳、限仓</td>
+</tr>
+<tr>
+<td>研究与教学</td>
+<td>策略等权集成</td>
+<td>walk-forward、失败账本</td>
+<td>多重检验、样本外、可复现性</td>
+</tr>
+</tbody>
+</table></div>
+<p>不同章节的收益数字不能直接排成一张跨窗口排行榜：SPY/GLD 基准、French 因子、ETF 代理、carry proxy 和事件窗口分别使用不同资产、频率、样本和成本。综合比较首先要问“是否同协议”，其次才是 CAGR 或 Sharpe 大小。</p>
+<h3 id="10-8-组合层统计与治理">10.8 组合层统计与治理</h3>
+<p>组合报告至少应保留：</p>
+<ol>
+<li>净收益、算术平均、CAGR、波动、Sharpe、Sortino、Calmar、最大回撤及持续期；</li>
+<li>策略/资产相关矩阵、滚动 beta、因子暴露、风险贡献和压力损失；</li>
+<li>年化换手、成本分解、融资/保证金、现金收益和容量假设；</li>
+<li>训练/验证/测试切分、参数候选数量、选择规则、PBO/DSR 或 Reality Check；</li>
+<li>每次权重变更的原因、数据版本、信号时间戳、订单和实际成交偏差。</li>
+</ol>
+<p>组合优化的统计误差可以用 block bootstrap 或 HAC 置信区间表达；若策略收益有明显自相关或波动聚集，独立同分布标准误会过度乐观。对多策略筛选，必须把候选数量和失败策略一并记录。</p>
+<h3 id="10-9-实现伪代码-统一组合管线">10.9 实现伪代码：统一组合管线</h3>
+<pre><code class="language-python">def integrated_portfolio(strategy_returns, asset_returns, config):
+    # 1) 读取点时信号与净收益序列，检查所有策略的共同样本和缺失月份。
+    aligned = align_common_sample(strategy_returns, asset_returns, config.sample)
+
+    # 2) 先在策略层计算相关性、因子暴露、波动和风险贡献。
+    risk = estimate_lagged_risk(aligned, lookback=config.lookback)
+    exposure = factor_and_asset_exposures(aligned, risk)
+
+    # 3) 用固定等权、风险预算或约束优化生成策略层目标权重。
+    weights = choose_allocator(config.allocator, risk.covariance, exposure, config.constraints)
+
+    # 4) 将主观观点仅作为有置信度和上限的 overlay，不覆盖核心风险约束。
+    weights = apply_black_litterman_or_event_overlay(weights, config.views, risk)
+
+    # 5) 扣除策略层换手、资产层执行成本、融资、现金收益和容量惩罚。
+    net = execute_and_cost(weights, aligned, cost_model=config.cost_model)
+
+    # 6) 输出 CAGR、MDD、Sharpe、风险贡献、压力情景和选择前后的失败账本。
+    return build_governance_ledger(net, weights, risk, exposure)
+</code></pre>
+<h3 id="10-10-失败模式与组合边界">10.10 失败模式与组合边界</h3>
+<ul>
+<li><strong>重复暴露：</strong> 趋势、动量、carry 和主观宏观可能在不同名称下同时做多美元、股票 beta 或短波动。</li>
+<li><strong>相关性跃迁：</strong> 历史分散化在危机期可能失效；风险平价和最小方差应配合压力相关矩阵。</li>
+<li><strong>优化器极端权重：</strong> 小的预期收益差异会被均值—方差优化放大；应使用收缩、上限和换手惩罚。</li>
+<li><strong>双重成本：</strong> constituent 已扣交易成本后，策略 overlay 还会产生策略层换手；不能默认零成本叠加。</li>
+<li><strong>异步信号：</strong> 事件、日频趋势和月频风险预算若在不同时间戳更新，组合可能隐含未来函数。</li>
+<li><strong>回测选择偏差：</strong> 只展示最好的组合忽略了候选失败策略；应保留参数敏感性和选择前分布。</li>
+<li><strong>现金与融资口径：</strong> 去杠杆的现金收益、杠杆的融资利率和期货抵押品收益直接改变 CAGR。</li>
+<li><strong>容量与执行：</strong> 小盘价值、短期均值回复和事件策略的理论收益可能无法承受真实冲击。</li>
+<li><strong>不可比数字误读：</strong> 不同样本期、代理资产和频率的 Sharpe/MDD 不能直接排序。</li>
+</ul>
+<h3 id="10-11-本章结论与后续接口">10.11 本章结论与后续接口</h3>
+<p>组合构建的核心不是找到单一“最好模型”，而是在统一协议下控制重复风险、估计误差、换手和尾部损失。SPY/GLD 同样本实验显示，四策略等权集成的 CAGR 为 10.03%、Sharpe 为 0.96、最大回撤为 −20.44%，相较 50/50 买入并持有降低了回撤但牺牲少量增长；趋势+波动目标防御集成进一步降低回撤，但收益下降。由于集成层尚未建模额外 overlay 成本，该结果只能作为机制证据。</p>
+<p>本报告已补齐全局总览、术语与方法总表、综合比较和最终参考文献，并完成 ARIS HTML 视觉 QA、README/导航同步与总 PDF 生成；后续仅需在新增数据或策略版本时按同一证据契约迭代。</p>
+<h3 id="本章参考文献-10">本章参考文献</h3>
+<ol>
+<li>[1] Markowitz, H., “Portfolio Selection,” <em>Journal of Finance</em>, 1952. <a href="https://doi.org/10.2307/2975974">https://doi.org/10.2307/2975974</a></li>
+<li>[2] DeMiguel, V., Garlappi, L. &amp; Uppal, R., “Optimal Versus Naive Diversification,” <em>Review of Financial Studies</em>, 2009. <a href="https://doi.org/10.1093/rfs/hhm075">https://doi.org/10.1093/rfs/hhm075</a></li>
+<li>[3] Black, F. &amp; Litterman, R., “Global Portfolio Optimization,” <em>Financial Analysts Journal</em>, 1992. <a href="https://doi.org/10.2469/faj.v48.n5.35">https://doi.org/10.2469/faj.v48.n5.35</a></li>
+<li>[4] Maillard, S., Roncalli, T. &amp; Teïletche, J., “The Properties of Equally Weighted Risk Contribution Portfolios,” <em>Journal of Portfolio Management</em>, 2010. <a href="https://doi.org/10.3905/jpm.2010.36.4.060">https://doi.org/10.3905/jpm.2010.36.4.060</a></li>
+<li>[5] Meucci, A., “Risk and Asset Allocation,” Springer, 2005. <a href="https://doi.org/10.1007/978-3-540-27706-0">https://doi.org/10.1007/978-3-540-27706-0</a></li>
+<li>[6] 本地统一组合快照：<code>quant_finance/data/classic_strategy_integration_snapshot.json</code>；SPY/GLD ETF 代理、月频、零现金收益和 10bps constituent 成本。</li>
+</ol>
+<h2 id="全局综合比较与选择建议">全局综合比较与选择建议</h2>
+<h3 id="按研究目标选择">按研究目标选择</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>研究目标</th>
+<th>更匹配的模型组合</th>
+<th>主要取舍</th>
+<th>证据优先级</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>长期配置与低维护</td>
+<td>买入并持有 + 固定权重 + 低频再平衡</td>
+<td>承受较大路径回撤，换手最低</td>
+<td>统一资产代理和成本后的 CAGR/MDD</td>
+</tr>
+<tr>
+<td>危机防御</td>
+<td>趋势 + 波动率目标 + 黄金</td>
+<td>信号滞后、现金机会成本和 whipsaw</td>
+<td>状态分段、回撤持续期、压力测试</td>
+</tr>
+<tr>
+<td>风险溢价研究</td>
+<td>价值/质量 + 动量 + carry</td>
+<td>因子拥挤、短腿融资、换手和崩溃</td>
+<td>因子定义、HAC、样本外和多重检验</td>
+</tr>
+<tr>
+<td>主观信息整合</td>
+<td>宏观情景 + Black–Litterman + 风险预算</td>
+<td>判断不可完全机械化，必须保留日志</td>
+<td>点时观点、置信度、成交账本</td>
+</tr>
+<tr>
+<td>研究平台验证</td>
+<td>固定规则 + 等权策略集成</td>
+<td>集成层成本和相关性可能被低估</td>
+<td>全部候选、失败记录、可复现哈希</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="跨资产结果的正确读法">跨资产结果的正确读法</h3>
+<p>本报告本地快照给出的数字分属于不同协议，不能简单排序：</p>
+<ol>
+<li>基准和风险管理章节使用 SPY/GLD 月频 ETF 代理；</li>
+<li>趋势、动量和均值回复章节的样本起点与交易频率不同；</li>
+<li>French HML/MOM 与五因子是多空因子，不是长-only ETF 净收益；</li>
+<li>Carry 章节使用连续期货与 ETF 差值的 basis/roll proxy，不是合约级总收益；</li>
+<li>事件章节的 1% 级别结果是公告窗口异常收益，不是 CAGR；</li>
+<li>统一组合章节才提供同一 SPY/GLD 面板上的集成比较，但集成 overlay 成本仍需进一步实现。</li>
+</ol>
+<p>因此，综合结论应采用“收益来源—风险路径—成本—证据等级”四维判断，而不是依据某个样本期 Sharpe 最高者做普遍推荐。</p>
+<h2 id="风险治理与可复现清单">风险治理与可复现清单</h2>
+<h3 id="回测前">回测前</h3>
+<ul>
+<li>固定资产代理、复权字段、连续合约换月规则、现金/融资和交易日历；</li>
+<li>保存原始下载日期、URL、SHA-256、字段定义和许可边界；</li>
+<li>预先登记信号窗口、持有期、候选参数、成本模型和样本外切分；</li>
+<li>对公告、财报和宏观数据使用点时发布时间，而不是事后修订值。</li>
+</ul>
+<h3 id="回测中">回测中</h3>
+<ul>
+<li>信号在 (t) 形成、交易在下一可成交时点执行；</li>
+<li>同时记录 gross、net、换手、融资、展期、现金收益和未成交订单；</li>
+<li>对收益、波动、Sharpe、MDD、回撤持续期、偏度、峰度、VaR/ES 和因子暴露做统一统计；</li>
+<li>使用 HAC、block bootstrap 或事件聚类处理时间依赖，并登记多重检验数量；</li>
+<li>保留失败策略、参数敏感性和成本倍数，而不是只保留最佳曲线。</li>
+</ul>
+<h3 id="上线前">上线前</h3>
+<ul>
+<li>对异常行情、跳空、停牌、涨跌停、保证金上调、流动性消失和相关性跃迁做压力测试；</li>
+<li>设定单资产、单策略、单事件、杠杆、最大换手和日损失上限；</li>
+<li>监控实盘与回测的滑点、信号延迟、数据修订、风险贡献和回撤恢复期；</li>
+<li>对主观观点保存版本化情景概率、置信度、失效条件和复盘结论；</li>
+<li>定期执行独立复核，确认模型没有把数据泄漏、参数选择或偶然相关性误认为 alpha。</li>
+</ul>
+<h2 id="最终结论">最终结论</h2>
+<p>经典交易模型没有单一的“平均收益率答案”。买入并持有提供最低复杂度基准；价值、动量、趋势、均值回复和 carry 提供不同的风险溢价假设；波动率目标与风险平价改变暴露路径；主观宏观与事件模型把信息解释转为情景、事件窗口和仓位治理。股票、黄金和跨资产组合的可用结论，必须同时满足：数学表达清楚、点时数据可追溯、成本口径透明、收益和回撤同协议计算、失败边界明确。</p>
+<p>统一 SPY/GLD 实验显示，四策略等权集成在特定样本中实现约 10.03% CAGR、0.96 Sharpe 和 −20.44% 最大回撤，但集成层尚未额外计入策略权重换手；这说明分散化可能改善路径，却不构成未来收益承诺。报告最终建议把模型当作可监控的风险预算组件，而不是不可质疑的预测器。</p>
+<h2 id="参考文献总表-references">参考文献总表（References）</h2>
+<p>各模型章节已给出针对性参考文献；以下列出贯穿全报告的核心来源入口：</p>
+<ol>
+<li>Markowitz (1952), “Portfolio Selection.” <a href="https://doi.org/10.2307/1907413">https://doi.org/10.2307/1907413</a></li>
+<li>Sharpe (1964), “Capital Asset Prices.” <a href="https://doi.org/10.2307/2977928">https://doi.org/10.2307/2977928</a></li>
+<li>Fama &amp; French (1993), “Common Risk Factors in the Returns on Stocks and Bonds.” <a href="https://doi.org/10.1016/0304-405X(93)90023-5">https://doi.org/10.1016/0304-405X(93)90023-5</a></li>
+<li>Jegadeesh &amp; Titman (1993), “Returns to Buying Winners and Selling Losers.” <a href="https://doi.org/10.1111/j.1540-6261.1993.tb04702.x">https://doi.org/10.1111/j.1540-6261.1993.tb04702.x</a></li>
+<li>Moskowitz, Ooi &amp; Pedersen (2012), “Time Series Momentum.” <a href="https://doi.org/10.1016/j.jfineco.2011.11.003">https://doi.org/10.1016/j.jfineco.2011.11.003</a></li>
+<li>Asness, Moskowitz &amp; Pedersen (2013), “Value and Momentum Everywhere.” <a href="https://doi.org/10.1093/rfs/hhs107">https://doi.org/10.1093/rfs/hhs107</a></li>
+<li>Koijen, Moskowitz, Pedersen &amp; Vrugt (2018), “Carry.” <a href="https://doi.org/10.1016/j.jfineco.2017.11.002">https://doi.org/10.1016/j.jfineco.2017.11.002</a></li>
+<li>Moreira &amp; Muir (2017), “Volatility-Managed Portfolios.” <a href="https://doi.org/10.1111/jofi.12513">https://doi.org/10.1111/jofi.12513</a></li>
+<li>Black &amp; Litterman (1992), “Global Portfolio Optimization.” <a href="https://doi.org/10.2469/faj.v48.n5.35">https://doi.org/10.2469/faj.v48.n5.35</a></li>
+<li>MacKinlay (1997), “Event Studies in Economics and Finance.” <a href="https://doi.org/10.2307/2729691">https://doi.org/10.2307/2729691</a></li>
+<li>Kenneth R. French Data Library. <a href="https://mba.tuck.dartmouth.edu/pages/faculty/ken.french/data_library.html">https://mba.tuck.dartmouth.edu/pages/faculty/ken.french/data_library.html</a></li>
+<li>Federal Reserve Bank of St. Louis FRED. <a href="https://fred.stlouisfed.org/">https://fred.stlouisfed.org/</a></li>
+<li>CME Group futures contract specifications. <a href="https://www.cmegroup.com/">https://www.cmegroup.com/</a></li>
+</ol>
+<h2 id="可复现产物索引">可复现产物索引</h2>
+<ul>
+<li>Canonical Markdown：<code>quant_finance/classic_trading_strategy_models_report.md</code></li>
+<li>Rendered HTML：<code>quant_finance/classic_trading_strategy_models_report.html</code></li>
+<li>Review record：<code>quant_finance/classic_trading_strategy_models_report.review.json</code></li>
+<li>Source registry：<code>quant_finance/sources/source_registry.md</code></li>
+<li>数据快照：<code>quant_finance/data/classic_strategy_*_snapshot.json</code></li>
+<li>回测构建脚本：<code>quant_finance/tools/build_carry_snapshot.py</code>、<code>quant_finance/tools/build_integration_snapshot.py</code></li>
+</ul>
+
+        <nav class="next-chapter" aria-label="下一章节">
+          <span class="next-chapter-label">下一章节</span>
+          <a rel="next" href="modules/00_orientation_and_diagnostic_notes.html">M00 领域导航与能力诊断 →</a>
+        </nav>
+
+        <a class="back-to-top" href="#top">返回页首 ↑</a>
+      </article>
+    </main>
+  </div>
+</body>
+</html>

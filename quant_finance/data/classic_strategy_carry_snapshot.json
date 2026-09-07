@@ -1,0 +1,117 @@
+{
+  "snapshot_date_utc": "2026-07-27",
+  "source": "Yahoo Finance chart API",
+  "source_type": "secondary_data_proxy",
+  "symbols": {
+    "gold": {
+      "futures": "GC=F",
+      "etf": "GLD",
+      "label": "黄金"
+    },
+    "oil": {
+      "futures": "CL=F",
+      "etf": "USO",
+      "label": "原油"
+    },
+    "bond": {
+      "futures": "ZB=F",
+      "etf": "TLT",
+      "label": "长期美债"
+    },
+    "euro": {
+      "futures": "6E=F",
+      "etf": "UUP",
+      "label": "美元 ETF（反向欧元代理）"
+    }
+  },
+  "data_window": {
+    "start": "2007-03",
+    "end": "2026-06",
+    "frequency": "monthly",
+    "common_months": 197
+  },
+  "protocol": {
+    "basis_roll_proxy": "continuous-front-futures monthly close return minus ETF adjusted-close return",
+    "lookback_months": 3,
+    "signal_timing": "signal at t uses t-3:t-1; target applies to ETF return at t+1",
+    "ranking": "top two assets by relative three-month proxy; positive-only variant goes to cash if no positive score",
+    "transaction_cost": "10 bps times one-way absolute target-weight turnover",
+    "cash_return": 0.0,
+    "annualization_factor": 12
+  },
+  "basis_roll_proxy_stats": {
+    "gold": {
+      "label": "黄金",
+      "mean_monthly_basis_roll_proxy": 0.00039855224922186975,
+      "annualized_basis_roll_proxy": 0.004782626990662437,
+      "annualized_volatility": 0.021466057729911718,
+      "t_stat_iid_descriptive": 0.9004334706746914,
+      "positive_month_fraction": 0.5612244897959183
+    },
+    "oil": {
+      "label": "原油",
+      "mean_monthly_basis_roll_proxy": 0.006393487569684939,
+      "annualized_basis_roll_proxy": 0.07672185083621927,
+      "annualized_volatility": 0.17487104052454763,
+      "t_stat_iid_descriptive": 1.7731218828517041,
+      "positive_month_fraction": 0.5663265306122449
+    },
+    "bond": {
+      "label": "长期美债",
+      "mean_monthly_basis_roll_proxy": -0.0032515715632719143,
+      "annualized_basis_roll_proxy": -0.039018858759262975,
+      "annualized_volatility": 0.06502516529002626,
+      "t_stat_iid_descriptive": -2.4251047967903374,
+      "positive_month_fraction": 0.3979591836734694
+    },
+    "euro": {
+      "label": "美元 ETF（反向欧元代理）",
+      "mean_monthly_basis_roll_proxy": -0.0023922436384929894,
+      "annualized_basis_roll_proxy": -0.02870692366191587,
+      "annualized_volatility": 0.17038714205823816,
+      "t_stat_iid_descriptive": -0.680906137195713,
+      "positive_month_fraction": 0.4846938775510204
+    }
+  },
+  "strategy_stats_net_10bps": {
+    "equal_weight_4_etf": {
+      "months": 193,
+      "annualized_arithmetic_return": 0.05425952233099075,
+      "cagr": 0.049011061462799654,
+      "annualized_volatility": 0.1131951910101011,
+      "sharpe_rf0": 0.4793447658580199,
+      "max_drawdown": -0.2795947779882627,
+      "final_wealth_multiple": 2.1588017208329773,
+      "annual_turnover": 0.06217616580310881,
+      "total_cost": 0.001
+    },
+    "top2_relative_carry": {
+      "months": 193,
+      "annualized_arithmetic_return": 0.015750346894644662,
+      "cagr": -0.002099602064487338,
+      "annualized_volatility": 0.18245957990929546,
+      "sharpe_rf0": 0.08632238933398012,
+      "max_drawdown": -0.6306234386276973,
+      "final_wealth_multiple": 0.9667608746586737,
+      "annual_turnover": 5.658031088082902,
+      "total_cost": 0.091
+    },
+    "top2_positive_carry": {
+      "months": 193,
+      "annualized_arithmetic_return": 0.05892740419354144,
+      "cagr": 0.04625188276333492,
+      "annualized_volatility": 0.1698464961055302,
+      "sharpe_rf0": 0.3469450683099653,
+      "max_drawdown": -0.4344401280885368,
+      "final_wealth_multiple": 2.0692663473243487,
+      "annual_turnover": 8.217616580310882,
+      "total_cost": 0.13216666666666665
+    }
+  },
+  "evidence_boundary": [
+    "Continuous Yahoo futures symbols do not provide a verified contract-level roll calendar, collateral yield, margin, or financing rate.",
+    "The futures-minus-ETF differential is a basis/roll proxy that also contains spot-tracking, ETF fee, collateral and data-construction differences; it is not pure carry.",
+    "ETF returns are used for the strategy leg, so the ranking experiment is a carry-proxy allocation test, not a futures total-return backtest.",
+    "The four-asset sample is descriptive, uses a secondary provider, zero cash return and 10 bps linear costs; it does not establish expected future returns."
+  ]
+}

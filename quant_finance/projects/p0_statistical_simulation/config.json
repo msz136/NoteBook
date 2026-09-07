@@ -1,0 +1,19 @@
+{
+  "protocol_version": "p0-v1",
+  "run_date": "2026-07-22",
+  "seed": 20260722,
+  "confidence_level": 0.95,
+  "replications": 4000,
+  "sample_sizes": [20, 50, 100, 500, 2000],
+  "distributions": ["normal", "student_t_df3", "centered_lognormal"],
+  "variance_sample_sizes": [5, 10, 20, 50, 100],
+  "ci_sample_sizes": [10, 20, 50, 100],
+  "bootstrap": {
+    "outer_replications": 500,
+    "resamples": 400,
+    "sample_sizes": [20, 50, 100],
+    "distribution": "exponential_rate_1",
+    "statistic": "median",
+    "interval": "percentile"
+  }
+}

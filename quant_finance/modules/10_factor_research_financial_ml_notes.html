@@ -1,0 +1,699 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="generator" content="quant_finance ARIS render-html (academic, v1)">
+  <meta name="source-file" content="10_factor_research_financial_ml_notes.md">
+  <meta name="source-sha256" content="030d4af8cc95ef0e977face6989778926313ff63cfe71d68996d8d2957774df0">
+  <title>因子研究与金融机器学习：时序验证、概率预测与消融</title>
+  <script>
+    window.MathJax = {
+      tex: {inlineMath: [['\\(', '\\)'], ['$', '$']], displayMath: [['\\[', '\\]'], ['$$', '$$']]},
+      options: {skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']}
+    };
+  </script>
+  <script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+  <style>
+/* ARIS academic v1 — quant_finance canonical inline stylesheet. */
+:root {
+  --paper: #fdfcf7;
+  --paper-soft: #f4f1ea;
+  --ink: #1a1a1a;
+  --muted: #625f58;
+  --blue: #1a4a8c;
+  --blue-soft: #dce7f4;
+  --rust: #b8390e;
+  --rule: #b9b2a6;
+  --serif: "Source Serif Pro", "Source Serif 4", "Crimson Pro", Georgia, "Songti SC", STSong, serif;
+  --mono: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  margin: 0;
+  color: var(--ink);
+  background: var(--paper);
+  font-family: var(--serif);
+  font-size: 16px;
+  line-height: 1.8;
+}
+a { color: var(--blue); text-underline-offset: 0.16em; }
+a:hover { color: var(--rust); }
+
+.page-shell {
+  width: min(1280px, calc(100% - 40px));
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: 260px minmax(0, 1fr);
+  gap: 42px;
+  align-items: start;
+}
+.toc {
+  position: sticky;
+  top: 24px;
+  max-height: calc(100vh - 48px);
+  overflow-y: auto;
+  padding: 28px 18px 24px 0;
+  color: var(--muted);
+}
+.toc-title {
+  margin: 0 0 0.65rem;
+  color: var(--blue);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+.toc ol { margin: 0; padding: 0; list-style: none; }
+.toc li { margin: 0.24rem 0; line-height: 1.35; }
+.toc a { color: inherit; text-decoration: none; }
+.toc a:hover { color: var(--rust); }
+.toc .depth-3 { padding-left: 0.85rem; font-size: 0.92rem; }
+.toc .depth-4 { padding-left: 1.55rem; font-size: 0.86rem; }
+
+main {
+  min-width: 0;
+  margin: 24px 0 64px;
+  padding: 48px clamp(32px, 5vw, 72px) 64px;
+  background: var(--paper-soft);
+  border: 1px solid #ded8cd;
+  box-shadow: 0 16px 44px rgba(55, 47, 36, 0.08);
+}
+article { min-width: 0; }
+.eyebrow {
+  margin: 0 0 0.45rem;
+  color: var(--rust);
+  font-family: var(--serif);
+  font-size: 0.76rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+.subtitle { margin: 0 0 0.5rem; color: var(--muted); font-size: 1.05rem; }
+.meta {
+  margin: 0 0 2.2rem;
+  color: var(--muted);
+  font-size: 0.86rem;
+}
+h1 {
+  margin: 0 0 0.7rem;
+  padding: 0 0 0.8rem;
+  color: var(--ink);
+  border-bottom: 5px double var(--blue);
+  font-size: clamp(2rem, 5vw, 3.1rem);
+  line-height: 1.14;
+  letter-spacing: -0.025em;
+}
+h2 {
+  margin: 3.2rem 0 1.15rem;
+  padding-bottom: 0.42rem;
+  border-bottom: 1px solid var(--rule);
+  color: var(--ink);
+  font-size: 1.62rem;
+  line-height: 1.35;
+}
+h3 { margin: 2.15rem 0 0.8rem; color: var(--blue); font-size: 1.28rem; line-height: 1.4; }
+h4 { margin: 1.55rem 0 0.6rem; color: var(--ink); font-size: 1.06rem; line-height: 1.45; }
+p, ul, ol, blockquote { margin: 0 0 1rem; }
+ul, ol { padding-left: 1.5rem; }
+li + li { margin-top: 0.24rem; }
+strong { color: #111; }
+
+code {
+  font-family: var(--mono);
+  font-size: 0.9em;
+  background: #e9e5dc;
+  border-radius: 3px;
+  padding: 0.1em 0.32em;
+}
+pre {
+  max-width: 100%;
+  margin: 1.2rem 0 1.5rem;
+  padding: 1rem 1.1rem;
+  overflow-x: auto;
+  background: #faf9f5;
+  border: 1px solid #d8d2c7;
+  border-left: 4px solid var(--blue);
+  border-radius: 2px;
+  line-height: 1.55;
+}
+pre code {
+  display: block;
+  min-width: max-content;
+  padding: 0;
+  color: #383a42;
+  background: transparent;
+}
+/* Highlight.js atom-one-light-compatible colors for portable, inline styling. */
+.hljs-comment, .hljs-quote { color: #a0a1a7; font-style: italic; }
+.hljs-keyword, .hljs-selector-tag, .hljs-literal { color: #a626a4; }
+.hljs-string, .hljs-regexp { color: #50a14f; }
+.hljs-number, .hljs-symbol { color: #986801; }
+.hljs-title, .hljs-section, .hljs-function { color: #4078f2; }
+
+.formula {
+  max-width: 100%;
+  margin: 1.25rem 0 1.5rem;
+  padding: 1rem 1.15rem;
+  overflow-x: auto;
+  background: #faf9f5;
+  border: 1px solid #d8d2c7;
+  border-left: 4px solid var(--blue);
+}
+.formula mjx-container { min-width: max-content; }
+
+.table-wrap { max-width: 100%; margin: 1.25rem 0 1.6rem; overflow-x: auto; }
+table { width: 100%; min-width: 640px; border-collapse: collapse; font-size: 0.93rem; line-height: 1.55; }
+th, td { padding: 0.68rem 0.78rem; border: 1px solid #aaa398; text-align: left; vertical-align: top; }
+thead th { color: #fff; background: var(--blue); font-weight: 700; }
+tbody tr:nth-child(even) { background: #ebe6dc; }
+tbody tr:nth-child(odd) { background: #f8f5ee; }
+
+.note, .warning, .evidence, blockquote {
+  margin: 1.2rem 0 1.45rem;
+  padding: 0.85rem 1rem;
+  background: #f8f5ee;
+  border: 1px solid #d2cbc0;
+  border-left: 4px solid var(--blue);
+}
+.warning { border-left-color: var(--rust); background: #fff2e9; }
+.evidence { border-left-color: #6b5b8e; background: #f2eef8; }
+.note > :last-child, .warning > :last-child, .evidence > :last-child, blockquote > :last-child { margin-bottom: 0; }
+.back-to-top { display: inline-block; margin-top: 2rem; font-size: 0.88rem; }
+
+@media (max-width: 900px) {
+  .page-shell { width: min(100% - 24px, 820px); grid-template-columns: 1fr; gap: 0; }
+  .toc { position: static; max-height: none; padding: 20px 8px 4px; columns: 2; column-gap: 1.5rem; }
+  .toc-title { column-span: all; }
+  main { margin-top: 16px; padding: 34px clamp(18px, 5vw, 40px) 48px; }
+  h1 { font-size: clamp(1.8rem, 8vw, 2.55rem); }
+  table { min-width: 600px; }
+  pre, .formula, .table-wrap { overflow-x: auto; }
+}
+
+@media (max-width: 560px) {
+  .toc { columns: 1; }
+  .page-shell { width: calc(100% - 12px); }
+  main { padding-left: 15px; padding-right: 15px; }
+}
+
+@media print {
+  body { background: #fff; }
+  .page-shell { display: block; width: 100%; }
+  .toc, .back-to-top { display: none !important; }
+  main { margin: 0; padding: 0; background: #fff; border: 0; box-shadow: none; }
+  a { color: inherit; text-decoration: none; }
+  pre, .formula, table { break-inside: avoid; }
+}
+
+    .next-chapter { margin: 2.5rem 0 1rem; padding: 1rem 1.2rem; border: 1px solid #b9c9df; border-left: 4px solid #1a4a8c; background: #f4f1ea; display: flex; gap: .75rem; align-items: baseline; justify-content: space-between; }
+    .next-chapter-label { color: #1a4a8c; font-weight: 700; white-space: nowrap; }
+    .next-chapter a { color: #1a4a8c; font-weight: 700; text-decoration: none; }
+    .next-chapter a:hover, .next-chapter a:focus { color: #b8390e; text-decoration: underline; }
+    @media (max-width: 900px) { .next-chapter { display: block; } .next-chapter-label { display: block; margin-bottom: .35rem; } }
+  </style>
+</head>
+<body id="top">
+  <div class="page-shell">
+    <nav class="toc" aria-label="目录">
+      <p class="toc-title">Contents</p>
+      <ol>
+<li class="depth-2"><a href="#question">问题（Question）</a></li>
+<li class="depth-2"><a href="#background">背景与动机（Background &amp; Motivation）</a></li>
+<li class="depth-2"><a href="#concepts">研究对象与特征契约</a></li>
+<li class="depth-2"><a href="#validation">时序切分、Purging 与 Embargo</a></li>
+<li class="depth-2"><a href="#models">模型与概率预测</a></li>
+<li class="depth-3"><a href="#regularization">正则化线性模型</a></li>
+<li class="depth-3"><a href="#trees">树模型与时序 ML</a></li>
+<li class="depth-3"><a href="#probability">概率评分与校准</a></li>
+<li class="depth-2"><a href="#multiple-testing">消融、多重检验与坏案例</a></li>
+<li class="depth-2"><a href="#math">工程与数据契约</a></li>
+<li class="depth-2"><a href="#pipeline">Pipeline 与伪代码（Pipeline &amp; Pseudocode）</a></li>
+<li class="depth-2"><a href="#implementation">实现证据与结果（Implementation &amp; Results）</a></li>
+<li class="depth-2"><a href="#comparison">方法对比与失败案例</a></li>
+<li class="depth-2"><a href="#exercises">练习与答案边界（Exercises）</a></li>
+<li class="depth-2"><a href="#answer-boundary">答案索引（Answer Boundary）</a></li>
+<li class="depth-2"><a href="#risks">风险与后续建议（Risks &amp; Next）</a></li>
+<li class="depth-2"><a href="#references">参考文献（References）</a></li>
+      </ol>
+    </nav>
+    <main>
+      <article>
+        <header>
+          <p class="eyebrow">Quant Finance · Factor Research and Financial ML</p>
+          <p class="subtitle">M10 · 用标签区间、purging/embargo 和失败登记阻断金融 ML 泄漏</p>
+          <h1>因子研究与金融机器学习：时序验证、概率预测与消融</h1>
+          <p class="meta">发布日期：2026-07-22 · 证据截止：2026-07-22 · 源文件 SHA-256：<code>030d4af8cc95ef0e977face6989778926313ff63cfe71d68996d8d2957774df0</code></p>
+        </header>
+<h2 id="question">问题（Question）</h2>
+<p>为什么普通随机交叉验证会高估金融模型？当标签覆盖未来五天时，如何按标签区间 purge 相邻训练样本并设置 embargo？正则化、树模型和概率预测如何评估，消融与多重检验怎样防止把偶然相关包装成 alpha？</p>
+<h2 id="background">背景与动机（Background &amp; Motivation）</h2>
+<p>金融 ML 的困难通常不是“模型不够复杂”，而是低信噪比、非平稳、重叠标签、反复试验和交易成本。Carr 与 López de Prado 强调反复用同一历史校准规则会产生回测过拟合；White 的 Reality Check 针对数据窥探下的模型比较。[1][2] 本模块把样本时间、标签开始/结束、可用时间和实验家族写成一等字段。</p>
+<div class="evidence"><strong>证据边界：</strong>本地实验使用合成序列和手写 ridge logistic 模型，只验证 purge/embargo、概率评分和单特征消融。未运行 scikit-learn、树模型或真实市场回测，不支持真实 alpha、模型优越性或部署主张。</div>
+<h2 id="concepts">研究对象与特征契约</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>对象</th>
+<th>必须定义</th>
+<th>泄漏风险</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>特征时间</td>
+<td><code>feature_time</code> 与 <code>available_at</code></td>
+<td>修订、收盘后数据回填</td>
+</tr>
+<tr>
+<td>标签区间</td>
+<td><code>label_start</code>, <code>label_end</code></td>
+<td>重叠未来收益跨过切分</td>
+</tr>
+<tr>
+<td>universe</td>
+<td>point-in-time 成员和可交易性</td>
+<td>幸存者偏差</td>
+</tr>
+<tr>
+<td>预测对象</td>
+<td>回报、方向、分位数或波动率</td>
+<td>目标与交易时点不一致</td>
+</tr>
+<tr>
+<td>实验族</td>
+<td>所有特征/模型/超参尝试</td>
+<td>只报告最好结果</td>
+</tr>
+<tr>
+<td>经济映射</td>
+<td>仓位、成本、容量和延迟</td>
+<td>统计分数无法兑现</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="validation">时序切分、Purging 与 Embargo</h2>
+<p>若样本 <span class="math-inline" data-math-kind="inline">\(i\)</span> 的标签使用区间 <span class="math-inline" data-math-kind="inline">\([t_i^{start},t_i^{end}]\)</span>，测试区间为 <span class="math-inline" data-math-kind="inline">\([T_0,T_1]\)</span>，purging 删除与测试标签区间重叠的训练样本。Embargo 再删除测试边界附近的一段时间，减少相邻信息依赖。</p>
+<p>本地契约是：</p>
+<div class="formula" data-math-kind="display">\[label\_end_i&lt;T_0-e,
+\qquad feature\_time_j\ge T_0\quad(j\in test),\]</div>
+<p>其中 <span class="math-inline" data-math-kind="inline">\(e\)</span> 为 embargo 长度。Embargo 不是固定魔法数字，应根据持有期、标签重叠、数据生成和执行延迟确定。</p>
+<h2 id="models">模型与概率预测</h2>
+<h3 id="regularization">正则化线性模型</h3>
+<p>Ridge logistic 最小化负对数似然与 L2 惩罚：</p>
+<div class="formula" data-math-kind="display">\[\min_\beta -\frac1n\sum_i[y_i\log p_i+(1-y_i)\log(1-p_i)]+\lambda\|\beta\|_2^2,
+\quad p_i=\sigma(x_i'\beta).\]</div>
+<p>正则化降低方差但不修复泄漏或标签错误；标准化参数必须只从训练窗口估计。</p>
+<h3 id="trees">树模型与时序 ML</h3>
+<p>随机森林、梯度提升和神经时序模型能拟合非线性，但更容易吸收制度、标识和数据处理泄漏。模型比较应共享相同 fold、样本、成本和调参预算；特征重要性需用 permutation、SHAP 或消融交叉核对，而不是把 split gain 当因果贡献。</p>
+<h3 id="probability">概率评分与校准</h3>
+<p>Brier score 与 log loss：</p>
+<div class="formula" data-math-kind="display">\[BS=\frac1n\sum_i(p_i-y_i)^2,
+\qquad LL=-\frac1n\sum_i[y_i\log p_i+(1-y_i)\log(1-p_i)].\]</div>
+<p>方向准确率忽略置信度；概率模型还应报告 calibration curve、基准发生率和分组稳定性。交易阈值必须在验证集冻结。</p>
+<h2 id="multiple-testing">消融、多重检验与坏案例</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>检查</th>
+<th>要回答的问题</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>特征消融</td>
+<td>删除该特征后样本外分数是否稳定恶化？</td>
+</tr>
+<tr>
+<td>时间/市场切片</td>
+<td>效果是否只存在单一制度或资产？</td>
+</tr>
+<tr>
+<td>标签置换</td>
+<td>无真实关系时流程是否仍产生高分？</td>
+</tr>
+<tr>
+<td>负对照</td>
+<td>与机制无关的特征/结果是否也显著？</td>
+</tr>
+<tr>
+<td>多重检验</td>
+<td>尝试了多少策略、特征、窗口和阈值？</td>
+</tr>
+<tr>
+<td>失败登记</td>
+<td>被否决实验是否仍可见？</td>
+</tr>
+</tbody>
+</table></div>
+<p>White Reality Check、SPA、FDR、deflated Sharpe 或 PBO 解决不同问题；不能混用成一个万能校正。</p>
+<h2 id="math">工程与数据契约</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>层</th>
+<th>冻结内容</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>数据</td>
+<td>source/version/hash、point-in-time、universe、时区/日历</td>
+</tr>
+<tr>
+<td>特征</td>
+<td>公式、窗口、缺失、标准化、available_at</td>
+</tr>
+<tr>
+<td>标签</td>
+<td>horizon、重叠、成交价、成本和退出规则</td>
+</tr>
+<tr>
+<td>切分</td>
+<td>train/validation/test 时间、purge、embargo</td>
+</tr>
+<tr>
+<td>训练</td>
+<td>seed、包版本、超参搜索空间和预算</td>
+</tr>
+<tr>
+<td>评估</td>
+<td>Brier/log loss/IC、校准、成本、容量、失败子样本</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="pipeline">Pipeline 与伪代码（Pipeline &amp; Pseudocode）</h2>
+<pre><code class="language-python">samples = build_point_in_time_features_and_interval_labels(raw_data)
+folds = walk_forward_split(samples, purge_overlapping_labels=True, embargo=10)
+for fold in folds:
+    scaler.fit(fold.train_only)
+    model.fit(fold.train_only, regularization=chosen_on_validation)
+    probability = model.predict_proba(fold.test)
+    record_brier_logloss_calibration_and_economic_mapping(probability)
+run_feature_ablation_label_permutation_and_regime_slices()
+correct_or_disclose_multiple_testing(all_attempts)
+</code></pre>
+<p>实现见 <a href="../tools/m10_financial_ml.py"><code>m10_financial_ml.py</code></a>，结果见 <a href="../data/m10_financial_ml_results.json"><code>m10_financial_ml_results.json</code></a>。</p>
+<h2 id="implementation">实现证据与结果（Implementation &amp; Results）</h2>
+<pre><code class="language-powershell">python quant_finance/tools/m10_financial_ml.py
+python quant_finance/data/test_m10_financial_ml.py -v
+</code></pre>
+<p>实验使用 720 个时点、5 日重叠标签、10 日 embargo 和 test_start=500。最大训练标签结束时点为 489，首个测试特征时点为 500，满足隔离契约。</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>指标</th>
+<th style="text-align:right">全特征模型</th>
+<th style="text-align:right">删除信号特征</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Brier</td>
+<td style="text-align:right">0.24387</td>
+<td style="text-align:right">0.25133</td>
+</tr>
+<tr>
+<td>Log loss</td>
+<td style="text-align:right">0.68020</td>
+<td style="text-align:right">0.69581</td>
+</tr>
+<tr>
+<td>Accuracy</td>
+<td style="text-align:right">0.54884</td>
+<td style="text-align:right">0.50698</td>
+</tr>
+</tbody>
+</table></div>
+<p>删除合成信号特征后 Brier 恶化 0.00746。测试验证 purge/embargo、不重叠、消融方向和 Brier 小于 0.25；结果不能外推到真实市场。</p>
+<h2 id="comparison">方法对比与失败案例</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>失败</th>
+<th>虚高来源</th>
+<th>修复</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>随机 K-fold</td>
+<td>未来和重叠标签进入训练</td>
+<td>walk-forward + purge + embargo</td>
+</tr>
+<tr>
+<td>全样本标准化</td>
+<td>测试分布进入 scaler</td>
+<td>每 fold 只 fit train</td>
+</tr>
+<tr>
+<td>用测试集调阈值</td>
+<td>样本外被污染</td>
+<td>validation 冻结阈值</td>
+</tr>
+<tr>
+<td>只报 accuracy</td>
+<td>忽略概率质量和基准率</td>
+<td>Brier、log loss、校准</td>
+</tr>
+<tr>
+<td>特征重要性当因果</td>
+<td>相关性/交互被误读</td>
+<td>消融、置换和因果设计</td>
+</tr>
+<tr>
+<td>只保留最佳实验</td>
+<td>数据窥探</td>
+<td>完整实验账本和校正</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="exercises">练习与答案边界（Exercises）</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>ID</th>
+<th>题目</th>
+<th>达标标准</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>M10-Q01</td>
+<td>为什么随机 K-fold 不适合重叠标签？</td>
+<td>训练标签区间可覆盖测试未来。</td>
+</tr>
+<tr>
+<td>M10-Q02</td>
+<td>Purging 删除什么？</td>
+<td>与测试标签区间重叠的训练样本。</td>
+</tr>
+<tr>
+<td>M10-Q03</td>
+<td>Embargo 作用？</td>
+<td>隔离测试边界附近依赖。</td>
+</tr>
+<tr>
+<td>M10-Q04</td>
+<td>标签区间至少保存什么？</td>
+<td>start、end、horizon 和成交规则。</td>
+</tr>
+<tr>
+<td>M10-Q05</td>
+<td>scaler 在哪里 fit？</td>
+<td>每个 fold 的训练集。</td>
+</tr>
+<tr>
+<td>M10-Q06</td>
+<td>Brier score 衡量什么？</td>
+<td>概率与二元结果的平方误差。</td>
+</tr>
+<tr>
+<td>M10-Q07</td>
+<td>log loss 为何惩罚自信错误？</td>
+<td>错误概率趋近 0 时负对数发散。</td>
+</tr>
+<tr>
+<td>M10-Q08</td>
+<td>accuracy 的局限？</td>
+<td>忽略概率、基准率和收益幅度。</td>
+</tr>
+<tr>
+<td>M10-Q09</td>
+<td>消融能证明因果吗？</td>
+<td>不能，只验证模型依赖与增量。</td>
+</tr>
+<tr>
+<td>M10-Q10</td>
+<td>标签置换用途？</td>
+<td>检查流程是否制造虚假分数。</td>
+</tr>
+<tr>
+<td>M10-Q11</td>
+<td>树模型重要性为何有偏？</td>
+<td>分裂机会、相关特征和尺度。</td>
+</tr>
+<tr>
+<td>M10-Q12</td>
+<td>超参预算为何要一致？</td>
+<td>避免更多搜索的模型占优。</td>
+</tr>
+<tr>
+<td>M10-Q13</td>
+<td>多重检验记录什么？</td>
+<td>所有特征、模型、窗口和阈值尝试。</td>
+</tr>
+<tr>
+<td>M10-Q14</td>
+<td>概率校准是什么？</td>
+<td>预测概率与经验发生率一致。</td>
+</tr>
+<tr>
+<td>M10-Q15</td>
+<td>IC 高是否可交易？</td>
+<td>还需成本、换手、容量和执行。</td>
+</tr>
+<tr>
+<td>M10-Q16</td>
+<td>regime slice 为什么重要？</td>
+<td>检查结构稳定和单制度依赖。</td>
+</tr>
+<tr>
+<td>M10-Q17</td>
+<td>point-in-time 特征要求？</td>
+<td><code>available_at &lt;= feature_time</code>。</td>
+</tr>
+<tr>
+<td>M10-Q18</td>
+<td>特征仓库需版本什么？</td>
+<td>公式、代码、数据、窗口和 hash。</td>
+</tr>
+<tr>
+<td>M10-Q19</td>
+<td>合成实验支持什么？</td>
+<td>支持切分、概率评分和消融路径。</td>
+</tr>
+<tr>
+<td>M10-Q20</td>
+<td>何时暂停 ML 结论？</td>
+<td>标签、切分、实验账本或经济映射失败。</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="answer-boundary">答案索引（Answer Boundary）</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>ID</th>
+<th>答案边界</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>M10-Q01</td>
+<td>重叠持有期让训练目标包含测试期间信息。</td>
+</tr>
+<tr>
+<td>M10-Q02</td>
+<td>删除 label interval 与测试重叠的训练行。</td>
+</tr>
+<tr>
+<td>M10-Q03</td>
+<td>在测试边界留出依赖缓冲区。</td>
+</tr>
+<tr>
+<td>M10-Q04</td>
+<td>起止时点、horizon、价格和退出规则。</td>
+</tr>
+<tr>
+<td>M10-Q05</td>
+<td>仅训练子集。</td>
+</tr>
+<tr>
+<td>M10-Q06</td>
+<td><span class="math-inline" data-math-kind="inline">\(n^{-1}\sum(p-y)^2\)</span>。</td>
+</tr>
+<tr>
+<td>M10-Q07</td>
+<td><span class="math-inline" data-math-kind="inline">\(-\log p_{true}\)</span> 对接近零概率很大。</td>
+</tr>
+<tr>
+<td>M10-Q08</td>
+<td>不反映置信度、收益大小或交易成本。</td>
+</tr>
+<tr>
+<td>M10-Q09</td>
+<td>不能；只是预测增量证据。</td>
+</tr>
+<tr>
+<td>M10-Q10</td>
+<td>构造无信号基准测试全流程偏差。</td>
+</tr>
+<tr>
+<td>M10-Q11</td>
+<td>高基数/相关变量会扭曲 split importance。</td>
+</tr>
+<tr>
+<td>M10-Q12</td>
+<td>搜索次数本身提供选择优势。</td>
+</tr>
+<tr>
+<td>M10-Q13</td>
+<td>记录整个实验家族而非最终模型。</td>
+</tr>
+<tr>
+<td>M10-Q14</td>
+<td>预测 0.7 的样本约 70% 发生。</td>
+</tr>
+<tr>
+<td>M10-Q15</td>
+<td>不能；还需经济与执行闭环。</td>
+</tr>
+<tr>
+<td>M10-Q16</td>
+<td>暴露制度依赖和结构变化。</td>
+</tr>
+<tr>
+<td>M10-Q17</td>
+<td>特征发布时间不晚于样本决策时点。</td>
+</tr>
+<tr>
+<td>M10-Q18</td>
+<td>定义、代码、源数据、窗口、版本和 hash。</td>
+</tr>
+<tr>
+<td>M10-Q19</td>
+<td>验证 purge/embargo、概率指标和消融。</td>
+</tr>
+<tr>
+<td>M10-Q20</td>
+<td>任一标签、切分、多重检验或经济闸门失败。</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="risks">风险与后续建议（Risks &amp; Next）</h2>
+<ul>
+<li>单次固定切分不等于完整 walk-forward 交叉验证；下一项目需多 fold 与冻结验证/测试层。</li>
+<li>手写 logistic 未与 scikit-learn、树模型或校准器对照。</li>
+<li>下一 slice G18/P5 将实施无泄漏 Alpha 研究，冻结训练/验证/测试、完整实验账本、多重检验和失败策略。</li>
+</ul>
+<h2 id="references">参考文献（References）</h2>
+<ol>
+<li>[1] Peter Carr and Marcos López de Prado, “Determining Optimal Trading Rules without Backtesting,” 2014. <a href="https://arxiv.org/abs/1408.1159">链接</a></li>
+<li>[2] Halbert White, “A Reality Check for Data Snooping,” <em>Econometrica</em>, 2000. <a href="https://doi.org/10.1111/1468-0262.00152">链接</a></li>
+<li>[3] Glenn W. Brier, “Verification of Forecasts Expressed in Terms of Probability,” <em>Monthly Weather Review</em>, 1950. <a href="https://doi.org/10.1175/1520-0493(1950)078%3C0001:VOFEIT%3E2.0.CO;2">链接</a></li>
+</ol>
+
+        <nav class="next-chapter" aria-label="下一章节">
+          <span class="next-chapter-label">下一章节</span>
+          <a rel="next" href="11_backtest_statistics_decay_notes.html">M11 回测统计与策略衰减 →</a>
+        </nav>
+
+        <a class="back-to-top" href="#top">返回页首 ↑</a>
+      </article>
+    </main>
+  </div>
+</body>
+</html>

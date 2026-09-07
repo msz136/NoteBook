@@ -1,0 +1,77 @@
+{
+  "artifact": "modules/00_orientation_and_diagnostic_notes.html",
+  "canonical_source": "modules/00_orientation_and_diagnostic_notes.md",
+  "source_revision": "adffc78cd99fbe6db48b5d050d4abd419b9939421251d8d9dcb5912b96117eab",
+  "verdict": "WARN",
+  "checks": [
+    {
+      "name": "source_sha",
+      "status": "PASS",
+      "evidence": "expected=adffc78cd99fbe6db48b5d050d4abd419b9939421251d8d9dcb5912b96117eab; embedded=adffc78cd99fbe6db48b5d050d4abd419b9939421251d8d9dcb5912b96117eab"
+    },
+    {
+      "name": "single_h1",
+      "status": "PASS",
+      "evidence": "h1_count=1"
+    },
+    {
+      "name": "heading_hierarchy",
+      "status": "PASS",
+      "evidence": "headings=[(1, '计量金融与量化研究：领域导航、问题分类与能力诊断'), (2, '问题（Question）'), (2, '背景与动机（Background & Motivation）'), (2, '基础概念与术语'), (3, '计量金融与量化研究的关系'), (3, '六类问题：先分类，再选方法'), (3, '七层知识栈'), (2, '方法与研究工作流总览'), (3, '从问题到证据的最小闭环'), (3, '不同研究对象的输出并不相同'), (2, '数学锚点：四个对象不能混为一谈'), (3, '收益测量'), (3, '预测对象'), (3, '因果对象'), (3, '资产定价对象'), (2, 'Pipeline 与伪代码'), (2, '能力诊断：作答规则'), (3, '评分契约'), (3, 'D1 数学与优化（Math & Optimization）'), (3, 'D2 概率与统计（Probability & Statistics）'), (3, 'D3 计量与识别（Econometrics & Identification）'), (3, 'D4 金融与市场（Finance & Markets）'), (3, 'D5 编程与数据（Programming & Data）'), (3, 'D6 研究与回测（Research & Backtesting）'), (3, 'D7 复现、证据与表达（Reproducibility & Communication）'), (2, '诊断答案与评分边界'), (3, 'D1 答案'), (3, 'D2 答案'), (3, 'D3 答案'), (3, 'D4 答案'), (3, 'D5 答案'), (3, 'D6 答案'), (3, 'D7 答案'), (2, '分流结果与学习路线'), (2, '实践资源准备清单'), (3, '最小环境'), (3, '第一份个人诊断记录'), (2, '坏案例与失败模式'), (2, '方法对比与选择建议'), (2, '风险与后续建议'), (2, '参考文献（References）')]"
+    },
+    {
+      "name": "academic_template",
+      "status": "PASS",
+      "evidence": "palette/serif/1280-grid/260-sticky/900-breakpoint markers"
+    },
+    {
+      "name": "mathjax_config",
+      "status": "PASS",
+      "evidence": "MathJax 3 delimiters and skipHtmlTags markers"
+    },
+    {
+      "name": "formula_em_zero",
+      "status": "PASS",
+      "evidence": "formula_em_count=0"
+    },
+    {
+      "name": "latex_subscript_literal",
+      "status": "PASS",
+      "evidence": "source=['_{f\\\\in\\\\mathcal F}', '_{t+1}', '_{t-1}']; missing=[]"
+    },
+    {
+      "name": "internal_overflow",
+      "status": "PASS",
+      "evidence": "table/code/formula internal overflow CSS markers"
+    },
+    {
+      "name": "anchors",
+      "status": "PASS",
+      "evidence": "unresolved=[]"
+    },
+    {
+      "name": "local_links",
+      "status": "PASS",
+      "evidence": "unresolved=[]"
+    },
+    {
+      "name": "required_sections",
+      "status": "PASS",
+      "evidence": "required=['question', 'background', 'concepts', 'methods', 'math', 'pipeline', 'comparison', 'risks', 'references']; missing=[]"
+    },
+    {
+      "name": "diagnostic_question_coverage",
+      "status": "PASS",
+      "evidence": "prefix=M00-D; expected=28; counts={'M00-D01': 2, 'M00-D02': 2, 'M00-D03': 2, 'M00-D04': 2, 'M00-D05': 2, 'M00-D06': 2, 'M00-D07': 2, 'M00-D08': 2, 'M00-D09': 2, 'M00-D10': 2, 'M00-D11': 2, 'M00-D12': 2, 'M00-D13': 2, 'M00-D14': 2, 'M00-D15': 2, 'M00-D16': 2, 'M00-D17': 2, 'M00-D18': 2, 'M00-D19': 2, 'M00-D20': 2, 'M00-D21': 2, 'M00-D22': 2, 'M00-D23': 2, 'M00-D24': 2, 'M00-D25': 2, 'M00-D26': 2, 'M00-D27': 2, 'M00-D28': 2}"
+    },
+    {
+      "name": "browser_visual_qa",
+      "status": "PENDING",
+      "evidence": "环境安全策略禁止浏览器直接打开本地 file:// HTML；未绕行，待人工桌面与窄屏复核"
+    }
+  ],
+  "open_items": [
+    "browser_visual_qa"
+  ],
+  "next": "完成浏览器视觉 QA 后重新审查"
+}

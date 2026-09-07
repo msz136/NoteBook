@@ -1,0 +1,23 @@
+{
+  "n_raw": 720,
+  "horizon": 5,
+  "embargo": 10,
+  "test_start": 500,
+  "train_count": 485,
+  "test_count": 215,
+  "max_train_label_end": 489,
+  "first_test_feature_time": 500,
+  "full_model": {
+    "brier": 0.24387192800760943,
+    "log_loss": 0.6802015904514325,
+    "accuracy": 0.5488372093023256
+  },
+  "ablation_without_signal": {
+    "brier": 0.2513303253946913,
+    "log_loss": 0.6958112222080349,
+    "accuracy": 0.5069767441860465
+  },
+  "brier_improvement": 0.007458397387081872,
+  "split_contract": "train label_end < test_start - embargo; test feature_time >= test_start",
+  "evidence_boundary": "synthetic overlapping-label classification; no real alpha or model-selection claim"
+}

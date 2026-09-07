@@ -1,0 +1,515 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="generator" content="quant_finance ARIS render-html (academic, v1)">
+  <meta name="source-file" content="p3_factor_pricing_report.md">
+  <meta name="source-sha256" content="5f584c76daca85fcf6b19b8f524ee3478b18672344e827b94656d7bdefe27209">
+  <title>P3 公开因子定价复现：French 三因子与 25 个 Size–B/M 组合</title>
+  <script>
+    window.MathJax = {
+      tex: {inlineMath: [['\\(', '\\)'], ['$', '$']], displayMath: [['\\[', '\\]'], ['$$', '$$']]},
+      options: {skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']}
+    };
+  </script>
+  <script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+  <style>
+/* ARIS academic v1 — quant_finance canonical inline stylesheet. */
+:root {
+  --paper: #fdfcf7;
+  --paper-soft: #f4f1ea;
+  --ink: #1a1a1a;
+  --muted: #625f58;
+  --blue: #1a4a8c;
+  --blue-soft: #dce7f4;
+  --rust: #b8390e;
+  --rule: #b9b2a6;
+  --serif: "Source Serif Pro", "Source Serif 4", "Crimson Pro", Georgia, "Songti SC", STSong, serif;
+  --mono: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  margin: 0;
+  color: var(--ink);
+  background: var(--paper);
+  font-family: var(--serif);
+  font-size: 16px;
+  line-height: 1.8;
+}
+a { color: var(--blue); text-underline-offset: 0.16em; }
+a:hover { color: var(--rust); }
+
+.page-shell {
+  width: min(1280px, calc(100% - 40px));
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: 260px minmax(0, 1fr);
+  gap: 42px;
+  align-items: start;
+}
+.toc {
+  position: sticky;
+  top: 24px;
+  max-height: calc(100vh - 48px);
+  overflow-y: auto;
+  padding: 28px 18px 24px 0;
+  color: var(--muted);
+}
+.toc-title {
+  margin: 0 0 0.65rem;
+  color: var(--blue);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+.toc ol { margin: 0; padding: 0; list-style: none; }
+.toc li { margin: 0.24rem 0; line-height: 1.35; }
+.toc a { color: inherit; text-decoration: none; }
+.toc a:hover { color: var(--rust); }
+.toc .depth-3 { padding-left: 0.85rem; font-size: 0.92rem; }
+.toc .depth-4 { padding-left: 1.55rem; font-size: 0.86rem; }
+
+main {
+  min-width: 0;
+  margin: 24px 0 64px;
+  padding: 48px clamp(32px, 5vw, 72px) 64px;
+  background: var(--paper-soft);
+  border: 1px solid #ded8cd;
+  box-shadow: 0 16px 44px rgba(55, 47, 36, 0.08);
+}
+article { min-width: 0; }
+.eyebrow {
+  margin: 0 0 0.45rem;
+  color: var(--rust);
+  font-family: var(--serif);
+  font-size: 0.76rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+.subtitle { margin: 0 0 0.5rem; color: var(--muted); font-size: 1.05rem; }
+.meta {
+  margin: 0 0 2.2rem;
+  color: var(--muted);
+  font-size: 0.86rem;
+}
+h1 {
+  margin: 0 0 0.7rem;
+  padding: 0 0 0.8rem;
+  color: var(--ink);
+  border-bottom: 5px double var(--blue);
+  font-size: clamp(2rem, 5vw, 3.1rem);
+  line-height: 1.14;
+  letter-spacing: -0.025em;
+}
+h2 {
+  margin: 3.2rem 0 1.15rem;
+  padding-bottom: 0.42rem;
+  border-bottom: 1px solid var(--rule);
+  color: var(--ink);
+  font-size: 1.62rem;
+  line-height: 1.35;
+}
+h3 { margin: 2.15rem 0 0.8rem; color: var(--blue); font-size: 1.28rem; line-height: 1.4; }
+h4 { margin: 1.55rem 0 0.6rem; color: var(--ink); font-size: 1.06rem; line-height: 1.45; }
+p, ul, ol, blockquote { margin: 0 0 1rem; }
+ul, ol { padding-left: 1.5rem; }
+li + li { margin-top: 0.24rem; }
+strong { color: #111; }
+
+code {
+  font-family: var(--mono);
+  font-size: 0.9em;
+  background: #e9e5dc;
+  border-radius: 3px;
+  padding: 0.1em 0.32em;
+}
+pre {
+  max-width: 100%;
+  margin: 1.2rem 0 1.5rem;
+  padding: 1rem 1.1rem;
+  overflow-x: auto;
+  background: #faf9f5;
+  border: 1px solid #d8d2c7;
+  border-left: 4px solid var(--blue);
+  border-radius: 2px;
+  line-height: 1.55;
+}
+pre code {
+  display: block;
+  min-width: max-content;
+  padding: 0;
+  color: #383a42;
+  background: transparent;
+}
+/* Highlight.js atom-one-light-compatible colors for portable, inline styling. */
+.hljs-comment, .hljs-quote { color: #a0a1a7; font-style: italic; }
+.hljs-keyword, .hljs-selector-tag, .hljs-literal { color: #a626a4; }
+.hljs-string, .hljs-regexp { color: #50a14f; }
+.hljs-number, .hljs-symbol { color: #986801; }
+.hljs-title, .hljs-section, .hljs-function { color: #4078f2; }
+
+.formula {
+  max-width: 100%;
+  margin: 1.25rem 0 1.5rem;
+  padding: 1rem 1.15rem;
+  overflow-x: auto;
+  background: #faf9f5;
+  border: 1px solid #d8d2c7;
+  border-left: 4px solid var(--blue);
+}
+.formula mjx-container { min-width: max-content; }
+
+.table-wrap { max-width: 100%; margin: 1.25rem 0 1.6rem; overflow-x: auto; }
+table { width: 100%; min-width: 640px; border-collapse: collapse; font-size: 0.93rem; line-height: 1.55; }
+th, td { padding: 0.68rem 0.78rem; border: 1px solid #aaa398; text-align: left; vertical-align: top; }
+thead th { color: #fff; background: var(--blue); font-weight: 700; }
+tbody tr:nth-child(even) { background: #ebe6dc; }
+tbody tr:nth-child(odd) { background: #f8f5ee; }
+
+.note, .warning, .evidence, blockquote {
+  margin: 1.2rem 0 1.45rem;
+  padding: 0.85rem 1rem;
+  background: #f8f5ee;
+  border: 1px solid #d2cbc0;
+  border-left: 4px solid var(--blue);
+}
+.warning { border-left-color: var(--rust); background: #fff2e9; }
+.evidence { border-left-color: #6b5b8e; background: #f2eef8; }
+.note > :last-child, .warning > :last-child, .evidence > :last-child, blockquote > :last-child { margin-bottom: 0; }
+.back-to-top { display: inline-block; margin-top: 2rem; font-size: 0.88rem; }
+
+@media (max-width: 900px) {
+  .page-shell { width: min(100% - 24px, 820px); grid-template-columns: 1fr; gap: 0; }
+  .toc { position: static; max-height: none; padding: 20px 8px 4px; columns: 2; column-gap: 1.5rem; }
+  .toc-title { column-span: all; }
+  main { margin-top: 16px; padding: 34px clamp(18px, 5vw, 40px) 48px; }
+  h1 { font-size: clamp(1.8rem, 8vw, 2.55rem); }
+  table { min-width: 600px; }
+  pre, .formula, .table-wrap { overflow-x: auto; }
+}
+
+@media (max-width: 560px) {
+  .toc { columns: 1; }
+  .page-shell { width: calc(100% - 12px); }
+  main { padding-left: 15px; padding-right: 15px; }
+}
+
+@media print {
+  body { background: #fff; }
+  .page-shell { display: block; width: 100%; }
+  .toc, .back-to-top { display: none !important; }
+  main { margin: 0; padding: 0; background: #fff; border: 0; box-shadow: none; }
+  a { color: inherit; text-decoration: none; }
+  pre, .formula, table { break-inside: avoid; }
+}
+
+    .next-chapter { margin: 2.5rem 0 1rem; padding: 1rem 1.2rem; border: 1px solid #b9c9df; border-left: 4px solid #1a4a8c; background: #f4f1ea; display: flex; gap: .75rem; align-items: baseline; justify-content: space-between; }
+    .next-chapter-label { color: #1a4a8c; font-weight: 700; white-space: nowrap; }
+    .next-chapter a { color: #1a4a8c; font-weight: 700; text-decoration: none; }
+    .next-chapter a:hover, .next-chapter a:focus { color: #b8390e; text-decoration: underline; }
+    @media (max-width: 900px) { .next-chapter { display: block; } .next-chapter-label { display: block; margin-bottom: .35rem; } }
+  </style>
+</head>
+<body id="top">
+  <div class="page-shell">
+    <nav class="toc" aria-label="目录">
+      <p class="toc-title">Contents</p>
+      <ol>
+<li class="depth-2"><a href="#question">问题（Question）</a></li>
+<li class="depth-2"><a href="#background">背景与动机（Background &amp; Motivation）</a></li>
+<li class="depth-2"><a href="#concepts">数据契约</a></li>
+<li class="depth-2"><a href="#methods">方法与数学形式（Methods &amp; Mathematical Form）</a></li>
+<li class="depth-2"><a href="#pipeline">Pipeline 与伪代码（Pipeline &amp; Pseudocode）</a></li>
+<li class="depth-2"><a href="#implementation">实现证据与结果（Implementation &amp; Results）</a></li>
+<li class="depth-2"><a href="#comparison">复现边界与失败案例</a></li>
+<li class="depth-2"><a href="#exercises">练习与答案边界（Exercises）</a></li>
+<li class="depth-2"><a href="#answer-boundary">答案索引（Answer Boundary）</a></li>
+<li class="depth-2"><a href="#risks">风险与后续建议（Risks &amp; Next）</a></li>
+<li class="depth-2"><a href="#references">参考文献（References）</a></li>
+      </ol>
+    </nav>
+    <main>
+      <article>
+        <header>
+          <p class="eyebrow">Quant Finance · Public Factor Pricing Reproduction</p>
+          <p class="subtitle">冻结官方 ZIP 哈希、单位和样本，并比较 CAPM 与 FF3 时序定价误差</p>
+          <h1>P3 公开因子定价复现：French 三因子与 25 个 Size–B/M 组合</h1>
+          <p class="meta">发布日期：2026-07-22 · 证据截止：2026-07-22 · 源文件 SHA-256：<code>5f584c76daca85fcf6b19b8f524ee3478b18672344e827b94656d7bdefe27209</code></p>
+        </header>
+<h2 id="question">问题（Question）</h2>
+<p>使用 Kenneth French Data Library 的公开因子和组合文件，CAPM 与 Fama–French 三因子模型对 25 个 Size–B/M 价值加权组合的月度时序 alpha 有何差异？如何冻结文件哈希、CRSP 数据库版本、百分比单位和原始数据再分发边界？</p>
+<h2 id="background">背景与动机（Background &amp; Motivation）</h2>
+<p>Fama–French (1993) 使用市场、规模和账面市值比相关因子解释股票与债券收益的共同变化；French Data Library 发布相应因子、组合构造说明与历史文件。[1][2] 本项目在 2026-07-22 直接下载官方三因子 ZIP 和 25 组合 ZIP，内存解析月度价值加权部分，并记录完整 SHA-256。两个文件头均声明基于 <code>202605 CRSP database</code>。</p>
+<div class="evidence"><strong>证据边界：</strong>下载 URL、字节哈希、文件头、样本区间和回归统计是本地可复核证据。原始 ZIP/CSV 不提交仓库；公开可访问不自动等于可自由再分发。结果是全样本描述性复现，不是样本外策略、因果机制或未来收益证明。</div>
+<h2 id="concepts">数据契约</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>项目</th>
+<th>冻结值</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>因子文件</td>
+<td><code>F-F_Research_Data_Factors_CSV.zip</code></td>
+</tr>
+<tr>
+<td>组合文件</td>
+<td><code>25_Portfolios_5x5_CSV.zip</code></td>
+</tr>
+<tr>
+<td>文件版本</td>
+<td>文件头：使用 202605 CRSP database 创建</td>
+</tr>
+<tr>
+<td>样本</td>
+<td>1926-07 至 2026-05，共 1199 个月</td>
+</tr>
+<tr>
+<td>测试资产</td>
+<td>25 个 Size–B/M 价值加权组合</td>
+</tr>
+<tr>
+<td>原始单位</td>
+<td>百分比；解析后除以 100 转小数</td>
+</tr>
+<tr>
+<td>超额收益</td>
+<td>组合收益减同月 RF</td>
+</tr>
+<tr>
+<td>缺失值</td>
+<td>官方说明的 -99.99/-999 行拒绝进入回归</td>
+</tr>
+</tbody>
+</table></div>
+<p>完整哈希保存在 <a href="p3_factor_pricing_results.json"><code>p3_factor_pricing_results.json</code></a>，脚本见 <a href="p3_factor_pricing.py"><code>p3_factor_pricing.py</code></a>。</p>
+<h2 id="methods">方法与数学形式（Methods &amp; Mathematical Form）</h2>
+<p>CAPM 时序回归：</p>
+<div class="formula" data-math-kind="display">\[R_{it}-R_{ft}=\alpha_i+\beta_{Mi}(R_{Mt}-R_{ft})+\varepsilon_{it}.\]</div>
+<p>FF3 时序回归：</p>
+<div class="formula" data-math-kind="display">\[R_{it}-R_{ft}=\alpha_i+\beta_{Mi}MKT_t+s_iSMB_t+h_iHML_t+\varepsilon_{it}.\]</div>
+<p>本项目比较 25 个组合的 <span class="math-inline" data-math-kind="inline">\(|\hat\alpha_i|\)</span> 横截面均值和最大值。较低平均绝对 alpha 只说明该样本和测试资产下截距较小；没有 HAC t 值、联合 GRS 检验或样本外协议时，不能把它升级为模型最终胜出。</p>
+<h2 id="pipeline">Pipeline 与伪代码（Pipeline &amp; Pseudocode）</h2>
+<pre><code class="language-python">factor_zip = download(FRENCH_FACTOR_URL)
+portfolio_zip = download(FRENCH_25_PORTFOLIO_URL)
+record_sha256_and_file_header(factor_zip, portfolio_zip)
+factors = parse_monthly_percent_to_decimal(factor_zip)
+portfolios = parse_value_weighted_monthly(portfolio_zip)
+dates = strict_inner_join(factors, portfolios)
+excess = portfolios - factors[&quot;RF&quot;]
+capm = regress_each_asset(excess, factors[[&quot;Mkt-RF&quot;]])
+ff3 = regress_each_asset(excess, factors[[&quot;Mkt-RF&quot;, &quot;SMB&quot;, &quot;HML&quot;]])
+report_alphas_without_redistributing_raw_files(capm, ff3)
+</code></pre>
+<h2 id="implementation">实现证据与结果（Implementation &amp; Results）</h2>
+<pre><code class="language-powershell">python quant_finance/projects/p3_factor_pricing/p3_factor_pricing.py
+python quant_finance/projects/p3_factor_pricing/test_p3_factor_pricing.py -v
+</code></pre>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>指标</th>
+<th style="text-align:right">CAPM</th>
+<th style="text-align:right">FF3</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>25 组合平均绝对月度 alpha</td>
+<td style="text-align:right">0.001535</td>
+<td style="text-align:right">0.001123</td>
+</tr>
+<tr>
+<td>FF3 最大绝对月度 alpha</td>
+<td style="text-align:right">—</td>
+<td style="text-align:right">0.006685</td>
+</tr>
+</tbody>
+</table></div>
+<p>FF3 的平均绝对 alpha 比 CAPM 低，但仍存在非零定价误差。测试验证月度解析器、25 个组合、1199 个月、两个 64 位十六进制 SHA，以及 FF3 平均绝对 alpha 小于 CAPM。网络文件可能更新，因此未来重跑若哈希变化应生成新版本记录，而非静默覆盖本结果。</p>
+<h2 id="comparison">复现边界与失败案例</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>失败</th>
+<th>影响</th>
+<th>防护</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>百分比未除 100</td>
+<td>系数/alpha 放大 100 倍</td>
+<td>单位断言与手算首行</td>
+</tr>
+<tr>
+<td>未减 RF</td>
+<td>混淆总收益与超额收益</td>
+<td>同月 RF 显式相减</td>
+</tr>
+<tr>
+<td>解析到年度区块</td>
+<td>频率和样本数错误</td>
+<td>在首个月度空行终止</td>
+</tr>
+<tr>
+<td>文件更新无记录</td>
+<td>结果不可重建</td>
+<td>URL、文件头与 SHA-256</td>
+</tr>
+<tr>
+<td>提交原始 CRSP 派生 CSV</td>
+<td>再分发边界不清</td>
+<td>只保存派生统计和下载脚本</td>
+</tr>
+<tr>
+<td>全样本拟合称样本外</td>
+<td>夸大预测能力</td>
+<td>明确本项目是描述性复现</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="exercises">练习与答案边界（Exercises）</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>ID</th>
+<th>题目</th>
+<th>达标标准</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>P3-Q01</td>
+<td>两个官方文件是什么？</td>
+<td>三因子与 25 个 Size–B/M 组合 ZIP。</td>
+</tr>
+<tr>
+<td>P3-Q02</td>
+<td>原始单位如何处理？</td>
+<td>百分比除以 100。</td>
+</tr>
+<tr>
+<td>P3-Q03</td>
+<td>组合超额收益怎么构造？</td>
+<td>同月组合收益减 RF。</td>
+</tr>
+<tr>
+<td>P3-Q04</td>
+<td>SHA 为什么重要？</td>
+<td>文件更新后仍能识别复现版本。</td>
+</tr>
+<tr>
+<td>P3-Q05</td>
+<td>FF3 alpha 更小证明什么？</td>
+<td>只说明该样本/资产下时序截距更小。</td>
+</tr>
+<tr>
+<td>P3-Q06</td>
+<td>为什么不提交原始 ZIP？</td>
+<td>公开访问不等于再分发授权。</td>
+</tr>
+<tr>
+<td>P3-Q07</td>
+<td>如何避免解析年度表？</td>
+<td>在月度区块首个空行终止。</td>
+</tr>
+<tr>
+<td>P3-Q08</td>
+<td>还缺哪些正式检验？</td>
+<td>HAC t 值、联合 GRS、稳健样本期。</td>
+</tr>
+<tr>
+<td>P3-Q09</td>
+<td>公开因子能替代 CRSP 点时个股吗？</td>
+<td>不能，无法重建底层成员和退市处理。</td>
+</tr>
+<tr>
+<td>P3-Q10</td>
+<td>本结果是否可交易？</td>
+<td>不能，没有样本外、成本和执行协议。</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="answer-boundary">答案索引（Answer Boundary）</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>ID</th>
+<th>答案边界</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>P3-Q01</td>
+<td><code>F-F_Research_Data_Factors_CSV.zip</code> 与 <code>25_Portfolios_5x5_CSV.zip</code>。</td>
+</tr>
+<tr>
+<td>P3-Q02</td>
+<td>所有收益/因子百分数转换成小数。</td>
+</tr>
+<tr>
+<td>P3-Q03</td>
+<td><span class="math-inline" data-math-kind="inline">\(R_i^e=R_i-R_f\)</span>。</td>
+</tr>
+<tr>
+<td>P3-Q04</td>
+<td>哈希把统计结果绑定到确切字节版本。</td>
+</tr>
+<tr>
+<td>P3-Q05</td>
+<td>仅支持全样本描述性拟合改善。</td>
+</tr>
+<tr>
+<td>P3-Q06</td>
+<td>许可/再分发权尚未被下载行为证明。</td>
+</tr>
+<tr>
+<td>P3-Q07</td>
+<td>识别月度表头并在空行停止。</td>
+</tr>
+<tr>
+<td>P3-Q08</td>
+<td>HAC、GRS、子样本和样本外。</td>
+</tr>
+<tr>
+<td>P3-Q09</td>
+<td>公开组合无法替代底层点时证券数据库。</td>
+</tr>
+<tr>
+<td>P3-Q10</td>
+<td>缺少可交易信号、成本、容量和执行证据。</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="risks">风险与后续建议（Risks &amp; Next）</h2>
+<ul>
+<li>官方文件会随数据库更新；本结果只对应已记录的 202605 CRSP 文件头和两个 SHA。</li>
+<li>未实现 GRS 联合检验、Shanken 修正、Fama–MacBeth 横截面第二步或多模型比较；这些不能由平均绝对 alpha 替代。</li>
+<li>下一 slice G13/M07 将进入固定收益、衍生品与随机过程，包括债券曲线、Black–Scholes、风险中性定价和数值对冲误差。</li>
+</ul>
+<h2 id="references">参考文献（References）</h2>
+<ol>
+<li>[1] Eugene F. Fama and Kenneth R. French, “Common Risk Factors in the Returns on Stocks and Bonds,” <em>Journal of Financial Economics</em>, 1993. <a href="https://doi.org/10.1016/0304-405X(93)90023-5">链接</a></li>
+<li>[2] Kenneth R. French, “Data Library.” <a href="https://mba.tuck.dartmouth.edu/pages/faculty/ken.french/data_library.html">链接</a></li>
+<li>[3] William F. Sharpe, “Capital Asset Prices,” <em>Journal of Finance</em>, 1964. <a href="https://doi.org/10.1111/j.1540-6261.1964.tb02865.x">链接</a></li>
+</ol>
+
+        <nav class="next-chapter" aria-label="下一章节">
+          <span class="next-chapter-label">下一章节</span>
+          <a rel="next" href="../p4_portfolio_risk/p4_portfolio_risk_report.html">P4 组合风险敏感性实验 →</a>
+        </nav>
+
+        <a class="back-to-top" href="#top">返回页首 ↑</a>
+      </article>
+    </main>
+  </div>
+</body>
+</html>

@@ -1,0 +1,53 @@
+{
+  "snapshot_date_utc": "2026-07-27",
+  "source": "Yahoo Finance chart API adjusted close",
+  "source_type": "secondary_data_proxy",
+  "symbols": ["SPY", "GLD"],
+  "sample": {"start": "2005-12", "end": "2026-06", "months": 247, "frequency": "monthly"},
+  "protocol": {
+    "forecast_window_months": 12,
+    "signal_lag": "forecast uses information through the prior month",
+    "target_annual_volatility": 0.10,
+    "leverage_cap": 1.5,
+    "cost_bps_per_rebalance_turnover": 10,
+    "cash_return": 0.0
+  },
+  "strategies": {
+    "fixed_50_50": {
+      "gross": {"annualized_arithmetic_return": 0.1152187823, "cagr": 0.1135548049, "annualized_volatility": 0.1197796885, "sharpe_rf0": 0.9619225412, "max_drawdown": -0.2560496790, "max_drawdown_trough": "2008-10"},
+      "net_10bps": {"annualized_arithmetic_return": 0.1150214176, "cagr": 0.1133376763, "annualized_volatility": 0.1197733359, "sharpe_rf0": 0.9603257413, "max_drawdown": -0.2561699867, "max_drawdown_trough": "2008-10"},
+      "annual_turnover": 0.1973647463
+    },
+    "inverse_vol_risk_parity": {
+      "gross": {"annualized_arithmetic_return": 0.1167655106, "cagr": 0.1155528996, "annualized_volatility": 0.1176222524, "sharpe_rf0": 0.99271615898, "max_drawdown": -0.2847575775, "max_drawdown_trough": "2009-02"},
+      "net_10bps": {"annualized_arithmetic_return": 0.1164089319, "cagr": 0.1151588730, "annualized_volatility": 0.1176202428, "sharpe_rf0": 0.9897015097, "max_drawdown": -0.2849166922, "max_drawdown_trough": "2009-02"},
+      "annual_turnover": 0.3565787606,
+      "average_weights": {"SPY": 0.5480728378, "GLD": 0.4519271622}
+    },
+    "vol_target_fixed_10pct": {
+      "gross": {"annualized_arithmetic_return": 0.0964934933, "cagr": 0.0934169764, "annualized_volatility": 0.1169023257, "sharpe_rf0": 0.8254197919, "max_drawdown": -0.2642393931, "max_drawdown_trough": "2008-10"},
+      "net_10bps": {"annualized_arithmetic_return": 0.0957130186, "cagr": 0.0925711520, "annualized_volatility": 0.1168864084, "sharpe_rf0": 0.8188549880, "max_drawdown": -0.2646581058, "max_drawdown_trough": "2008-10"},
+      "annual_turnover": 0.7804747872,
+      "average_cash_weight": 0.0620984181,
+      "average_scale": 0.9379015819,
+      "maximum_scale": 1.5,
+      "fraction_at_cap": 0.0890688259
+    },
+    "vol_target_risk_parity_10pct": {
+      "gross": {"annualized_arithmetic_return": 0.1018186318, "cagr": 0.0993475042, "annualized_volatility": 0.1158549220, "sharpe_rf0": 0.8788459742, "max_drawdown": -0.2883508316, "max_drawdown_trough": "2009-02"},
+      "net_10bps": {"annualized_arithmetic_return": 0.1009655607, "cagr": 0.0984176356, "annualized_volatility": 0.1158458281, "sharpe_rf0": 0.8715511157, "max_drawdown": -0.2893552030, "max_drawdown_trough": "2009-02"},
+      "annual_turnover": 0.8530710669,
+      "average_cash_weight": 0.0386521761,
+      "average_scale": 0.9613478239,
+      "maximum_scale": 1.5,
+      "fraction_at_cap": 0.1255060729,
+      "average_weights": {"SPY": 0.5287210017, "GLD": 0.4326268222}
+    }
+  },
+  "evidence_boundary": [
+    "The volatility forecast uses a simple lagged rolling standard deviation, not a formally estimated GARCH or realized-volatility model.",
+    "The two-asset ETF sample is illustrative; no financing, tax, FX conversion, bid-ask spread, market impact, or intraday margin calls are modeled.",
+    "Risk parity here is inverse-volatility weighting; with unequal correlations it is only an approximation to equal risk contribution.",
+    "The zero cash return assumption understates the opportunity return of de-risked periods when short rates are positive."
+  ]
+}

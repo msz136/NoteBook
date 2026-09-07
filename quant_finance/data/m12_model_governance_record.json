@@ -1,0 +1,16 @@
+{
+  "model_id": "synthetic-alpha-v1",
+  "owner": "research-owner",
+  "independent_reviewer": "model-risk-reviewer",
+  "purpose": "Demonstrate a reproducible governance contract; not for live trading",
+  "data_revision": "sha256:synthetic-fixture",
+  "code_revision": "workspace-uncommitted-slice",
+  "environment_hash": "sha256:example-environment-lock",
+  "status": "validated_not_deployed",
+  "metrics": {"brier_max": 0.25, "turnover_max": 5.0},
+  "limits": {"gross_exposure_max": 1.0, "daily_loss_stop": 0.02},
+  "approvals": {"research": true, "independent_validation": true, "production": false},
+  "monitoring": {"data_freshness_minutes": 60, "feature_drift_psi_warn": 0.2, "pnl_drawdown_stop": 0.1},
+  "rollback": {"action": "set target exposure to zero and restore prior artifact", "artifact_revision": "synthetic-alpha-v0"},
+  "incident_drill": {"scenario": "stale input data", "detected": true, "orders_blocked": true, "owner_notified": true, "recovery_verified": true}
+}

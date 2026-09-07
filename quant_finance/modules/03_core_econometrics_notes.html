@@ -1,0 +1,677 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="generator" content="quant_finance ARIS render-html (academic, v1)">
+  <meta name="source-file" content="03_core_econometrics_notes.md">
+  <meta name="source-sha256" content="771bd2fdafaaa2dd9d6a9f654b6c231d569091630332d01cb77e212bcf91ab95">
+  <title>核心计量：OLS、MLE、GMM、稳健推断与 Bootstrap</title>
+  <script>
+    window.MathJax = {
+      tex: {inlineMath: [['\\(', '\\)'], ['$', '$']], displayMath: [['\\[', '\\]'], ['$$', '$$']]},
+      options: {skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']}
+    };
+  </script>
+  <script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+  <style>
+/* ARIS academic v1 — quant_finance canonical inline stylesheet. */
+:root {
+  --paper: #fdfcf7;
+  --paper-soft: #f4f1ea;
+  --ink: #1a1a1a;
+  --muted: #625f58;
+  --blue: #1a4a8c;
+  --blue-soft: #dce7f4;
+  --rust: #b8390e;
+  --rule: #b9b2a6;
+  --serif: "Source Serif Pro", "Source Serif 4", "Crimson Pro", Georgia, "Songti SC", STSong, serif;
+  --mono: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  margin: 0;
+  color: var(--ink);
+  background: var(--paper);
+  font-family: var(--serif);
+  font-size: 16px;
+  line-height: 1.8;
+}
+a { color: var(--blue); text-underline-offset: 0.16em; }
+a:hover { color: var(--rust); }
+
+.page-shell {
+  width: min(1280px, calc(100% - 40px));
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: 260px minmax(0, 1fr);
+  gap: 42px;
+  align-items: start;
+}
+.toc {
+  position: sticky;
+  top: 24px;
+  max-height: calc(100vh - 48px);
+  overflow-y: auto;
+  padding: 28px 18px 24px 0;
+  color: var(--muted);
+}
+.toc-title {
+  margin: 0 0 0.65rem;
+  color: var(--blue);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+.toc ol { margin: 0; padding: 0; list-style: none; }
+.toc li { margin: 0.24rem 0; line-height: 1.35; }
+.toc a { color: inherit; text-decoration: none; }
+.toc a:hover { color: var(--rust); }
+.toc .depth-3 { padding-left: 0.85rem; font-size: 0.92rem; }
+.toc .depth-4 { padding-left: 1.55rem; font-size: 0.86rem; }
+
+main {
+  min-width: 0;
+  margin: 24px 0 64px;
+  padding: 48px clamp(32px, 5vw, 72px) 64px;
+  background: var(--paper-soft);
+  border: 1px solid #ded8cd;
+  box-shadow: 0 16px 44px rgba(55, 47, 36, 0.08);
+}
+article { min-width: 0; }
+.eyebrow {
+  margin: 0 0 0.45rem;
+  color: var(--rust);
+  font-family: var(--serif);
+  font-size: 0.76rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+.subtitle { margin: 0 0 0.5rem; color: var(--muted); font-size: 1.05rem; }
+.meta {
+  margin: 0 0 2.2rem;
+  color: var(--muted);
+  font-size: 0.86rem;
+}
+h1 {
+  margin: 0 0 0.7rem;
+  padding: 0 0 0.8rem;
+  color: var(--ink);
+  border-bottom: 5px double var(--blue);
+  font-size: clamp(2rem, 5vw, 3.1rem);
+  line-height: 1.14;
+  letter-spacing: -0.025em;
+}
+h2 {
+  margin: 3.2rem 0 1.15rem;
+  padding-bottom: 0.42rem;
+  border-bottom: 1px solid var(--rule);
+  color: var(--ink);
+  font-size: 1.62rem;
+  line-height: 1.35;
+}
+h3 { margin: 2.15rem 0 0.8rem; color: var(--blue); font-size: 1.28rem; line-height: 1.4; }
+h4 { margin: 1.55rem 0 0.6rem; color: var(--ink); font-size: 1.06rem; line-height: 1.45; }
+p, ul, ol, blockquote { margin: 0 0 1rem; }
+ul, ol { padding-left: 1.5rem; }
+li + li { margin-top: 0.24rem; }
+strong { color: #111; }
+
+code {
+  font-family: var(--mono);
+  font-size: 0.9em;
+  background: #e9e5dc;
+  border-radius: 3px;
+  padding: 0.1em 0.32em;
+}
+pre {
+  max-width: 100%;
+  margin: 1.2rem 0 1.5rem;
+  padding: 1rem 1.1rem;
+  overflow-x: auto;
+  background: #faf9f5;
+  border: 1px solid #d8d2c7;
+  border-left: 4px solid var(--blue);
+  border-radius: 2px;
+  line-height: 1.55;
+}
+pre code {
+  display: block;
+  min-width: max-content;
+  padding: 0;
+  color: #383a42;
+  background: transparent;
+}
+/* Highlight.js atom-one-light-compatible colors for portable, inline styling. */
+.hljs-comment, .hljs-quote { color: #a0a1a7; font-style: italic; }
+.hljs-keyword, .hljs-selector-tag, .hljs-literal { color: #a626a4; }
+.hljs-string, .hljs-regexp { color: #50a14f; }
+.hljs-number, .hljs-symbol { color: #986801; }
+.hljs-title, .hljs-section, .hljs-function { color: #4078f2; }
+
+.formula {
+  max-width: 100%;
+  margin: 1.25rem 0 1.5rem;
+  padding: 1rem 1.15rem;
+  overflow-x: auto;
+  background: #faf9f5;
+  border: 1px solid #d8d2c7;
+  border-left: 4px solid var(--blue);
+}
+.formula mjx-container { min-width: max-content; }
+
+.table-wrap { max-width: 100%; margin: 1.25rem 0 1.6rem; overflow-x: auto; }
+table { width: 100%; min-width: 640px; border-collapse: collapse; font-size: 0.93rem; line-height: 1.55; }
+th, td { padding: 0.68rem 0.78rem; border: 1px solid #aaa398; text-align: left; vertical-align: top; }
+thead th { color: #fff; background: var(--blue); font-weight: 700; }
+tbody tr:nth-child(even) { background: #ebe6dc; }
+tbody tr:nth-child(odd) { background: #f8f5ee; }
+
+.note, .warning, .evidence, blockquote {
+  margin: 1.2rem 0 1.45rem;
+  padding: 0.85rem 1rem;
+  background: #f8f5ee;
+  border: 1px solid #d2cbc0;
+  border-left: 4px solid var(--blue);
+}
+.warning { border-left-color: var(--rust); background: #fff2e9; }
+.evidence { border-left-color: #6b5b8e; background: #f2eef8; }
+.note > :last-child, .warning > :last-child, .evidence > :last-child, blockquote > :last-child { margin-bottom: 0; }
+.back-to-top { display: inline-block; margin-top: 2rem; font-size: 0.88rem; }
+
+@media (max-width: 900px) {
+  .page-shell { width: min(100% - 24px, 820px); grid-template-columns: 1fr; gap: 0; }
+  .toc { position: static; max-height: none; padding: 20px 8px 4px; columns: 2; column-gap: 1.5rem; }
+  .toc-title { column-span: all; }
+  main { margin-top: 16px; padding: 34px clamp(18px, 5vw, 40px) 48px; }
+  h1 { font-size: clamp(1.8rem, 8vw, 2.55rem); }
+  table { min-width: 600px; }
+  pre, .formula, .table-wrap { overflow-x: auto; }
+}
+
+@media (max-width: 560px) {
+  .toc { columns: 1; }
+  .page-shell { width: calc(100% - 12px); }
+  main { padding-left: 15px; padding-right: 15px; }
+}
+
+@media print {
+  body { background: #fff; }
+  .page-shell { display: block; width: 100%; }
+  .toc, .back-to-top { display: none !important; }
+  main { margin: 0; padding: 0; background: #fff; border: 0; box-shadow: none; }
+  a { color: inherit; text-decoration: none; }
+  pre, .formula, table { break-inside: avoid; }
+}
+
+    .next-chapter { margin: 2.5rem 0 1rem; padding: 1rem 1.2rem; border: 1px solid #b9c9df; border-left: 4px solid #1a4a8c; background: #f4f1ea; display: flex; gap: .75rem; align-items: baseline; justify-content: space-between; }
+    .next-chapter-label { color: #1a4a8c; font-weight: 700; white-space: nowrap; }
+    .next-chapter a { color: #1a4a8c; font-weight: 700; text-decoration: none; }
+    .next-chapter a:hover, .next-chapter a:focus { color: #b8390e; text-decoration: underline; }
+    @media (max-width: 900px) { .next-chapter { display: block; } .next-chapter-label { display: block; margin-bottom: .35rem; } }
+  </style>
+</head>
+<body id="top">
+  <div class="page-shell">
+    <nav class="toc" aria-label="目录">
+      <p class="toc-title">Contents</p>
+      <ol>
+<li class="depth-2"><a href="#question">问题（Question）</a></li>
+<li class="depth-2"><a href="#background">背景与动机（Background &amp; Motivation）</a></li>
+<li class="depth-2"><a href="#concepts">先修知识与术语</a></li>
+<li class="depth-2"><a href="#methods">方法与假设</a></li>
+<li class="depth-3"><a href="#ols">OLS 与稳健标准误</a></li>
+<li class="depth-3"><a href="#mle">Gaussian MLE</a></li>
+<li class="depth-3"><a href="#gmm">GMM 与识别</a></li>
+<li class="depth-3"><a href="#bootstrap-iv">Bootstrap 与 IV 入口</a></li>
+<li class="depth-2"><a href="#math">数学、诊断与实现映射</a></li>
+<li class="depth-2"><a href="#pipeline">Pipeline 与伪代码（Pipeline &amp; Pseudocode）</a></li>
+<li class="depth-2"><a href="#implementation">实现证据与结果（Implementation &amp; Results）</a></li>
+<li class="depth-2"><a href="#boundary">数据契约与坏案例</a></li>
+<li class="depth-2"><a href="#comparison">方法对比与选择建议（Comparison）</a></li>
+<li class="depth-2"><a href="#exercises">练习与答案边界（Exercises）</a></li>
+<li class="depth-2"><a href="#answer-boundary">答案索引（Answer Boundary）</a></li>
+<li class="depth-2"><a href="#risks">风险与后续建议（Risks &amp; Next）</a></li>
+<li class="depth-2"><a href="#references">参考文献（References）</a></li>
+      </ol>
+    </nav>
+    <main>
+      <article>
+        <header>
+          <p class="eyebrow">Quant Finance · Core Econometrics</p>
+          <p class="subtitle">M03 · 把数据契约接到估计器，并把假设、标准误与识别边界一起报告</p>
+          <h1>核心计量：OLS、MLE、GMM、稳健推断与 Bootstrap</h1>
+          <p class="meta">发布日期：2026-07-22 · 证据截止：2026-07-22 · 源文件 SHA-256：<code>771bd2fdafaaa2dd9d6a9f654b6c231d569091630332d01cb77e212bcf91ab95</code></p>
+        </header>
+<h2 id="question">问题（Question）</h2>
+<p>给定 M02 的点时价格/收益面板，如何估计线性关系、量化不确定性，并避免把“估计得到”误写成“因果成立”？本模块用一个可重复的异方差合成数据集对照手写 OLS、Gaussian MLE、恰好识别 GMM 与个体 Bootstrap；IV 只作为下一阶段的识别入口。</p>
+<h2 id="background">背景与动机（Background &amp; Motivation）</h2>
+<p>MIT 14.382 将模型、识别、估计和推断作为现代计量的连续链条；Hansen 的计量教材提供研究生层面的渐近理论与估计器框架。[1][2] <code>statsmodels</code> 提供 OLS、协方差估计和诊断的官方实现入口，但软件输出不能替代研究者检查数据时间语义、函数形式和误差结构。[3] Efron 的经典论文奠定 Bootstrap 的重抽样方法，同时明确其覆盖率依赖统计量与数据依赖结构。[4]</p>
+<div class="evidence"><strong>证据边界：</strong>方法定义和 API 能由课程、教材及官方文档支持；数值结果是本地合成 fixture 的可复现实验，不支持任何真实资产的 alpha 或因果结论。异方差只在本地数据生成机制中注入，稳健标准误的实现契约在本模块冻结，非对所有金融时间序列自动有效。</div>
+<h2 id="concepts">先修知识与术语</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>术语</th>
+<th>定义</th>
+<th>本模块中的边界</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>普通最小二乘（Ordinary Least Squares, OLS）</td>
+<td>最小化残差平方和的线性估计器</td>
+<td>需要外生性才能作因果解释；线性投影本身不保证因果</td>
+</tr>
+<tr>
+<td>最大似然（Maximum Likelihood, MLE）</td>
+<td>选择使观测样本似然最大的参数</td>
+<td>分布设定错时，点估计/标准误解释会改变</td>
+</tr>
+<tr>
+<td>广义矩估计（Generalized Method of Moments, GMM）</td>
+<td>令样本矩逼近理论矩的估计方法</td>
+<td>矩条件必须有经济/统计依据；恰好识别时与 OLS 可重合</td>
+</tr>
+<tr>
+<td>异方差稳健协方差（heteroskedasticity-robust covariance）</td>
+<td>不强制误差方差恒定的渐近协方差估计</td>
+<td>不是自动修复内生性、时间依赖或小样本问题</td>
+</tr>
+<tr>
+<td>Bootstrap</td>
+<td>从观测样本重抽样近似估计量分布</td>
+<td>序列相关数据通常需要 block/bootstrap 变体</td>
+</tr>
+<tr>
+<td>工具变量（Instrumental Variable, IV）</td>
+<td>用与解释变量相关但与结构误差正交的工具识别参数</td>
+<td>本模块只冻结入口，不声称存在有效工具</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="methods">方法与假设</h2>
+<h3 id="ols">OLS 与稳健标准误</h3>
+<p>线性模型写为 (y=Xeta+u)。OLS 为：</p>
+<div class="formula" data-math-kind="display">\[\hat\beta_{OLS}=(X'X)^{-1}X'y,
+\qquad \hat u_i=y_i-x_i'\hat\beta.\]</div>
+<p>同方差协方差使用 <span class="math-inline" data-math-kind="inline">\(\hat\sigma^2(X'X)^{-1}\)</span>；异方差稳健（sandwich）形式则为：</p>
+<div class="formula" data-math-kind="display">\[\widehat{\operatorname{Var}}(\hat\beta)=
+(X'X)^{-1}\left(\sum_i x_ix_i'\hat u_i^2\right)(X'X)^{-1}.\]</div>
+<p>稳健协方差改变不确定性估计，不会让相关性、反向因果或遗漏变量消失。金融日收益还可能有时间聚类、重叠观测或横截面相关，需要 HAC、cluster 或双向 cluster 的额外契约。</p>
+<h3 id="mle">Gaussian MLE</h3>
+<p>若假设 <span class="math-inline" data-math-kind="inline">\(u_i\overset{iid}{\sim}N(0,\sigma^2)\)</span>，对数似然为：</p>
+<div class="formula" data-math-kind="display">\[\ell(\beta,\sigma^2)=-\frac n2\log(2\pi\sigma^2)-\frac{1}{2\sigma^2}(y-X\beta)'(y-X\beta).\]</div>
+<p>在该设定下，<span class="math-inline" data-math-kind="inline">\(\hat\beta_{MLE}=\hat\beta_{OLS}\)</span>，<span class="math-inline" data-math-kind="inline">\(\hat\sigma^2=n^{-1}\sum_i\hat u_i^2\)</span>。这是一条模型等价性，不是“正态分布已被数据证明”。</p>
+<h3 id="gmm">GMM 与识别</h3>
+<p>给定矩条件 <span class="math-inline" data-math-kind="inline">\(E[g(z_i,\theta)]=0\)</span>，GMM 最小化：</p>
+<div class="formula" data-math-kind="display">\[Q_n(\theta)=\bar g_n(\theta)'W_n\bar g_n(\theta),\qquad
+\bar g_n(\theta)=n^{-1}\sum_i g(z_i,\theta).\]</div>
+<p>恰好识别且使用线性矩 <span class="math-inline" data-math-kind="inline">\(g_i=x_i(y_i-x_i'\beta)\)</span> 时，<span class="math-inline" data-math-kind="inline">\(\bar g=0\)</span> 等价于 OLS 正规方程；过度识别时应报告权重矩阵、J 检验与矩条件的经济含义。GMM 的灵活性来自矩条件，而不是免除识别假设。</p>
+<h3 id="bootstrap-iv">Bootstrap 与 IV 入口</h3>
+<p>个体 Bootstrap 对 <span class="math-inline" data-math-kind="inline">\((y_i,x_i)\)</span> 成对重抽样，重复估计并用经验分位数形成区间。若收益有明显序列相关，应改用 moving-block 或 stationary bootstrap，并在实验记录中写明块长选择。IV/2SLS 需要第一阶段相关性、排除限制和单调性等问题；在没有可信工具时，报告相关性不应升级为因果效应。</p>
+<h2 id="math">数学、诊断与实现映射</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>检查</th>
+<th>数学对象</th>
+<th>实现证据</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>秩</td>
+<td><span class="math-inline" data-math-kind="inline">\(\operatorname{rank}(X)=k\)</span></td>
+<td><code>np.linalg.lstsq</code> 返回的解与设计矩阵列数</td>
+</tr>
+<tr>
+<td>残差</td>
+<td><span class="math-inline" data-math-kind="inline">\(\hat u=y-X\hat\beta\)</span></td>
+<td>估计器输出可重算 RSS</td>
+</tr>
+<tr>
+<td>外生性</td>
+<td><span class="math-inline" data-math-kind="inline">\(E[x_i u_i]=0\)</span></td>
+<td>需要研究设计或工具支持，不能由 OLS 输出证明</td>
+</tr>
+<tr>
+<td>异方差</td>
+<td><span class="math-inline" data-math-kind="inline">\(E[u_i^2\mid x_i]\)</span> 随 <span class="math-inline" data-math-kind="inline">\(x_i\)</span> 变化</td>
+<td>fixture 按 <span class="math-inline" data-math-kind="inline">\(0.35+0.65|x_i|\)</span> 缩放噪声</td>
+</tr>
+<tr>
+<td>Bootstrap 区间</td>
+<td><span class="math-inline" data-math-kind="inline">\(q_{.025},q_{.975}\)</span></td>
+<td>固定 seed、400 次重抽样、分位数记录</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="pipeline">Pipeline 与伪代码（Pipeline &amp; Pseudocode）</h2>
+<pre><code class="language-python">rows = load_point_in_time_panel(asof_at)       # 继承 M02 的 available_at &lt;= asof_at
+y, X = make_design(rows, target=&quot;total_return_raw&quot;)
+beta_ols = solve_least_squares(X, y)
+se_hc = sandwich_covariance(X, y - X @ beta_ols)
+beta_mle, sigma2 = gaussian_mle(X, y)
+beta_gmm = solve_moment_equations(X, y)
+bootstrap_ci = resample_pairs_and_refit(X, y, seed=20260722)
+report_assumptions_and_failures(beta_ols, se_hc, beta_mle, beta_gmm, bootstrap_ci)
+</code></pre>
+<p>本切片的可执行实现见 <a href="../tools/m03_core_estimators.py"><code>m03_core_estimators.py</code></a>，结果见 <a href="../data/m03_estimator_comparison.json"><code>m03_estimator_comparison.json</code></a>。实现刻意只使用合成数据，避免把受限市场数据混入仓库。</p>
+<h2 id="implementation">实现证据与结果（Implementation &amp; Results）</h2>
+<p>运行：</p>
+<pre><code class="language-powershell">python quant_finance/tools/m03_core_estimators.py
+python quant_finance/data/test_m03_core_estimators.py -v
+</code></pre>
+<p>固定 seed 的本地结果验证三个不变量：Gaussian MLE 与 OLS 的 <span class="math-inline" data-math-kind="inline">\(\hat\beta\)</span> 差异小于 <span class="math-inline" data-math-kind="inline">\(10^{-12}\)</span>，恰好识别线性 GMM 与 OLS 差异小于 <span class="math-inline" data-math-kind="inline">\(10^{-12}\)</span>，Bootstrap 恰好执行 400 次并输出两个参数的 95% percentile 区间。结果只说明实现路径一致，不说明正态性、外生性或市场可交易性成立。</p>
+<h2 id="boundary">数据契约与坏案例</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>风险</th>
+<th>失效表现</th>
+<th>必须记录/修复</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>未来信息</td>
+<td>用 <code>observed_at</code> 或修订值替代 <code>available_at</code></td>
+<td>继承 M02 point-in-time join 和快照时间</td>
+</tr>
+<tr>
+<td>异方差</td>
+<td>同方差 SE 过窄、显著性虚高</td>
+<td>HC/HAC/cluster 选择与小样本修正</td>
+</tr>
+<tr>
+<td>内生性</td>
+<td>OLS 系数有预测相关但无因果含义</td>
+<td>设计识别策略；可信时再进入 IV</td>
+</tr>
+<tr>
+<td>弱工具</td>
+<td>2SLS 不稳定、有限样本偏误</td>
+<td>第一阶段诊断、弱 IV 稳健区间</td>
+</tr>
+<tr>
+<td>序列相关 Bootstrap</td>
+<td>区间覆盖率失真</td>
+<td>block 长度、重抽样单位和时间切分</td>
+</tr>
+<tr>
+<td>多重检验</td>
+<td>反复试规格后偶然显著</td>
+<td>预注册、校正或完整失败登记</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="comparison">方法对比与选择建议（Comparison）</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>目标</th>
+<th>首选</th>
+<th>不能替代的工作</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>线性预测基线</td>
+<td>OLS + 稳健 SE</td>
+<td>不能替代样本外时间切分</td>
+</tr>
+<tr>
+<td>明确分布模型</td>
+<td>MLE</td>
+<td>需诊断分布错设和边界参数</td>
+</tr>
+<tr>
+<td>经济矩条件/资产定价</td>
+<td>GMM</td>
+<td>需解释矩条件、权重和过度识别</td>
+</tr>
+<tr>
+<td>小样本不确定性探索</td>
+<td>Bootstrap</td>
+<td>依赖重抽样单位与数据依赖结构</td>
+</tr>
+<tr>
+<td>因果识别</td>
+<td>IV/2SLS（下一模块深入）</td>
+<td>不能凭相关性自动构造工具</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="exercises">练习与答案边界（Exercises）</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>ID</th>
+<th>题目</th>
+<th>通过边界</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>M03-Q01</td>
+<td>推导 OLS 正规方程。</td>
+<td>能从 RSS 对 <span class="math-inline" data-math-kind="inline">\(\beta\)</span> 求导并说明满秩条件。</td>
+</tr>
+<tr>
+<td>M03-Q02</td>
+<td>OLS 何时有因果解释？</td>
+<td>说明外生性/识别设计，而非只说拟合优度。</td>
+</tr>
+<tr>
+<td>M03-Q03</td>
+<td>MLE 与 OLS 何时重合？</td>
+<td>给出 iid Gaussian 误差及 <span class="math-inline" data-math-kind="inline">\(\sigma^2\)</span> 估计条件。</td>
+</tr>
+<tr>
+<td>M03-Q04</td>
+<td>为什么 robust SE 不修复内生性？</td>
+<td>区分方差估计与系数识别。</td>
+</tr>
+<tr>
+<td>M03-Q05</td>
+<td>写出 sandwich 协方差三部分。</td>
+<td>面、肉、面及残差平方项位置正确。</td>
+</tr>
+<tr>
+<td>M03-Q06</td>
+<td>GMM 的矩条件是什么？</td>
+<td>说明理论矩为零且样本矩被最小化。</td>
+</tr>
+<tr>
+<td>M03-Q07</td>
+<td>恰好识别 GMM 为什么可等于 OLS？</td>
+<td>连接线性矩方程与正规方程。</td>
+</tr>
+<tr>
+<td>M03-Q08</td>
+<td>过度识别时应报告什么？</td>
+<td>权重矩阵、J 检验和矩条件经济含义。</td>
+</tr>
+<tr>
+<td>M03-Q09</td>
+<td>Bootstrap 重抽样什么单位？</td>
+<td>iid 观测成对重抽样；时间依赖需 block。</td>
+</tr>
+<tr>
+<td>M03-Q10</td>
+<td>percentile 区间的边界？</td>
+<td>说明小样本、偏态和依赖结构下覆盖率不保证。</td>
+</tr>
+<tr>
+<td>M03-Q11</td>
+<td>如何检测设计矩阵病态？</td>
+<td>看秩、条件数和尺度，不能静默求逆。</td>
+</tr>
+<tr>
+<td>M03-Q12</td>
+<td>M02 的 <code>available_at</code> 如何进入估计？</td>
+<td>先按 <code>asof_at</code> 过滤，再形成 <span class="math-inline" data-math-kind="inline">\(y,X\)</span>。</td>
+</tr>
+<tr>
+<td>M03-Q13</td>
+<td>异方差为何常见于金融收益？</td>
+<td>条件波动随状态/规模变化，不能假定恒定。</td>
+</tr>
+<tr>
+<td>M03-Q14</td>
+<td>HAC 与 HC 的差异？</td>
+<td>HAC 处理时间相关，HC 主要放松横截面同方差。</td>
+</tr>
+<tr>
+<td>M03-Q15</td>
+<td>IV 的排除限制是什么？</td>
+<td>工具只能通过内生解释变量影响结果。</td>
+</tr>
+<tr>
+<td>M03-Q16</td>
+<td>弱工具会怎样？</td>
+<td>2SLS 有限样本分布异常，需专门诊断。</td>
+</tr>
+<tr>
+<td>M03-Q17</td>
+<td>固定 seed 能保证什么？</td>
+<td>保证本脚本同环境重放；不承诺所有未来版本逐位一致。</td>
+</tr>
+<tr>
+<td>M03-Q18</td>
+<td>为什么不能从合成 fixture 宣称 alpha？</td>
+<td>数据生成机制不是市场证据，也没有交易成本。</td>
+</tr>
+<tr>
+<td>M03-Q19</td>
+<td>估计报告至少列哪些信息？</td>
+<td>样本、变量、估计器、SE、切分、假设和失败项。</td>
+</tr>
+<tr>
+<td>M03-Q20</td>
+<td>何时暂停解释显著系数？</td>
+<td>数据契约、识别、诊断或稳健性闸门未通过时。</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="answer-boundary">答案索引（Answer Boundary）</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>ID</th>
+<th>答案边界</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>M03-Q01</td>
+<td>RSS 求导为零得到 <span class="math-inline" data-math-kind="inline">\(X'X\hat\beta=X'y\)</span>，需满列秩。</td>
+</tr>
+<tr>
+<td>M03-Q02</td>
+<td>需要外生性或明确识别设计；高 <span class="math-inline" data-math-kind="inline">\(R^2\)</span> 不够。</td>
+</tr>
+<tr>
+<td>M03-Q03</td>
+<td>iid 正态误差下均值参数的 MLE 与 OLS 重合。</td>
+</tr>
+<tr>
+<td>M03-Q04</td>
+<td>robust 只估计协方差，不能消除 <span class="math-inline" data-math-kind="inline">\(E[xu]\ne0\)</span>。</td>
+</tr>
+<tr>
+<td>M03-Q05</td>
+<td><span class="math-inline" data-math-kind="inline">\((X'X)^{-1}\)</span>、残差加权的中间项、右侧 <span class="math-inline" data-math-kind="inline">\((X'X)^{-1}\)</span>。</td>
+</tr>
+<tr>
+<td>M03-Q06</td>
+<td>选择 <span class="math-inline" data-math-kind="inline">\(\theta\)</span> 使 <span class="math-inline" data-math-kind="inline">\(\bar g_n(\theta)'W\bar g_n(\theta)\)</span> 最小。</td>
+</tr>
+<tr>
+<td>M03-Q07</td>
+<td>线性矩为零即 OLS 正规方程。</td>
+</tr>
+<tr>
+<td>M03-Q08</td>
+<td>记录权重、J 检验和矩条件是否有经济依据。</td>
+</tr>
+<tr>
+<td>M03-Q09</td>
+<td>iid 时成对重抽样；序列相关时用 block。</td>
+</tr>
+<tr>
+<td>M03-Q10</td>
+<td>依赖统计量、样本量和数据依赖，非无条件标称覆盖。</td>
+</tr>
+<tr>
+<td>M03-Q11</td>
+<td>检查 rank/condition number，并报告数值稳定性。</td>
+</tr>
+<tr>
+<td>M03-Q12</td>
+<td>只使用 <code>available_at &lt;= asof_at</code> 的记录构造样本。</td>
+</tr>
+<tr>
+<td>M03-Q13</td>
+<td>金融条件波动、规模和状态常使条件方差变化。</td>
+</tr>
+<tr>
+<td>M03-Q14</td>
+<td>HAC 同时允许滞后相关；HC 主要针对异方差。</td>
+</tr>
+<tr>
+<td>M03-Q15</td>
+<td>工具与内生变量相关、与结构误差正交。</td>
+</tr>
+<tr>
+<td>M03-Q16</td>
+<td>第一阶段弱时估计不稳定，需弱 IV 方法。</td>
+</tr>
+<tr>
+<td>M03-Q17</td>
+<td>固定本脚本 seed 的重放，不等于跨版本逐位保证。</td>
+</tr>
+<tr>
+<td>M03-Q18</td>
+<td>合成数据不能验证真实市场收益、成本或容量。</td>
+</tr>
+<tr>
+<td>M03-Q19</td>
+<td>至少列数据版本、样本、估计、SE、假设、切分与失败。</td>
+</tr>
+<tr>
+<td>M03-Q20</td>
+<td>任一数据、识别、诊断或稳健性闸门失败都应暂停强解释。</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="risks">风险与后续建议（Risks &amp; Next）</h2>
+<ul>
+<li>本模块未实现完整 HC/HAC/cluster 数值库，只冻结其公式、选择边界和报告要求；生产研究应与 <code>statsmodels</code> 输出交叉核对。</li>
+<li>合成数据不含交易成本、非同步交易、缺失会话和退市机制，不能用于策略收益结论。</li>
+<li>下一 slice G07/M04 将处理 ARIMA/VAR、状态空间、单位根、协整和 ARCH/GARCH；需要把 M02 的会话与时间切分继续保留。</li>
+</ul>
+<h2 id="references">参考文献（References）</h2>
+<ol>
+<li>[1] MIT OpenCourseWare, “14.382 Econometrics,” 2017. <a href="https://ocw.mit.edu/courses/14-382-econometrics-spring-2017/">链接</a></li>
+<li>[2] Bruce E. Hansen, “Econometrics,” 2022. <a href="https://www.ssc.wisc.edu/~bhansen/econometrics/">链接</a></li>
+<li>[3] statsmodels developers, “Statsmodels documentation.” <a href="https://www.statsmodels.org/stable/index.html">链接</a></li>
+<li>[4] Bradley Efron, “Bootstrap Methods: Another Look at the Jackknife,” <em>Annals of Statistics</em>, 1979. <a href="https://projecteuclid.org/journals/annals-of-statistics/volume-7/issue-1/Bootstrap-Methods-Another-Look-at-the-Jackknife/10.1214/aos/1176344552.short">链接</a></li>
+</ol>
+
+        <nav class="next-chapter" aria-label="下一章节">
+          <span class="next-chapter-label">下一章节</span>
+          <a rel="next" href="04_financial_time_series_notes.html">M04 金融时间序列 →</a>
+        </nav>
+
+        <a class="back-to-top" href="#top">返回页首 ↑</a>
+      </article>
+    </main>
+  </div>
+</body>
+</html>

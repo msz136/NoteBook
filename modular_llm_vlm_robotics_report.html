@@ -1,0 +1,1208 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>传统算法 + VLM/LLM 大脑具身智能路线调研报告</title>
+    <script>
+    window.MathJax = {
+        tex: { inlineMath: [['\\(','\\)']], displayMath: [['\\[','\\]'], ['$$','$$']] },
+        options: { skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code'] }
+    };
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Noto Sans SC", sans-serif;
+            font-size: 16px;
+            line-height: 1.8;
+            color: #1a1a1a;
+            background: #fff;
+            padding: 2rem 1rem;
+        }
+        article { max-width: 900px; margin: 0 auto; }
+        h1 { font-size: 2rem; margin-bottom: 0.5rem; border-bottom: 2px solid #333; padding-bottom: 0.6rem; line-height: 1.35; }
+        h2 { font-size: 1.5rem; margin-top: 2.5rem; margin-bottom: 1rem; color: #222; border-left: 4px solid #2563eb; padding-left: 0.75rem; line-height: 1.45; }
+        h3 { font-size: 1.25rem; margin-top: 1.8rem; margin-bottom: 0.8rem; color: #333; line-height: 1.5; }
+        h4 { font-size: 1.08rem; margin-top: 1.2rem; margin-bottom: 0.5rem; color: #444; }
+        p { margin-bottom: 1rem; }
+        ul, ol { margin-bottom: 1rem; padding-left: 1.5rem; }
+        li { margin-bottom: 0.35rem; }
+        a { color: #2563eb; text-decoration: none; overflow-wrap: anywhere; }
+        a:hover { text-decoration: underline; }
+        code { font-family: "Fira Code", Consolas, "Courier New", monospace; background: #f3f4f6; padding: 0.15rem 0.4rem; border-radius: 3px; font-size: 0.9em; }
+        pre { background: #f8f9fa; border: 1px solid #e5e7eb; border-radius: 6px; padding: 1rem; overflow-x: auto; margin: 1rem 0; font-size: 0.9rem; line-height: 1.55; }
+        pre code { display: block; background: none; padding: 0; border-radius: 0; font-size: inherit; }
+        table { width: 100%; border-collapse: collapse; margin-bottom: 1.5rem; font-size: 0.92rem; }
+        th, td { border: 1px solid #ddd; padding: 0.58rem 0.75rem; text-align: left; vertical-align: top; }
+        th { background: #f8f8f8; font-weight: 600; }
+        tbody tr:nth-child(even) { background: #fafafa; }
+        .table-wrap { overflow-x: auto; margin: 1.2rem 0; }
+        .meta { color: #666; font-size: 0.92rem; margin-bottom: 1.5rem; }
+        .toc { background: #f8fbff; border: 1px solid #d9e8ff; border-left: 4px solid #2563eb; padding: 1rem 1.2rem; margin: 1.5rem 0 2rem; border-radius: 6px; }
+        .toc h2 { border: none; margin: 0 0 0.8rem; padding: 0; font-size: 1.2rem; color: #123; }
+        .toc ol { columns: 2; column-gap: 2rem; margin-bottom: 0; }
+        .toc li { break-inside: avoid; margin-bottom: 0.35rem; }
+        .note { background: #f0f9ff; border-left: 4px solid #2563eb; padding: 0.8rem 1rem; margin: 1rem 0; border-radius: 0 4px 4px 0; }
+        .warning { background: #fff7ed; border-left: 4px solid #f97316; padding: 0.8rem 1rem; margin: 1rem 0; border-radius: 0 4px 4px 0; }
+        .evidence { background: #f8f0ff; border-left: 4px solid #7c3aed; padding: 0.8rem 1rem; margin: 1rem 0; border-radius: 0 4px 4px 0; }
+        .good { background: #f0fdf4; border-left: 4px solid #16a34a; padding: 0.8rem 1rem; margin: 1rem 0; border-radius: 0 4px 4px 0; }
+        .tag { display: inline-block; font-size: 0.78rem; background: #eef2ff; color: #3730a3; border: 1px solid #c7d2fe; border-radius: 999px; padding: 0.05rem 0.45rem; margin-right: 0.3rem; white-space: nowrap; }
+        section { scroll-margin-top: 1rem; }
+        @media (max-width: 700px) {
+            body { padding: 1rem 0.5rem; }
+            h1 { font-size: 1.5rem; }
+            h2 { font-size: 1.25rem; }
+            table { font-size: 0.82rem; }
+            .toc ol { columns: 1; }
+        }
+    </style>
+</head>
+<body>
+<article>
+<h1>传统算法 + VLM/LLM 大脑具身智能路线调研报告</h1>
+<p class="meta">报告日期：2026-07-17 | 证据截止：2026-07-17 | 主题：区别于端到端 VLA/WAM 的模块化具身智能系统路线、项目、数据集、benchmark 与系统架构</p>
+
+<nav class="toc" aria-label="目录">
+<h2>目录</h2>
+<ol>
+    <li><a href="#question">问题（Question）</a></li>
+    <li><a href="#background">背景与动机</a></li>
+    <li><a href="#concepts">基础概念与术语</a></li>
+    <li><a href="#routes">路线总览</a></li>
+    <li><a href="#capability">当前能力边界</a></li>
+    <li><a href="#projects">代表项目与系统典例</a></li>
+    <li><a href="#current-projects">2024-2026 主流项目矩阵</a></li>
+    <li><a href="#datasets">数据集与 Benchmark</a></li>
+    <li><a href="#architecture">系统架构与构成</a></li>
+    <li><a href="#math">数学形式与接口目标</a></li>
+    <li><a href="#pipeline">Pipeline 与伪代码</a></li>
+    <li><a href="#implementation">实现证据与代码映射</a></li>
+    <li><a href="#boundary">公源/本地设计边界</a></li>
+    <li><a href="#comparison">方法对比与选择建议</a></li>
+    <li><a href="#risks">风险与后续建议</a></li>
+    <li><a href="#references">参考文献</a></li>
+</ol>
+</nav>
+
+<section id="question">
+<h2>问题（Question）</h2>
+<p>本报告回答的问题是：如果不走 VLA（Vision-Language-Action，视觉-语言-动作）或 WAM（World Action Model，世界动作模型）这类端到端“图像/语言直接到动作或未来”的路线，而是把传统机器人算法作为底盘，把 VLM/LLM 作为语义大脑，那么当前研究和工程路线是什么？有哪些代表性项目、数据集、benchmark、系统架构与构成典例值得关注？</p>
+<p>这里的“传统算法 + VLM/LLM 大脑”不是指完全不用学习，而是指系统边界不同：LLM/VLM 负责语言理解、开放词表感知、任务分解、语义记忆、约束生成和失败恢复；SLAM、语义地图、任务与运动规划（Task and Motion Planning, TAMP）、Nav2/MoveIt/OMPL、MPC/MPPI、抓取检测、控制器和安全监控负责几何可行性、碰撞约束和闭环执行。</p>
+</section>
+
+<section id="background">
+<h2>背景与动机（Background &amp; Motivation）</h2>
+<p>端到端 VLA/WAM 的优点是统一表征、动作学习能力强、容易随着数据规模提升；但它通常需要大量机器人轨迹、动作空间对齐、在线 rollout 验证和模型部署优化。模块化路线的动机相反：把高层语义问题交给基础模型，把连续空间、动力学和安全约束交给可解释、可验证、可替换的传统模块。</p>
+<p>从 2022 年 SayCan、Inner Monologue、Code as Policies 到 2023 年 VoxPoser、VLMaps，再到 2024-2026 年开放词表移动操作、3D 场景图、具身问答和多 benchmark 评测，趋势越来越清楚：LLM/VLM 最可靠的位置不是直接输出低层控制量，而是作为“语义接口层”。它把自然语言目标转成技能调用、PDDL/行为树、语义地图查询、对象约束、关键点、候选抓取或失败解释；执行层仍由路径规划、运动规划、抓取和控制闭环完成。</p>
+<div class="note">
+<strong>核心判断：</strong>当前这条路线更像“机器人系统工程 + 基础模型语义插件”，而不是一个单一模型范式。它在可解释性、低数据启动、真实机器人安全和工程可控性上有优势；在长时程鲁棒性、语义 grounding、接口脆弱性和闭环学习上仍明显受限。
+</div>
+</section>
+
+<section id="concepts">
+<h2>基础概念与术语</h2>
+
+<h3>端到端 VLA/WAM 与模块化大脑的边界</h3>
+<p>VLA 通常学习从观测 \(o_t\)、语言指令 \(c\) 到动作 \(a_t\) 或动作块 \(a_{t:t+H}\) 的映射；WAM 进一步把动作、未来观测、世界状态或可行动作后果纳入统一预测。模块化路线则把动作生成拆成语义决策、几何规划和低层控制三层。</p>
+<p>专业地说，模块化路线把自然语言任务 \(c\) 分解为离散技能序列 \(\pi_\text{task}\)、连续运动参数 \(\theta\)、目标/约束集合 \(\mathcal{G}\)，再由传统 planner 和 controller 求解可执行轨迹。这使得每个接口可以单独测试，但也要求接口定义足够严格。</p>
+
+<h3>任务与运动规划（Task and Motion Planning, TAMP）</h3>
+<p>直观地说，TAMP 是“先决定做什么，再证明怎么做得到”。例如“把杯子放进柜子”会被拆成 <code>navigate</code>、<code>open_door</code>、<code>grasp</code>、<code>place</code> 等符号动作，同时每个动作都要有可碰撞检测、可逆解、可抓取姿态的连续参数。</p>
+<p>专业地说，TAMP 联合搜索符号计划和连续参数。PDDLStream 等框架把传统符号规划器与黑盒采样器/运动规划器连接起来，用 optimistic planning 推迟连续约束的求解，从而处理抓取、放置、轨迹规划等混合离散-连续问题 [38]。</p>
+
+<h3>开放词表感知（Open-Vocabulary Perception）</h3>
+<p>开放词表感知允许机器人用自然语言描述查询对象或地点，例如“红色杯子”“可以坐的东西”“冰箱旁边的台面”。它通常依赖 CLIP、Grounding DINO、SAM、VLM 或 3D 语义特征场，把文本 embedding 与图像/点云/地图 embedding 对齐。</p>
+<p>与封闭类别检测不同，开放词表模块的输出不一定是一个固定类别 ID，而可能是对象 mask、3D instance、语义相似度热力图或场景图节点。VLMaps、CLIP-Fields、OpenScene、ConceptGraphs 和 HOV-SG 都属于这一接口方向 [9-13]。</p>
+
+<h3>语义地图与 3D 场景图</h3>
+<p>语义地图（Semantic Map）把空间位置、可通行区域、障碍物、对象实例和语言特征组织成可查询记忆。3D 场景图（3D Scene Graph）进一步显式表示对象、房间、容器、支撑关系、邻接关系和可供性（affordance）。</p>
+<p>这类结构是 VLM/LLM 大脑与传统导航/操作算法之间的重要中间层：LLM 负责提出“去哪里/操作什么/为什么”，地图负责给出候选目标，Nav2、A*、RRT、PRM、MPPI 或 MoveIt 负责求解可执行路径。</p>
+
+<h3>技能库（Skill Library）与行为树（Behavior Tree）</h3>
+<p>技能库把复杂控制封装成可调用动作，例如 <code>pick(object_id)</code>、<code>place(surface_id)</code>、<code>navigate(goal_pose)</code>、<code>open(drawer_id)</code>。行为树把技能组织成可中断、可重试、可检查前置条件和后置条件的执行结构。ROS 2 Nav2 官方导航栈就广泛使用行为树来组织导航任务 [41]。</p>
+</section>
+
+<section id="routes">
+<h2>路线总览</h2>
+<div class="table-wrap">
+<table>
+<thead>
+<tr>
+    <th>路线</th>
+    <th>LLM/VLM 位置</th>
+    <th>传统算法位置</th>
+    <th>典型项目</th>
+    <th>适合任务</th>
+    <th>主要风险</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+    <td>语言规划 + 技能库</td>
+    <td>把自然语言目标拆成技能序列，做任务选择与重规划</td>
+    <td>技能策略、导航、抓取、控制器、执行监控</td>
+    <td>SayCan、Inner Monologue、ProgPrompt、TidyBot</td>
+    <td>家居服务、长时程任务、可枚举技能集合</td>
+    <td>技能覆盖不足；LLM 生成不可执行步骤；状态反馈不完整</td>
+</tr>
+<tr>
+    <td>代码生成控制</td>
+    <td>生成 Python/DSL 调用机器人 API、视觉 API 和几何函数</td>
+    <td>API 内部调用 perception、IK、motion planning、controllers</td>
+    <td>Code as Policies、Microsoft ChatGPT for Robotics 风格系统</td>
+    <td>桌面操作、结构化 API 环境、快速原型</td>
+    <td>代码安全、API 幻觉、异常处理困难</td>
+</tr>
+<tr>
+    <td>开放词表语义地图 + 经典导航</td>
+    <td>理解目标、查询地图、选择 landmark 或候选 goal</td>
+    <td>SLAM、occupancy grid、A*/D*/RRT/Nav2/MPPI/local planner</td>
+    <td>LM-Nav、VLMaps、CLIP-Fields、ConceptGraphs、HOV-SG、SG-Nav</td>
+    <td>ObjectNav、开放词表导航、室内巡航、语义探索</td>
+    <td>语义定位误差；地图陈旧；query 与物理可达性不一致</td>
+</tr>
+<tr>
+    <td>VLM 约束/价值场 + 运动规划</td>
+    <td>从语言和视觉生成 affordance、避障、接触、关键点、价值地图</td>
+    <td>采样/优化运动规划、IK、轨迹优化、MPC、碰撞检测</td>
+    <td>VoxPoser、MOKA、Text2Motion 类系统</td>
+    <td>桌面/移动操作、非固定目标、组合约束任务</td>
+    <td>价值场噪声；约束不完整；真实机器人接触误差</td>
+</tr>
+<tr>
+    <td>LLM + PDDL/TAMP 验证规划</td>
+    <td>把语言转成符号目标、动作 schema、对象绑定和失败解释</td>
+    <td>PDDL/SAS+ 规划器、PDDLStream、OMPL、MoveIt、IK、碰撞检测</td>
+    <td>LLM+P、LLM3、PDDLStream 集成路线</td>
+    <td>需要可验证可追踪计划的操作任务</td>
+    <td>domain 建模成本高；LLM 到 PDDL 的 grounding 易错</td>
+</tr>
+<tr>
+    <td>开放词表移动操作系统</td>
+    <td>物体/地点理解、任务解释、偏好学习、失败恢复</td>
+    <td>语义建图、导航、检测分割、抓取、放置、机械臂规划</td>
+    <td>OK-Robot、HomeRobot/OVMM、TidyBot、MOKA</td>
+    <td>真实家庭/办公室中的 pick-and-place、整理、找物</td>
+    <td>全链路误差叠加；真实世界重置和评测成本高</td>
+</tr>
+</tbody>
+</table>
+</div>
+
+<h3>路线之间的共性</h3>
+<ul>
+    <li><strong>LLM/VLM 不直接承担所有物理约束。</strong>它们负责语义与组合推理，连续几何约束由 motion planner、collision checker 和 controller 验证。</li>
+    <li><strong>中间表示是成败关键。</strong>技能 schema、PDDL、JSON state、scene graph、语义地图、value map、keypoint 都是把“语言”变成“可执行动作”的接口。</li>
+    <li><strong>评测不应只看最终 success rate。</strong>需要拆分为语义理解、对象定位、可达性判断、导航、抓取、放置、恢复次数、人工介入次数和安全违规。</li>
+</ul>
+</section>
+
+<section id="capability">
+<h2>当前能力边界：能演示不等于能部署</h2>
+<p>本节把“能力”分成三档：<strong>工程可靠</strong>表示在明确的硬件、场景和工艺条件下可以连续运行；<strong>研究可行</strong>表示已有论文或项目完成了受控 demo，但仍依赖特定数据、平台或人工恢复；<strong>开放问题</strong>表示公开系统尚未给出稳定、可重复、可审计的全链路证据。</p>
+
+<div class="table-wrap">
+<table>
+<thead><tr><th>场景</th><th>传统算法/工程栈</th><th>VLA</th><th>WAM/World Model</th><th>真正的瓶颈</th></tr></thead>
+<tbody>
+<tr>
+    <td>工业零件抓取、码垛、上下料</td>
+    <td><strong>工程可靠</strong>：3D 视觉、标定、抓取候选、IK、碰撞规划和 PLC/控制器已经成熟。</td>
+    <td><strong>研究可行</strong>：可减少换任务编程，在多物体、多语言桌面任务中泛化。</td>
+    <td><strong>辅助角色</strong>：可预测动作后果、生成合成轨迹或做策略筛选。</td>
+    <td>工业系统更看重节拍、故障率、可维护性和安全认证，不只看 zero-shot 泛化。</td>
+</tr>
+<tr>
+    <td>家庭杂物抓取</td>
+    <td><strong>研究可行</strong>：已知类别、可见物体和固定抓取技能可以做；透明、反光、软物、严重遮挡会显著掉点。</td>
+    <td><strong>研究可行</strong>：能理解“拿红色杯子/可以擦桌子的东西”等语义，适合选择目标和技能。</td>
+    <td><strong>辅助角色</strong>：可以进行未来状态预测，但预测的视觉真实性不等于抓取可行性。</td>
+    <td>开放词表定位、6D pose、遮挡下的抓取稳定性和失败恢复。</td>
+</tr>
+<tr>
+    <td>按钮、旋钮、抽屉、门、工具</td>
+    <td><strong>工程可靠</strong>：设备型号、操作位姿和流程固定时，传统 primitive 很强；陌生设备需要重新建模。</td>
+    <td><strong>研究可行</strong>：能够结合语言、图像和少量示范完成简单工具使用。</td>
+    <td><strong>开放问题</strong>：物理预测、接触和隐藏状态仍不能替代真实执行验证。</td>
+    <td>操作手册理解、按钮语义、接触力、状态反馈和安全规则。</td>
+</tr>
+<tr>
+    <td>折毛巾、衬衫、衣物</td>
+    <td><strong>研究可行</strong>：平铺、衣物类别和折叠工位固定时可以做；任意皱褶衣堆仍难。</td>
+    <td><strong>研究可行</strong>：π₀ 提供 towel checkpoint，并展示卸衣/叠衣；π₀.₅ 展示更长时程家务，但这是强后训练结果。</td>
+    <td><strong>研究可行</strong>：适合建模布料未来形态和生成数据，但自接触、摩擦和拓扑变化仍难。</td>
+    <td>柔性物体是高维状态；视觉上“像折好了”不等于边缘对齐、层数正确和可重复。</td>
+</tr>
+<tr>
+    <td>固定产线装配、插接、焊接</td>
+    <td><strong>工程可靠</strong>：夹具、力控、视觉伺服和工艺参数明确时性能最好。</td>
+    <td><strong>研究可行</strong>：可学习接触丰富的局部技能，减少显式建模。</td>
+    <td><strong>辅助角色</strong>：可用于离线策略优化和动作筛选，不能跳过力/位姿验证。</td>
+    <td>亚毫米误差、接触力、材料公差和安全联锁。</td>
+</tr>
+<tr>
+    <td>移动操作：找物、导航、抓取、搬运、放置</td>
+    <td><strong>研究可行至工程可用</strong>：每一阶段有成熟模块，但整条链路需要大量场景工程。</td>
+    <td><strong>研究可行</strong>：语义目标和跨任务泛化明显更强，但长时程错误会累积。</td>
+    <td><strong>研究可行</strong>：可做场景记忆、未来预测、合成数据和规划辅助。</td>
+    <td>地图陈旧、对象重定位、可达性、抓取后状态变化和 recovery policy。</td>
+</tr>
+<tr>
+    <td>未知家庭中的长时程家务</td>
+    <td><strong>开放问题</strong>：可以靠行为树/技能库覆盖局部任务，但异常分支会爆炸。</td>
+    <td><strong>研究可行</strong>：π₀.₅ 等系统已展示新家清理类任务，但公开证据仍以研究 demo 和特定平台为主。</td>
+    <td><strong>开放问题</strong>：预测和生成还不足以保证连续几十步动作的物理一致性。</td>
+    <td>任务分解、记忆、探索、接触、错误恢复和真实环境不可控性同时出现。</td>
+</tr>
+</tbody>
+</table>
+</div>
+
+<div class="note"><strong>能力判定原则：</strong>论文中的单次成功、视频 demo、仿真 success rate、open-loop action accuracy 和真实机器人连续任务 success rate 不是同一量级的证据。部署判断至少要同时报告任务集合、试验次数、是否允许人工干预、失败恢复次数、碰撞/安全事件、平均耗时和跨平台泛化。</div>
+
+<h3>传统算法的真实上限</h3>
+<p>传统算法的上限取决于“环境是否可以被工程化”。如果物体类别、工位、相机、机器人、夹具、动作序列和安全边界可以固定，它可以达到很高的稳定性；这就是工业机器人在码垛、焊接、喷涂、上下料和重复装配中仍然占主导的原因。它的弱点不是不会控制，而是无法低成本地解释开放世界目标、自动发现新技能和处理未建模异常。</p>
+<p>在家庭机器人中，传统栈通常需要拆成 SLAM/导航、开放词表检测、对象跟踪、抓取、放置、行为树和 recovery policy。每一个模块都可以成熟，但组合后的长时程成功率往往由最弱环节决定。HomeRobot/OVMM、DovSG 等项目体现了这条工程路线：移动底盘、语义地图和机械臂模块分别可用，整机仍需要任务级设计 [8][51]。</p>
+
+<h3>VLA 的真实上限</h3>
+<p>VLA 已经越过“只能做单一实验室动作”的阶段。OpenVLA、π₀、π₀.₅、GR00T N1.7 等系统具备多机器人数据预训练、语言条件控制、跨任务 fine-tuning 和一定的跨场景泛化。它们能在受控条件下完成抓取、放置、清洁、开关抽屉、工具使用，部分系统还能处理较长的家务序列 [45][46][47]。</p>
+<p>但 VLA 的证据通常仍有三条边界：第一，动作空间和机器人形态需要适配；第二，复杂能力通常来自 post-training 或特定 checkpoint，而不是基础模型 zero-shot；第三，成功率随摄像头、控制频率、动作归一化、提示词、物体遮挡和 reset 条件变化很大。因此，VLA 更像“可迁移的策略先验”，还不是一个可以取代导航、运动规划和安全监督的万能控制器。</p>
+
+<h3>WAM 的真实上限</h3>
+<p>当前 WAM/世界模型的最强价值主要是<strong>预测、模拟、数据生成和策略评价</strong>：给定图像、状态和动作，生成未来观测或状态；或者用世界模型产生合成轨迹，再训练 policy。Cosmos 3 把 reasoner、generator 和 action modeling 放进统一的 Physical AI 平台，DreamDojo 使用大规模人类视频预训练机器人世界模型，GR00T-Dreams 则把 Cosmos 视频生成与 inverse dynamics model 连接成合成轨迹管线，PointWorld 进一步预测 RGB-D 场景中的 3D point flow [53][54][55][56]。</p>
+<p>这些系统证明了 WAM 路线有助于解决机器人数据稀缺，但尚不能据此宣称“机器人已经学会了物理”。世界模型可能生成视觉上合理但接触力、物体质量、摩擦、遮挡变化不合理的未来；因此当前更可靠的闭环是：真实观测校正世界模型，世界模型提出候选，真实碰撞检查和控制器做最终裁决。</p>
+</section>
+
+<section id="projects">
+<h2>代表项目与系统典例</h2>
+
+<h3>1. SayCan：语言可行性乘以技能可供性</h3>
+<p>SayCan 的核心思想是让 LLM 判断“下一步在语言上是否合理”，让低层技能的 affordance 判断“这一步在当前机器人状态下是否可执行”，两者相乘选择技能 [1]。这是一条非常典型的模块化路线：LLM 不生成关节动作，而是在一组可执行技能中做语义调度。</p>
+<div class="evidence">证据：SayCan 项目页和论文公开了 PaLM + affordance skill selection 的设计，并在真实移动机械臂上展示长时程任务执行 [1]。</div>
+
+<h3>2. Inner Monologue：用环境反馈闭环修正语言计划</h3>
+<p>Inner Monologue 把场景描述、成功检测、语言反馈和机器人反馈写回 prompt，让 LLM 在执行过程中“听到自己的内心独白”，从而改进下一步计划 [2]。它证明了模块化路线不能只做 open-loop plan，需要把执行结果、视觉状态和失败信息反馈给大脑。</p>
+
+<h3>3. Code as Policies：LLM 生成可执行控制程序</h3>
+<p>Code as Policies 让语言模型生成 Python 代码，调用已有感知、几何和机器人控制 API [3]。与端到端 VLA 不同，模型输出的是程序结构和 API 调用，真正的控制、检测、运动规划在函数库内完成。它适合 API 稳定、任务可程序化、环境相对结构化的场景。</p>
+
+<h3>4. ProgPrompt：程序化 prompt 做家庭任务规划</h3>
+<p>ProgPrompt 用类似程序的 prompt 表示可调用动作、对象和状态，让 LLM 在 VirtualHome/机器人环境中生成长时程家庭活动计划 [4]。它的价值在于提示工程层面建立了“动作函数 + 前后置条件 + 计划结构”的接口，而不是让模型自由生成自然语言步骤。</p>
+
+<h3>5. LM-Nav：LLM 提取 landmark，VLM grounding，经典图导航执行</h3>
+<p>LM-Nav 面向语言导航：LLM 把自然语言指令解析为地标序列，VLM 把地标 grounding 到视觉观测，导航图/可达性模型负责实际移动 [5]。这是开放词表导航路线的早期典型：语义分解与空间执行解耦。</p>
+
+<h3>6. VLMaps、CLIP-Fields、OpenScene、ConceptGraphs：开放词表空间记忆</h3>
+<p>VLMaps 把语言对齐的视觉特征投影进 3D/2D 空间地图，使机器人可以用文本查询目标区域并调用导航规划 [9]。CLIP-Fields 学习空间中的语言兼容特征场 [10]。OpenScene 把开放词表语义扩展到 3D scene understanding [11]。ConceptGraphs 则从 RGB-D 序列构建开放词表 3D 场景图，显式组织对象实例和关系 [12]。</p>
+<p>这些项目构成了“VLM 负责识别和记忆，传统导航负责到达”的主干。它们也把问题从“单帧检测是否正确”变成“地图中语义、几何、拓扑和可达性如何一致”。</p>
+
+<h3>7. VoxPoser：LLM/VLM 生成 3D 价值地图，运动规划器执行</h3>
+<p>VoxPoser 使用 LLM 和 VLM 从语言指令与视觉观测中生成 affordance map 与 constraint map，再把它们组合成 3D value maps，用传统运动规划和控制器求解动作 [6]。这条路线很适合表达“靠近杯柄”“避开盘子”“把物体放到左侧区域”这类几何-语义混合约束。</p>
+
+<h3>8. TidyBot 与 OK-Robot：真实家居中的开放词表移动操作</h3>
+<p>TidyBot 强调个性化整理：通过语言模型从少量用户纠正中学习“物体应该放到哪里”的偏好，再由机器人执行导航、抓取和放置 [7]。OK-Robot 则展示了开放知识、开放词表感知和移动操作系统如何组合到真实家庭场景中，目标是让机器人处理“找某物并移动到某处”这类自然语言任务 [8]。</p>
+<p>这类系统最接近真实落地，但也最暴露全链路误差：目标理解、检测分割、语义地图、可达性、抓取姿态、机械臂规划、放置稳定性和失败恢复任一环节出错都会导致任务失败。</p>
+
+<h3>9. LLM+P、PDDLStream 与 LLM3：让 LLM 生成，规划器验证</h3>
+<p>LLM+P 的思路是让 LLM 把自然语言问题翻译成 PDDL，再由经典规划器求解，从而利用 planner 的完备搜索和可验证性 [37]。PDDLStream 则是 TAMP 领域成熟的符号-连续规划框架 [38]。LLM3 等近年工作进一步把 LLM 用于 task-motion planning 和 motion failure reasoning，即在运动规划失败后解释失败并修改计划 [39]。</p>
+<p>这条路线的核心不是“LLM 更聪明”，而是“LLM 输出必须被形式化接口约束，再由规划器检查”。如果目标是可靠部署，而不是 demo 式灵活性，这是非常重要的方向。</p>
+
+<h3>项目选型速览</h3>
+<div class="table-wrap">
+<table>
+<thead>
+<tr>
+    <th>项目/路线</th>
+    <th>公开形态</th>
+    <th>最值得借鉴的模块</th>
+    <th>与传统算法的连接点</th>
+    <th>复现难度</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+    <td>SayCan</td>
+    <td>论文 + 项目页</td>
+    <td>LLM score 与 affordance score 的技能选择接口</td>
+    <td>技能库、移动机械臂执行、可供性估计</td>
+    <td>中：需要真实/仿真技能库</td>
+</tr>
+<tr>
+    <td>Code as Policies</td>
+    <td>论文 + 项目页 + 代码</td>
+    <td>用代码作为动作组合语言</td>
+    <td>Python API、感知函数、运动规划函数</td>
+    <td>中：API 设计比模型更关键</td>
+</tr>
+<tr>
+    <td>VLMaps</td>
+    <td>论文 + GitHub</td>
+    <td>语言索引空间地图</td>
+    <td>SLAM/地图、goal selection、导航规划</td>
+    <td>中：需要 RGB-D/位姿数据</td>
+</tr>
+<tr>
+    <td>ConceptGraphs</td>
+    <td>论文 + GitHub</td>
+    <td>开放词表 3D object graph</td>
+    <td>对象实例、关系、场景记忆、导航目标</td>
+    <td>中高：3D reconstruction 与 object association 有工程量</td>
+</tr>
+<tr>
+    <td>VoxPoser</td>
+    <td>论文 + 项目页 + 代码</td>
+    <td>语言/视觉到 3D value map，再接 motion planning</td>
+    <td>IK、motion planner、constraint checking</td>
+    <td>中高：需要可靠深度/点云与控制接口</td>
+</tr>
+<tr>
+    <td>OK-Robot</td>
+    <td>论文 + 项目页 + GitHub</td>
+    <td>开放词表移动操作系统级集成</td>
+    <td>导航、检测、抓取、放置、真实机器人执行</td>
+    <td>高：全链路系统复现</td>
+</tr>
+<tr>
+    <td>LLM+P / PDDLStream</td>
+    <td>论文 + 规划框架</td>
+    <td>LLM 到符号规划接口、可验证计划</td>
+    <td>PDDL solver、采样器、OMPL/MoveIt、碰撞检测</td>
+    <td>中高：domain 建模成本高</td>
+</tr>
+</tbody>
+</table>
+</div>
+</section>
+
+<section id="current-projects">
+<h2>2024-2026 主流项目矩阵</h2>
+<p>以下项目按“当前有公开代码/模型/数据入口”筛选。GitHub 活跃度只能说明可访问性和社区关注，不能替代论文实验，也不直接等同于部署成熟度。仓库状态核对日期为 2026-07-17。</p>
+
+<h3>端到端 VLA 与训练基础设施</h3>
+<div class="table-wrap">
+<table>
+<thead><tr><th>项目</th><th>公开事实</th><th>解决方案形态</th><th>能说明什么</th><th>不能说明什么</th></tr></thead>
+<tbody>
+<tr>
+    <td><a href="https://github.com/openvla/openvla">OpenVLA</a> [45]</td>
+    <td>7B 开源 VLA；论文报告使用 970k 真实机器人 demonstrations；支持 RLDS、LIBERO、LoRA/OFT fine-tuning。</td>
+    <td>视觉编码器 + LLM backbone + action tokenizer/head。</td>
+    <td>开源 VLA 已能覆盖多任务、多物体和多 embodiment 研究。</td>
+    <td>不代表无需任务数据、平台适配或动作/相机契约。</td>
+</tr>
+<tr>
+    <td><a href="https://github.com/Physical-Intelligence/openpi">openpi / π₀ / π₀.₅</a> [46]</td>
+    <td>官方仓库提供 flow-based π₀、FAST 自回归 π₀-FAST、开放世界泛化 π₀.₅；base checkpoints 预训练于 10k+ 小时机器人数据，并提供 DROID/towel 等专家 checkpoint。</td>
+    <td>VLM backbone + flow matching 或 FAST action head；依赖平台/任务 post-training。</td>
+    <td>VLA 可以把语言、语义子任务和连续动作结合到较长任务中。</td>
+    <td>官方也明确提示 checkpoint 未必适配任意机器人；不能把公开 checkpoint 当成通用即插即用控制器。</td>
+</tr>
+<tr>
+    <td><a href="https://github.com/NVIDIA/Isaac-GR00T">Isaac GR00T N1.7</a> [47]</td>
+    <td>Apache 2.0；公开 fine-tuning、inference、simulation benchmark 和 policy API；README 描述 relative EEF action、diffusion transformer head、20k 小时 EgoScale 视频预训练。</td>
+    <td>跨 embodiment VLA + 连续 action diffusion head。</td>
+    <td>当前主流正在从单臂 tabletop 走向 humanoid/cross-embodiment 和部署接口。</td>
+    <td>跨 embodiment 不是零成本迁移，state/action schema、动作维度和控制器仍需配置。</td>
+</tr>
+<tr>
+    <td><a href="https://github.com/huggingface/lerobot">LeRobot</a> [58]</td>
+    <td>统一机器人接口、LeRobotDataset、预训练模型和训练工具，支持多种机器人与遥操作设备。</td>
+    <td>训练/数据/硬件适配基础设施，而非单一模型。</td>
+    <td>降低采集、格式转换、训练和部署的工程门槛。</td>
+    <td>数据标准化不会自动解决任务定义、闭环评估或安全问题。</td>
+</tr>
+</tbody>
+</table>
+</div>
+
+<h3>模块化、双系统与安全约束</h3>
+<div class="table-wrap">
+<table>
+<thead><tr><th>项目</th><th>核心构成</th><th>典型场景</th><th>成熟度判断</th></tr></thead>
+<tbody>
+<tr>
+    <td><a href="https://github.com/OpenHelix-Team/OpenHelix">OpenHelix</a> [48]</td>
+    <td>双系统 VLA；公开 CALVIN ABC-D 评测、训练与模型权重入口。</td>
+    <td>语言条件长时程桌面操作。</td>
+    <td>代表“慢语义系统 + 快动作系统”的主流研究趋势；仓库仍把真实机器人部署列为后续工作，说明 benchmark 成绩和真实部署仍有距离。</td>
+</tr>
+<tr>
+    <td><a href="https://github.com/gaolongsen/GFVLA_CBF">GFVLA-CBF</a> [49]</td>
+    <td>图融合 VLA + Control Barrier Function；CBF-QP 对 nominal action 做安全过滤；提供 UR5e/UR10e 双臂仿真与硬件 demo。</td>
+    <td>双臂协作、障碍规避、安全动作修正。</td>
+    <td>代表把传统安全层重新接回 VLA 的方向。它解决的是碰撞安全，不等于解决语义错误或抓取失败。</td>
+</tr>
+<tr>
+    <td><a href="https://github.com/facebookresearch/home-robot">HomeRobot / OVMM</a> [25][50]</td>
+    <td>移动操作 research tools，连接底盘导航、开放词表目标、抓取和放置。</td>
+    <td>家庭找物、移动、抓取、搬运和放置。</td>
+    <td>最接近传统算法 + VLM/LLM 大脑的系统工程骨架；瓶颈在全链路 reset、感知和 recovery。</td>
+</tr>
+<tr>
+    <td><a href="https://github.com/BJHYZJ/DovSG">DovSG</a> [51]</td>
+    <td>动态开放词表 3D scene graph；LLM task decomposition；真实系统为 xArm6 + Ranger Mini 3 + RealSense D455。</td>
+    <td>长期语言引导移动操作，支持环境发生变化后的局部地图更新。</td>
+    <td>代表“语义地图/场景图作为大脑与传统控制器接口”的成熟研究方向。</td>
+</tr>
+<tr>
+    <td><a href="https://github.com/yongchao98/AutoTAMP">AutoTAMP</a> [52]</td>
+    <td>LLM/VLM + syntax checker、semantic checker、额外算法工具和 TAMP。</td>
+    <td>符号任务规划与连续运动规划结合。</td>
+    <td>代表“LLM 生成候选，规划器/检查器裁决”的可验证路线。</td>
+</tr>
+</tbody>
+</table>
+</div>
+
+<h3>世界模型、数据生成与动作评估</h3>
+<div class="table-wrap">
+<table>
+<thead><tr><th>项目</th><th>公开组件</th><th>适合做什么</th><th>当前限制</th></tr></thead>
+<tbody>
+<tr>
+    <td><a href="https://github.com/NVIDIA/cosmos">NVIDIA Cosmos 3</a> [53]</td>
+    <td>Reasoner、Generator、action modeling 和 Physical AI 数据/工具平台；支持文本/视觉/视频/动作输入输出组合。</td>
+    <td>世界理解、未来视频、动作预测、合成数据、策略训练。</td>
+    <td>平台能力很广，但具体机器人任务的 post-training、物理一致性和真实闭环仍需单独验证。</td>
+</tr>
+<tr>
+    <td><a href="https://github.com/NVIDIA/DreamDojo">DreamDojo</a> [54]</td>
+    <td>44k 小时人类第一视角视频预训练；公开 2B/14B checkpoint、GR-1 数据和评估代码。</td>
+    <td>从人类视频中学习通用世界表征，之后 post-train 到机器人交互。</td>
+    <td>人类视频到机器人动作存在 embodiment、视角、接触和动力学差异。</td>
+</tr>
+<tr>
+    <td><a href="https://github.com/NVIDIA/GR00T-Dreams">GR00T-Dreams / DreamGen</a> [55]</td>
+    <td>用 Cosmos 生成视频，再用 inverse dynamics model 提取动作并转换为 LeRobot 格式；支持 Franka、GR1、SO100、RoboCasa。</td>
+    <td>单张图像 + 语言生成新任务的 synthetic trajectory，缓解遥操作数据稀缺。</td>
+    <td>生成视频质量、动作反演和仿真到真实的误差会叠加；合成数据不是自动等价于真实 demonstrations。</td>
+</tr>
+<tr>
+    <td><a href="https://github.com/NVlabs/PointWorld">PointWorld</a> [56]</td>
+    <td>从 RGB-D 与 robot actions 预测全场景 3D point flows；公开 DROID/BEHAVIOR 数据包和 checkpoint。</td>
+    <td>3D 未来预测、动作条件场景变化建模、策略评估。</td>
+    <td>3D 预测结果仍需与真实控制器、碰撞检测和传感器反馈闭环。</td>
+</tr>
+</tbody>
+</table>
+</div>
+</section>
+
+<section id="datasets">
+<h2>数据集与 Benchmark</h2>
+<p>这条路线目前没有一个单一 benchmark 能完整覆盖“语言理解 - 开放词表感知 - 语义地图 - TAMP - 导航 - 抓取 - 真实执行”。更现实的做法是组合评测：用一个 benchmark 测 LLM/VLM 语义大脑，用一个测导航/操作执行，再用真实或高保真仿真做端到端系统验证。</p>
+
+<h3>高层任务规划与家居交互</h3>
+<div class="table-wrap">
+<table>
+<thead>
+<tr><th>Benchmark / 数据集</th><th>环境</th><th>适合评测</th><th>对模块化路线的价值</th></tr>
+</thead>
+<tbody>
+<tr>
+    <td>ALFRED [17]</td>
+    <td>AI2-THOR 家居环境</td>
+    <td>自然语言指令到低层动作序列，包含拿取、移动、开关、放置等任务</td>
+    <td>适合评估 LLM task planner、子目标分解、语言 grounding 和失败恢复</td>
+</tr>
+<tr>
+    <td>TEACh [18]</td>
+    <td>AI2-THOR + 对话式教学</td>
+    <td>人类通过对话教 agent 完成家居任务</td>
+    <td>适合评估交互式 LLM planner、问答澄清、历史记忆</td>
+</tr>
+<tr>
+    <td>VirtualHome [19]</td>
+    <td>家庭活动程序仿真</td>
+    <td>程序化 household activity、动作序列和脚本生成</td>
+    <td>适合评估 ProgPrompt/代码式计划，但物理真实度较弱</td>
+</tr>
+<tr>
+    <td>BEHAVIOR-1K / OmniGibson [20]</td>
+    <td>高交互家庭任务仿真</td>
+    <td>大量日常活动、对象状态变化和物理交互</td>
+    <td>适合评估长时程任务、状态变化、复杂物体交互</td>
+</tr>
+</tbody>
+</table>
+</div>
+
+<h3>导航、开放词表导航与移动操作</h3>
+<div class="table-wrap">
+<table>
+<thead>
+<tr><th>Benchmark / 数据集</th><th>任务</th><th>典型指标</th><th>模块化路线用途</th></tr>
+</thead>
+<tbody>
+<tr>
+    <td>Habitat / HM3D / Matterport3D [21][22]</td>
+    <td>PointNav、ObjectNav、ImageNav、Embodied QA、Rearrangement</td>
+    <td>Success、SPL、SoftSPL、路径长度、碰撞</td>
+    <td>评估 SLAM/语义地图/导航 planner 的几何执行能力</td>
+</tr>
+<tr>
+    <td>OVON：Open-Vocabulary Object Navigation [23]</td>
+    <td>开放词表物体导航</td>
+    <td>找到自然语言指定物体的成功率和效率</td>
+    <td>直接对应“VLM 语义目标 + 经典导航”的路线</td>
+</tr>
+<tr>
+    <td>GOAT-Bench [24]</td>
+    <td>多目标、多模态导航，目标可由类别、语言、图像描述给出</td>
+    <td>success、SPL、多目标完成率</td>
+    <td>适合测试 LLM/VLM 是否能在目标切换和语义记忆中稳定工作</td>
+</tr>
+<tr>
+    <td>HomeRobot / OVMM [25]</td>
+    <td>开放词表移动操作：找物、导航、抓取、放置</td>
+    <td>阶段成功率、整体成功率、路径/动作效率</td>
+    <td>更接近真实系统；可拆分导航、检测、抓取、放置误差</td>
+</tr>
+<tr>
+    <td>AI2-THOR / ProcTHOR [26][27]</td>
+    <td>室内交互、ObjectNav、问答、程序生成场景</td>
+    <td>任务成功率、交互正确率、泛化</td>
+    <td>适合快速搭建 LLM planner + embodied simulator 的闭环验证</td>
+</tr>
+</tbody>
+</table>
+</div>
+
+<h3>操作、技能学习与低层 primitive</h3>
+<div class="table-wrap">
+<table>
+<thead>
+<tr><th>Benchmark / 数据集</th><th>任务类型</th><th>与“传统算法 + 大脑”路线的关系</th></tr>
+</thead>
+<tbody>
+<tr>
+    <td>RLBench [28]</td>
+    <td>多任务机械臂操作</td>
+    <td>可用于测试 LLM/VLM 生成约束、目标位姿或调用 scripted/learned skills</td>
+</tr>
+<tr>
+    <td>CALVIN [29]</td>
+    <td>语言条件长时程桌面操作</td>
+    <td>适合验证任务分解、技能组合和状态闭环；也常用于 VLA baseline</td>
+</tr>
+<tr>
+    <td>LIBERO [30]</td>
+    <td>终身机器人学习、多任务操作</td>
+    <td>适合训练/评估技能库，作为大脑调用的 low-level policy 集合</td>
+</tr>
+<tr>
+    <td>ManiSkill [31]</td>
+    <td>高质量操作仿真、刚体/铰接物体、GPU 并行</td>
+    <td>适合对 motion primitive、抓取、放置、铰接操作做仿真评估</td>
+</tr>
+<tr>
+    <td>RoboCasa [32]</td>
+    <td>厨房/家庭操作任务</td>
+    <td>适合测试真实家居语义任务与机器人操作 primitive 的组合</td>
+</tr>
+<tr>
+    <td>GraspNet-1Billion / AnyGrasp [33][34]</td>
+    <td>6D 抓取姿态估计</td>
+    <td>可作为模块化系统的 grasp proposal primitive，与 VLM 目标分割/对象定位连接</td>
+</tr>
+</tbody>
+</table>
+</div>
+
+<h3>VLM/LLM 大脑能力评测</h3>
+<div class="table-wrap">
+<table>
+<thead>
+<tr><th>Benchmark</th><th>关注点</th><th>适合回答的问题</th></tr>
+</thead>
+<tbody>
+<tr>
+    <td>OpenEQA [35]</td>
+    <td>具身问答：根据场景记忆回答开放式问题</td>
+    <td>VLM/LLM 是否真正理解环境、对象关系和空间记忆？</td>
+</tr>
+<tr>
+    <td>EmbodiedBench [36]</td>
+    <td>多模态大模型在视觉驱动 embodied agent 任务中的综合评测</td>
+    <td>当前 MLLM 作为 embodied agent 大脑时在哪些任务类型上薄弱？</td>
+</tr>
+<tr>
+    <td>PlanBench / PDDL 类规划评测 [40]</td>
+    <td>LLM 在形式化 planning domain 中的计划能力</td>
+    <td>LLM 是否需要外部 planner 才能可靠处理长时程约束？</td>
+</tr>
+</tbody>
+</table>
+</div>
+
+<h3>2025-2026 新增的能力/系统 benchmark</h3>
+<div class="table-wrap">
+<table>
+<thead><tr><th>Benchmark / 项目</th><th>评测对象</th><th>新增价值</th><th>如何使用</th></tr></thead>
+<tbody>
+<tr>
+    <td><a href="https://arxiv.org/abs/2506.09343">CheckManual</a></td>
+    <td>根据设备手册进行机器人操作</td>
+    <td>把“常识操作”推进到多页说明书、面板语义、设备状态和步骤依赖。</td>
+    <td>评估 VLM/LLM 是否真正能读懂陌生机器；传统 primitive 可作为执行后端。</td>
+</tr>
+<tr>
+    <td><a href="https://github.com/EmbodiedBench/EmbodiedBench">EmbodiedBench</a></td>
+    <td>MLLM 作为视觉驱动 embodied agent</td>
+    <td>把导航、操作、问答和决策能力拆开评测，避免只报告语言模型分数。</td>
+    <td>用于测“VLM/LLM 大脑”本身，而不是直接证明机器人硬件闭环成功。</td>
+</tr>
+<tr>
+    <td><a href="https://github.com/StanfordVL/BEHAVIOR-1K">BEHAVIOR-1K Challenge</a></td>
+    <td>1,000 类日常活动、高交互家庭仿真</td>
+    <td>长时程、状态变化、物理交互和多阶段任务的难度高于简单 tabletop benchmark。</td>
+    <td>用于测试 VLA/WAM/LLM planner 的长期规划和恢复；需要明确是否使用仿真特权状态。</td>
+</tr>
+<tr>
+    <td><a href="https://github.com/robocasa/robocasa">RoboCasa</a></td>
+    <td>厨房和家庭操作仿真</td>
+    <td>提供日常任务、家具、器具、可交互物体和机器人操作环境。</td>
+    <td>适合比较 VLA、传统 motion primitive、world-model synthetic data 和 hybrid policy。</td>
+</tr>
+<tr>
+    <td><a href="https://github.com/Lifelong-Robot-Learning/LIBERO">LIBERO</a> / <a href="https://github.com/mees/calvin">CALVIN</a></td>
+    <td>语言条件操作与 lifelong/long-horizon policy</td>
+    <td>仍是开放 VLA、双系统 VLA、skill library 和 adapter 的主流可复现基准。</td>
+    <td>适合做模型横向比较，但不能替代真实家庭和真实接触任务验证。</td>
+</tr>
+</tbody>
+</table>
+</div>
+
+<div class="note"><strong>建议的评测分层：</strong>先用 LIBERO/CALVIN 做动作和语言条件 policy 的回归测试；用 RoboCasa/BEHAVIOR 做长时程与物理交互；用 OVON/GOAT/OVMM 测开放词表移动操作；用 CheckManual/OpenEQA/EmbodiedBench 测 VLM/LLM 的语义大脑；最后用真实机器人报告 50-100 次以上的连续任务、人工介入、碰撞和恢复统计。</div>
+
+<div class="warning">⚠️ 未找到可靠来源：截至本报告证据截止日，未看到一个被社区广泛接受、专门覆盖“传统算法 + VLM/LLM 大脑 + 真实机器人闭环执行”全链路的统一 benchmark。因此实践中应组合 ALFRED/TEACh/OVON/OVMM/RLBench/OpenEQA 等多类评测，而不是用单一分数判断路线优劣。</div>
+</section>
+
+<section id="architecture">
+<h2>系统架构与构成典例</h2>
+
+<h3>通用模块化机器人架构</h3>
+<pre><code class="language-text">Natural language goal / human correction
+        |
+        v
+LLM/VLM Brain
+  # Parse the task, ask clarification questions, select skills,
+  # query open-vocabulary maps, generate constraints, and explain failures.
+        |
+        v
+Symbolic and semantic interface
+  # JSON state, PDDL problem, behavior tree, scene graph, object map,
+  # value maps, keypoints, affordance scores, skill preconditions/effects.
+        |
+        v
+Classical robotics core
+  # SLAM, semantic mapping, Nav2/A*/MPPI, MoveIt/OMPL/IK,
+  # grasp planner, collision checker, MPC/controller, safety supervisor.
+        |
+        v
+Robot execution and monitoring
+  # Execute actions, check postconditions, log failures, replan if needed.
+</code></pre>
+
+<h3>典例 A：开放词表室内导航</h3>
+<p>目标是“去厨房里靠近咖啡机的台面”。LLM 把目标解析成 landmark 和约束；VLM/语义地图查询“厨房”“咖啡机”“台面”；地图给出候选 goal pose；Nav2 或经典 planner 在 occupancy grid 上求路径；执行过程中检测目标是否仍可见，失败则重新查询。</p>
+<div class="table-wrap">
+<table>
+<thead><tr><th>模块</th><th>输入</th><th>输出</th><th>可用项目/算法</th></tr></thead>
+<tbody>
+<tr><td>目标解析</td><td>语言指令、历史上下文</td><td>目标对象、房间、关系约束</td><td>LLM prompt、LM-Nav 风格 landmark decomposition [5]</td></tr>
+<tr><td>语义地图</td><td>RGB-D/pose、文本 query</td><td>候选 object/region/goal pose</td><td>VLMaps、ConceptGraphs、HOV-SG [9][12][13]</td></tr>
+<tr><td>全局导航</td><td>goal pose、occupancy grid</td><td>全局路径</td><td>A*、D*、Nav2 planner [41]</td></tr>
+<tr><td>局部控制</td><td>路径、局部障碍、机器人状态</td><td>速度命令</td><td>DWA/TEB/MPPI/MPC、Nav2 controller [41]</td></tr>
+<tr><td>监控</td><td>视觉目标、里程计、碰撞、超时</td><td>成功/失败/replan 信号</td><td>行为树、状态机、LLM failure analysis</td></tr>
+</tbody>
+</table>
+</div>
+
+<h3>典例 B：桌面操作与抓取放置</h3>
+<p>目标是“把红色杯子放到盘子左边”。VLM 负责检测和分割“红色杯子”“盘子”；深度/点云构造 3D 位姿；grasp planner 生成候选抓取；LLM 或 VoxPoser 风格约束模块生成“盘子左边”的放置区域；MoveIt/OMPL 规划机械臂轨迹并检查碰撞；控制器执行并用视觉确认。</p>
+<div class="table-wrap">
+<table>
+<thead><tr><th>模块</th><th>传统/学习算法</th><th>LLM/VLM 作用</th><th>评测关注点</th></tr></thead>
+<tbody>
+<tr><td>对象 grounding</td><td>检测、分割、6D pose、点云配准</td><td>开放词表查询和目标 disambiguation</td><td>目标 mask 是否正确；pose 是否可用于抓取</td></tr>
+<tr><td>抓取生成</td><td>GraspNet/AnyGrasp/Contact-GraspNet、几何抓取采样</td><td>选择目标对象和偏好抓取区域</td><td>grasp success、碰撞率、执行稳定性</td></tr>
+<tr><td>放置约束</td><td>可放置面检测、support polygon、IK</td><td>把“左边/靠近/不要挡住”等语言转为约束</td><td>语义关系是否满足，物体是否稳定</td></tr>
+<tr><td>运动规划</td><td>MoveIt 2、OMPL、RRTConnect、CHOMP/STOMP、轨迹优化</td><td>提供目标和约束，不直接输出关节轨迹</td><td>规划成功率、轨迹安全、执行时间</td></tr>
+<tr><td>闭环恢复</td><td>视觉伺服、重抓取、replan</td><td>解释失败并选择恢复策略</td><td>恢复成功率、人工介入次数</td></tr>
+</tbody>
+</table>
+</div>
+
+<h3>典例 C：LLM + PDDL/TAMP 家庭任务</h3>
+<p>目标是“准备一杯水并放到餐桌”。LLM 根据对象和环境状态生成 PDDL goal 或行为树；PDDL planner 生成候选任务序列；PDDLStream/MoveIt 为每一步采样抓取、放置和轨迹；执行监控发现 motion failure 时，把失败约束反馈给 planner 或 LLM 重新绑定对象。</p>
+<pre><code class="language-text">User goal
+  -> LLM converts the request into symbolic goal predicates.
+  -> Planner searches over symbolic actions and object bindings.
+  -> Motion samplers test grasp, place, reachability, and collision constraints.
+  -> Robot executes a behavior tree with postcondition checks.
+  -> Failure monitor adds a new constraint and triggers replanning.
+</code></pre>
+</section>
+
+<section id="math">
+<h2>数学形式与接口目标</h2>
+
+<h3>1. 技能选择：语言合理性与物理可供性的乘积</h3>
+<p>令 \(c\) 表示用户指令（command），\(h\) 表示历史执行上下文（history），\(s_t\) 表示当前机器人/环境状态（state），\(\mathcal{K}\) 表示技能集合（skill library），\(u_k\) 表示技能 \(k\) 的语言描述。SayCan 风格选择可写为：</p>
+\[
+k^\*=\arg\max_{k\in\mathcal{K}}
+\left[
+\log p_{\mathrm{LLM}}(u_k \mid c,h)
++ \lambda \log q_{\mathrm{aff}}(k \mid s_t)
+\right]
+\]
+<p>变量解释：\(p_{\mathrm{LLM}}\) 是 LLM 判断“下一步说得通”的概率，\(q_{\mathrm{aff}}\) 是 affordance/value function 判断“当前做得到”的概率，\(\lambda\) 控制语义分数与可执行性分数的权重。</p>
+<div class="note">实现映射：工程上可把 \(p_{\mathrm{LLM}}\) 变成候选技能的 log-prob 或排序分，\(q_{\mathrm{aff}}\) 来自技能成功率模型、前置条件检查、几何可达性、导航可达性或 grasp feasibility。该公式对应 SayCan 的核心接口思想 [1]。</div>
+
+<h3>2. 语义地图查询：文本目标到可达 goal pose</h3>
+<p>令 \(q\) 表示文本查询（query），\(e_T(q)\) 表示文本 embedding，\(M(x)\) 表示地图位置 \(x\) 处的视觉-语言特征，\(\Omega_{\mathrm{free}}\) 表示可通行空间，\(d(x,x_t)\) 表示当前位置到候选点的距离，\(r_{\mathrm{risk}}(x)\) 表示障碍/不确定性风险。开放词表导航可抽象为：</p>
+\[
+x^\* =
+\arg\max_{x\in\Omega_{\mathrm{free}}}
+\left[
+\cos(e_T(q), M(x))
+- \alpha d(x,x_t)
+- \beta r_{\mathrm{risk}}(x)
+\right]
+\]
+<p>变量解释：第一项找语义最匹配的位置，第二项惩罚太远的目标，第三项惩罚危险或低置信区域。\(x^\*\) 不是最终控制命令，而是交给 Nav2/A*/局部 planner 的导航目标。</p>
+<div class="note">实现映射：VLMaps、CLIP-Fields、ConceptGraphs 等项目都可视为构造 \(M(x)\) 或对象图节点特征；经典导航栈只需要最终 goal pose 和 costmap，因此该接口是模块化路线的关键 [9][10][12][41]。</div>
+
+<h3>3. TAMP：符号计划与连续参数联合求解</h3>
+<p>令 \(\pi=(a_1,\ldots,a_T)\) 表示符号动作序列（symbolic plan），\(\theta=(\theta_1,\ldots,\theta_T)\) 表示连续参数，例如抓取姿态、放置姿态、导航目标、轨迹参数。TAMP 目标可写为：</p>
+\[
+(\pi^\*,\theta^\*)=
+\arg\min_{\pi,\theta} C(\pi,\theta)
+\quad
+\mathrm{s.t.}\quad
+\Phi_{\mathrm{sym}}(\pi, s_0, g)=1,\;
+\Phi_{\mathrm{geom}}(\pi,\theta)=1
+\]
+<p>变量解释：\(C\) 是代价函数，\(\Phi_{\mathrm{sym}}\) 检查符号前置条件和目标是否满足，\(\Phi_{\mathrm{geom}}\) 检查 IK、碰撞、可达性、抓取稳定性等连续约束。LLM 可以生成 \(g\)、候选 \(\pi\) 或 domain binding，但不应绕过这些约束检查。</p>
+<div class="note">实现映射：PDDLStream 把 \(\Phi_{\mathrm{geom}}\) 中的连续可行性检查封装成 stream/sampler，由规划器按需调用；MoveIt/OMPL 可作为 \(\Phi_{\mathrm{geom}}\) 的运动规划后端 [38][42][43]。</div>
+
+<h3>4. VLM 价值场到运动规划</h3>
+<p>令 \(V_\phi(x,q)\) 表示由 VLM/LLM 生成或组合的价值场（value field），\(x_t\) 是机器人末端或物体在时刻 \(t\) 的状态，\(u_t\) 是控制量，\(f\) 是动力学或运动学转移，\(g_{\mathrm{coll}}\) 是碰撞约束。VoxPoser 风格的执行可抽象为：</p>
+\[
+\tau^\* =
+\arg\min_{\tau}
+\sum_{t=0}^{T}
+\left[-V_\phi(x_t,q)+\rho\|u_t\|_2^2\right]
+\quad
+\mathrm{s.t.}\quad
+x_{t+1}=f(x_t,u_t),\;
+g_{\mathrm{coll}}(x_t)\le 0
+\]
+<p>变量解释：高价值区域对应更符合语言目标和视觉约束的位置，控制代价约束动作平滑，碰撞约束保证安全。轨迹 \(\tau^\*\) 仍由优化器、采样 planner 或控制器求解。</p>
+<div class="note">实现映射：VoxPoser 将 affordance map、avoidance map、rotation map 等组合为 3D value maps，再通过机器人控制和运动规划执行；这说明 VLM 可以生成“目标函数/约束”，而不必直接输出动作 [6]。</div>
+</section>
+
+<section id="pipeline">
+<h2>Pipeline 与伪代码</h2>
+
+<h3>通用闭环执行 pipeline</h3>
+<pre><code class="language-python">def modular_embodied_agent(user_goal, robot):
+    # 1. Read sensors and maintain a geometric/semantic world model.
+    obs = robot.sense()
+    metric_map = update_slam_and_costmap(obs)
+    semantic_map = update_open_vocab_map(obs, metric_map)
+
+    # 2. Convert raw observations into a compact state for the LLM/VLM brain.
+    #    The state must be schema-bound; avoid passing unstructured text only.
+    state = build_state_json(
+        robot_pose=robot.pose,
+        objects=semantic_map.visible_objects(),
+        rooms=semantic_map.rooms(),
+        skills=robot.skill_registry.available_skills(),
+    )
+
+    # 3. Ask the brain for a symbolic plan, a behavior tree, or skill call.
+    #    The brain may also query the VLM map for candidate objects/regions.
+    plan = llm_brain.plan(goal=user_goal, state=state)
+
+    # 4. Validate the plan before execution.
+    #    This is where PDDL, behavior-tree guards, reachability, IK, collision
+    #    checks, and skill preconditions prevent hallucinated actions.
+    validated_plan = planner.verify_and_refine(plan, metric_map, semantic_map)
+
+    # 5. Execute one skill or one small chunk, then observe again.
+    for step in validated_plan.steps:
+        result = robot.execute_skill(step)
+
+        # 6. Check postconditions with sensors rather than trusting the model.
+        if not monitor.check_postcondition(step, result, robot.sense()):
+            # 7. Feed structured failure information back to the brain/planner.
+            failure = monitor.explain_failure(step, result)
+            return modular_embodied_agent(rewrite_goal(user_goal, failure), robot)
+
+    # 8. Final verification matters for benchmarks and real deployment.
+    return monitor.check_task_success(user_goal, robot.sense())</code></pre>
+
+<h3>开放词表导航 pipeline</h3>
+<pre><code class="language-python">def open_vocab_navigation(language_goal, robot, semantic_map, nav_stack):
+    # Parse the goal into target concepts and spatial relations.
+    query = llm_parse_goal(language_goal)
+
+    # Query a language-indexed map or 3D scene graph.
+    candidates = semantic_map.search(
+        text=query.target_object,
+        room=query.room,
+        relation=query.spatial_relation,
+    )
+
+    # Filter candidates by reachability and navigation cost.
+    feasible_goals = []
+    for cand in candidates:
+        # Project object or region into a navigable goal pose.
+        goal_pose = choose_standoff_pose(cand, semantic_map.costmap)
+        if nav_stack.is_reachable(goal_pose):
+            feasible_goals.append((goal_pose, cand.semantic_score))
+
+    # Select the best reachable target; then let classical navigation execute.
+    goal_pose = rank_by_semantics_and_path_cost(feasible_goals)
+    path = nav_stack.plan(goal_pose)
+    return nav_stack.follow(path)</code></pre>
+
+<h3>抓取放置 pipeline</h3>
+<pre><code class="language-python">def open_vocab_pick_place(task_text, robot):
+    # Ground object names and spatial relations with a VLM or open-vocabulary detector.
+    task = llm_parse_manipulation_task(task_text)
+    rgbd = robot.get_rgbd()
+    target_mask = vlm_segment(rgbd, text=task.object_query)
+    reference_mask = vlm_segment(rgbd, text=task.reference_query)
+
+    # Convert masks into 3D object hypotheses.
+    target_cloud = backproject_mask_to_pointcloud(rgbd, target_mask)
+    reference_cloud = backproject_mask_to_pointcloud(rgbd, reference_mask)
+
+    # Generate grasp and place candidates with dedicated geometric modules.
+    grasps = grasp_planner.propose(target_cloud)
+    place_region = compute_language_place_region(
+        relation=task.relation,
+        reference_cloud=reference_cloud,
+    )
+
+    # Validate candidates with IK and collision checks before execution.
+    for grasp in rank_grasps(grasps):
+        pick_traj = moveit.plan_to_grasp(grasp)
+        place_traj = moveit.plan_to_place(place_region)
+        if pick_traj.valid and place_traj.valid:
+            robot.execute(pick_traj)
+            robot.close_gripper()
+            robot.execute(place_traj)
+            robot.open_gripper()
+            return verify_place_relation(task, robot.get_rgbd())
+
+    # If all candidates fail, return structured failure for replanning.
+    return {"success": False, "reason": "no collision-free grasp/place plan"}</code></pre>
+
+<h3>PDDL/TAMP pipeline</h3>
+<pre><code class="language-python">def llm_tamp_solver(language_goal, world_state):
+    # LLM produces a symbolic goal and candidate object bindings.
+    # The output must be parsed against a fixed schema, not free-form text.
+    pddl_problem = llm_translate_to_pddl(language_goal, world_state)
+
+    # Classical planner searches symbolic action sequences.
+    candidate_plan = pddl_planner.solve(pddl_problem)
+
+    # Continuous streams sample grasps, poses, and trajectories on demand.
+    for action in candidate_plan:
+        params = sample_continuous_parameters(action, world_state)
+        if not motion_checker.is_feasible(action, params):
+            # Add a constraint and replan rather than forcing execution.
+            pddl_problem.add_constraint(action, "motion_infeasible")
+            return llm_tamp_solver(language_goal, world_state)
+
+    # Execute only after symbolic and geometric feasibility both pass.
+    return execute_plan(candidate_plan)</code></pre>
+</section>
+
+<section id="implementation">
+<h2>实现证据与代码映射</h2>
+<p>本报告是公开调研，不涉及对本地项目源码的改造。下面给出可直接映射到工程实现的开源/官方入口与模块边界。</p>
+<div class="table-wrap">
+<table>
+<thead>
+<tr><th>工程模块</th><th>可用开源/官方组件</th><th>接口输入</th><th>接口输出</th><th>注意事项</th></tr>
+</thead>
+<tbody>
+<tr>
+    <td>导航栈</td>
+    <td>ROS 2 Navigation2 [41]</td>
+    <td>地图、costmap、goal pose、机器人状态</td>
+    <td>路径、速度控制、行为树执行状态</td>
+    <td>LLM 只能给 goal/约束，不能绕过安全层</td>
+</tr>
+<tr>
+    <td>机械臂运动规划</td>
+    <td>MoveIt 2、OMPL [42][43]</td>
+    <td>目标姿态、约束、碰撞场景、机器人模型</td>
+    <td>关节轨迹、规划失败原因</td>
+    <td>需要把 VLM 输出转成准确 6D pose/约束</td>
+</tr>
+<tr>
+    <td>行为组织</td>
+    <td>BehaviorTree.CPP、Nav2 BT [44][41]</td>
+    <td>技能节点、条件节点、恢复节点</td>
+    <td>可中断、可恢复、可监控的执行图</td>
+    <td>适合把 LLM plan 固化成可执行结构</td>
+</tr>
+<tr>
+    <td>开放词表地图</td>
+    <td>VLMaps、ConceptGraphs、OpenScene、HOV-SG [9][11][12][13]</td>
+    <td>RGB-D/pose、文本 query、对象关系</td>
+    <td>语义目标、object node、3D region、goal pose</td>
+    <td>语义置信度必须与可达性联合排序</td>
+</tr>
+<tr>
+    <td>抓取 primitive</td>
+    <td>GraspNet-1Billion、AnyGrasp、Contact-GraspNet [33][34]</td>
+    <td>目标点云/深度、mask、夹爪模型</td>
+    <td>6D grasp poses、grasp scores</td>
+    <td>VLM mask 错误会直接污染 grasp proposal</td>
+</tr>
+<tr>
+    <td>形式化规划</td>
+    <td>PDDLStream、PDDL solver、LLM+P 风格翻译 [37][38]</td>
+    <td>PDDL domain/problem、stream、world facts</td>
+    <td>符号计划 + 连续参数</td>
+    <td>domain 编写成本高，但可解释性最好</td>
+</tr>
+<tr>
+    <td>失败恢复</td>
+    <td>Inner Monologue、LLM3 风格 failure reasoning [2][39]</td>
+    <td>失败步骤、传感器状态、planner error</td>
+    <td>replan hint、约束更新、问题澄清</td>
+    <td>失败信息要结构化，避免只把日志全文塞给 LLM</td>
+</tr>
+</tbody>
+</table>
+</div>
+
+<h3>推荐的数据契约</h3>
+<pre><code class="language-json">{
+  "task": "put the red mug to the left of the plate",
+  "robot": {
+    "base_pose": [1.2, 0.4, 1.57],
+    "arm_state": "ready",
+    "gripper_state": "open"
+  },
+  "objects": [
+    {
+      "id": "mug_3",
+      "name": "red mug",
+      "pose": [0.55, 0.20, 0.84, 0, 0, 0],
+      "mask_confidence": 0.86,
+      "reachable": true
+    }
+  ],
+  "skills": [
+    {
+      "name": "pick",
+      "arguments": ["object_id"],
+      "preconditions": ["object.visible", "object.reachable", "grasp.exists"],
+      "postconditions": ["gripper.holding(object_id)"]
+    }
+  ]
+}</code></pre>
+<p>这种 schema 的意义是把 LLM/VLM 的自由语言输出压缩到可验证字段中。所有进入 Nav2、MoveIt、TAMP 或控制器的值都应由 parser、类型检查、可达性检查和碰撞检查过滤。</p>
+</section>
+
+<section id="boundary">
+<h2>公源/本地设计边界</h2>
+<div class="table-wrap">
+<table>
+<thead><tr><th>类别</th><th>本报告中的处理方式</th><th>证据边界</th></tr></thead>
+<tbody>
+<tr>
+    <td>公有设计 / 上游公开流程</td>
+    <td>SayCan、Code as Policies、VoxPoser、VLMaps、ConceptGraphs、OK-Robot、PDDLStream 等均按论文/官方项目页描述</td>
+    <td>引用 arXiv、项目页、官方 GitHub 或官方文档</td>
+</tr>
+<tr>
+    <td>本地证据</td>
+    <td>本地证据仅包括 NoteBook 仓库报告规范、README 列表和现有 HTML 风格</td>
+    <td>未分析其他本地机器人代码，因此不声称本地实现已存在</td>
+</tr>
+<tr>
+    <td>本地推断</td>
+    <td>将这些路线映射为可实现工程模块：LLM/VLM brain、语义地图、TAMP、Nav2、MoveIt、grasp planner、monitor</td>
+    <td>属于从公开系统设计和传统机器人组件做出的工程归纳</td>
+</tr>
+<tr>
+    <td>尚未核实</td>
+    <td>具体某个新项目是否适配特定机器人硬件、许可是否可商用、模型权重是否可直接下载，需要逐项核对</td>
+    <td>本报告只给路线和公开入口，不替代许可证/硬件兼容性审计</td>
+</tr>
+</tbody>
+</table>
+</div>
+</section>
+
+<section id="comparison">
+<h2>方法对比与选择建议</h2>
+<div class="table-wrap">
+<table>
+<thead>
+<tr>
+    <th>目标</th>
+    <th>优先路线</th>
+    <th>理由</th>
+    <th>建议 benchmark</th>
+    <th>最低可交付系统</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+    <td>快速做出可解释 demo</td>
+    <td>LLM + 技能库 + 行为树</td>
+    <td>工程成本最低，计划过程可打印、可调试</td>
+    <td>VirtualHome、ALFRED、AI2-THOR</td>
+    <td>固定技能集合 + LLM planner + 状态监控</td>
+</tr>
+<tr>
+    <td>开放词表室内导航</td>
+    <td>语义地图 + Nav2/经典导航</td>
+    <td>LLM/VLM 擅长语义查询，传统导航擅长几何执行</td>
+    <td>OVON、GOAT-Bench、Habitat ObjectNav</td>
+    <td>RGB-D SLAM + VLMaps/ConceptGraphs + Nav2</td>
+</tr>
+<tr>
+    <td>桌面操作/抓取放置</td>
+    <td>VLM grounding + grasp planner + MoveIt</td>
+    <td>可以把开放词表理解和成熟运动规划连接起来</td>
+    <td>RLBench、ManiSkill、LIBERO、RoboCasa</td>
+    <td>Grounded segmentation + AnyGrasp/GraspNet + MoveIt</td>
+</tr>
+<tr>
+    <td>需要严格可验证计划</td>
+    <td>LLM + PDDL/TAMP</td>
+    <td>LLM 负责翻译和候选生成，planner 负责可行性和完备搜索</td>
+    <td>PlanBench、PDDL domain、RLBench/TAMP tasks</td>
+    <td>PDDL domain + PDDLStream + MoveIt/OMPL</td>
+</tr>
+<tr>
+    <td>真实家庭移动操作</td>
+    <td>OK-Robot / HomeRobot 风格全链路</td>
+    <td>必须同时处理导航、目标发现、抓取、放置和失败恢复</td>
+    <td>OVMM、BEHAVIOR-1K、真实家庭任务集</td>
+    <td>语义地图 + 导航 + 抓取 + 放置 + 监控日志</td>
+</tr>
+<tr>
+    <td>长期研究潜力</td>
+    <td>模块化系统 + 可学习 skill / VLA 混合</td>
+    <td>纯模块化会受限于手写接口，纯端到端受限于数据和安全；混合路线更可持续</td>
+    <td>OVMM + LIBERO/RoboCasa + 真实 rollout</td>
+    <td>LLM/VLM brain 调度传统模块，同时逐步替换为 learned skills</td>
+</tr>
+</tbody>
+</table>
+</div>
+
+<h3>与 VLA/WAM 的互补关系</h3>
+<ul>
+    <li>如果任务需要高频、精细、接触丰富的动作生成，VLA/模仿学习/扩散策略更有优势；模块化路线可以把这些策略作为 skill。</li>
+    <li>如果任务需要开放词表目标、复杂语言约束、可解释失败恢复和安全验证，LLM/VLM + 传统规划更有优势。</li>
+    <li>如果目标是工程部署，建议采用“LLM/VLM 负责语义，传统 planner 保底，学习策略做局部技能”的混合架构。</li>
+</ul>
+</section>
+
+<section id="risks">
+<h2>风险与后续建议</h2>
+
+<h3>主要风险</h3>
+<ul>
+    <li><strong>语义 hallucination。</strong>LLM/VLM 可能虚构对象、空间关系或可执行技能；必须通过地图、传感器和 planner 验证。</li>
+    <li><strong>接口脆弱。</strong>自然语言、JSON、PDDL、scene graph、goal pose 之间任何 schema 不一致都会导致系统失败。</li>
+    <li><strong>开放词表感知与几何不一致。</strong>VLM 找到的语义目标可能不可达、被遮挡、pose 不准或不适合抓取。</li>
+    <li><strong>全链路误差叠加。</strong>导航误差、定位误差、mask 误差、抓取误差、放置误差会累积；单模块指标高不代表系统成功。</li>
+    <li><strong>评测不统一。</strong>不同项目任务集、机器人平台、重置条件、失败定义不同，不能直接比较 success rate。</li>
+    <li><strong>许可和部署约束。</strong>公开项目不等于可商用；部分模型、数据、仿真资产和机器人硬件适配需要单独审计。</li>
+</ul>
+
+<h3>建议的研究/工程路线</h3>
+<ol>
+    <li><strong>先做导航闭环：</strong>RGB-D/pose 数据构建语义地图，用文本 query 产生 goal pose，再接 Nav2/经典 planner，评测 OVON/GOAT/ObjectNav。</li>
+    <li><strong>再做桌面 pick-place：</strong>开放词表检测/分割 + GraspNet/AnyGrasp + MoveIt，任务从单物体抓取扩展到空间关系放置。</li>
+    <li><strong>引入 LLM planner：</strong>把任务状态定义为 JSON schema，技能定义前后置条件，LLM 只输出 schema 内的行为树或 PDDL goal。</li>
+    <li><strong>建立错误账本：</strong>每次失败标注为语义理解、目标定位、可达性、规划、抓取、放置、控制或监控错误，避免只看总成功率。</li>
+    <li><strong>最后考虑与 VLA/WAM 混合：</strong>把端到端策略作为局部 skill，而不是一开始就让它接管所有系统边界。</li>
+</ol>
+</section>
+
+<section id="references">
+<h2>参考文献（References）</h2>
+<ol>
+    <li>[1] Ahn et al., "Do As I Can, Not As I Say: Grounding Language in Robotic Affordances", 2022. <a href="https://say-can.github.io/">项目页</a> / <a href="https://arxiv.org/abs/2204.01691">arXiv</a></li>
+    <li>[2] Huang et al., "Inner Monologue: Embodied Reasoning through Planning with Language Models", 2022. <a href="https://innermonologue.github.io/">项目页</a> / <a href="https://arxiv.org/abs/2207.05608">arXiv</a></li>
+    <li>[3] Liang et al., "Code as Policies: Language Model Programs for Embodied Control", 2022. <a href="https://code-as-policies.github.io/">项目页</a> / <a href="https://arxiv.org/abs/2209.07753">arXiv</a></li>
+    <li>[4] Singh et al., "ProgPrompt: Generating Situated Robot Task Plans using Large Language Models", 2023. <a href="https://progprompt.github.io/">项目页</a> / <a href="https://arxiv.org/abs/2209.11302">arXiv</a></li>
+    <li>[5] Shah et al., "LM-Nav: Robotic Navigation with Large Pre-Trained Models of Language, Vision, and Action", 2022. <a href="https://sites.google.com/view/lmnav">项目页</a> / <a href="https://arxiv.org/abs/2207.04429">arXiv</a></li>
+    <li>[6] Huang et al., "VoxPoser: Composable 3D Value Maps for Robotic Manipulation with Language Models", 2023. <a href="https://voxposer.github.io/">项目页</a> / <a href="https://arxiv.org/abs/2307.05973">arXiv</a></li>
+    <li>[7] Wu et al., "TidyBot: Personalized Robot Assistance with Large Language Models", 2023. <a href="https://tidybot.cs.princeton.edu/">项目页</a> / <a href="https://arxiv.org/abs/2305.05658">arXiv</a></li>
+    <li>[8] Liu et al., "OK-Robot: What Really Matters in Integrating Open-Knowledge Models for Robotics", 2024. <a href="https://ok-robot.github.io/">项目页</a> / <a href="https://arxiv.org/abs/2401.12202">arXiv</a></li>
+    <li>[9] Huang et al., "VLMaps: Spatial Map Representations for Language-Guided Navigation", 2023. <a href="https://vlmaps.github.io/">项目页</a> / <a href="https://arxiv.org/abs/2210.05714">arXiv</a></li>
+    <li>[10] Shafiullah et al., "CLIP-Fields: Weakly Supervised Semantic Fields for Robotic Memory", 2023. <a href="https://mahis.life/clip-fields/">项目页</a> / <a href="https://arxiv.org/abs/2210.05663">arXiv</a></li>
+    <li>[11] Peng et al., "OpenScene: 3D Scene Understanding with Open Vocabularies", 2023. <a href="https://pengsongyou.github.io/openscene">项目页</a> / <a href="https://github.com/pengsongyou/openscene">GitHub</a></li>
+    <li>[12] Gu et al., "ConceptGraphs: Open-Vocabulary 3D Scene Graphs for Perception and Planning", 2023. <a href="https://concept-graphs.github.io/">项目页</a> / <a href="https://github.com/concept-graphs/concept-graphs">GitHub</a></li>
+    <li>[13] Werby et al., "Hierarchical Open-Vocabulary 3D Scene Graphs for Language-Grounded Robot Navigation", 2024. <a href="https://hovsg.github.io/">项目页</a> / <a href="https://arxiv.org/abs/2403.17846">arXiv</a></li>
+    <li>[14] Ren et al., "Grounded SAM: Assembling Open-World Models for Diverse Visual Tasks", 2023. <a href="https://github.com/IDEA-Research/Grounded-Segment-Anything">GitHub</a></li>
+    <li>[15] Liu et al., "MOKA: Open-World Robotic Manipulation through Mark-Based Visual Prompting", 2024. <a href="https://moka-manipulation.github.io/">项目页</a> / <a href="https://arxiv.org/abs/2403.03174">arXiv</a></li>
+    <li>[16] Min et al., "SG-Nav: Online 3D Scene Graph Prompting for LLM-based Zero-shot Object Navigation", 2025. <a href="https://github.com/bagh2178/SG-Nav">GitHub</a></li>
+    <li>[17] Shridhar et al., "ALFRED: A Benchmark for Interpreting Grounded Instructions for Everyday Tasks", 2020. <a href="https://alfredbenchmark.github.io/">项目页</a> / <a href="https://arxiv.org/abs/1912.01734">arXiv</a></li>
+    <li>[18] Padmakumar et al., "TEACh: Task-driven Embodied Agents that Chat", 2021. <a href="https://github.com/alexa/teach">GitHub</a> / <a href="https://arxiv.org/abs/2110.00534">arXiv</a></li>
+    <li>[19] Puig et al., "VirtualHome: Simulating Household Activities via Programs", 2018. <a href="http://virtual-home.org/">项目页</a> / <a href="https://arxiv.org/abs/1806.07011">arXiv</a></li>
+    <li>[20] Li et al., "BEHAVIOR-1K: A Benchmark for Embodied AI with 1,000 Everyday Activities and Realistic Simulation", 2024. <a href="https://behavior.stanford.edu/behavior-1k">项目页</a></li>
+    <li>[21] Savva et al., "Habitat: A Platform for Embodied AI Research", 2019. <a href="https://aihabitat.org/">项目页</a> / <a href="https://arxiv.org/abs/1904.01201">arXiv</a></li>
+    <li>[22] Ramakrishnan et al., "Habitat-Matterport 3D Dataset", 2021. <a href="https://aihabitat.org/datasets/hm3d/">数据集页</a> / <a href="https://arxiv.org/abs/2109.08238">arXiv</a></li>
+    <li>[23] Yokoyama et al., "Open-Vocabulary Object Navigation", 2024. <a href="https://open-vocabulary-objectnav.github.io/">项目页</a> / <a href="https://arxiv.org/abs/2306.11565">arXiv</a></li>
+    <li>[24] Gervet et al., "GOAT-Bench: A Benchmark for Multi-Modal Lifelong Navigation", 2024. <a href="https://theophilegervet.github.io/projects/goat-bench/">项目页</a> / <a href="https://arxiv.org/abs/2404.06609">arXiv</a></li>
+    <li>[25] Yenamandra et al., "HomeRobot: Open-Vocabulary Mobile Manipulation", 2023. <a href="https://ovmm.github.io/">项目页</a> / <a href="https://github.com/facebookresearch/home-robot">GitHub</a></li>
+    <li>[26] Kolve et al., "AI2-THOR: An Interactive 3D Environment for Visual AI", 2017. <a href="https://ai2thor.allenai.org/">项目页</a></li>
+    <li>[27] Deitke et al., "ProcTHOR: Large-Scale Embodied AI Using Procedural Generation", 2022. <a href="https://procthor.allenai.org/">项目页</a> / <a href="https://arxiv.org/abs/2206.06994">arXiv</a></li>
+    <li>[28] James et al., "RLBench: The Robot Learning Benchmark &amp; Learning Environment", 2020. <a href="https://github.com/stepjam/RLBench">GitHub</a> / <a href="https://arxiv.org/abs/1909.12271">arXiv</a></li>
+    <li>[29] Mees et al., "CALVIN: A Benchmark for Language-Conditioned Policy Learning for Long-Horizon Robot Manipulation Tasks", 2022. <a href="http://calvin.cs.uni-freiburg.de/">项目页</a> / <a href="https://arxiv.org/abs/2112.03227">arXiv</a></li>
+    <li>[30] Liu et al., "LIBERO: Benchmarking Knowledge Transfer for Lifelong Robot Learning", 2023. <a href="https://libero-project.github.io/">项目页</a> / <a href="https://arxiv.org/abs/2306.03310">arXiv</a></li>
+    <li>[31] Mu et al., "ManiSkill: Generalizable Manipulation Skill Benchmark with Large-Scale Demonstrations", 2021-2024. <a href="https://maniskill.ai/">项目页</a> / <a href="https://github.com/haosulab/ManiSkill">GitHub</a></li>
+    <li>[32] Nasiriany et al., "RoboCasa: Large-Scale Simulation of Everyday Tasks for Generalist Robots", 2024. <a href="https://robocasa.ai/">项目页</a> / <a href="https://arxiv.org/abs/2406.02523">arXiv</a></li>
+    <li>[33] Fang et al., "GraspNet-1Billion: A Large-Scale Benchmark for General Object Grasping", 2020. <a href="https://graspnet.net/">项目页</a> / <a href="https://arxiv.org/abs/1912.13470">arXiv</a></li>
+    <li>[34] Fang et al., "AnyGrasp: Robust and Efficient Grasp Perception in Spatial and Temporal Domains", 2023. <a href="https://graspnet.net/anygrasp.html">项目页</a></li>
+    <li>[35] Majumdar et al., "OpenEQA: Embodied Question Answering in the Era of Foundation Models", 2024. <a href="https://open-eqa.github.io/">项目页</a> / <a href="https://arxiv.org/abs/2405.14083">arXiv</a></li>
+    <li>[36] Mu et al., "EmbodiedBench: Comprehensive Benchmarking Multi-modal Large Language Models for Vision-Driven Embodied Agents", 2025. <a href="https://github.com/EmbodiedBench/EmbodiedBench">GitHub</a> / <a href="https://arxiv.org/abs/2502.09560">arXiv</a></li>
+    <li>[37] Liu et al., "LLM+P: Empowering Large Language Models with Optimal Planning Proficiency", 2023. <a href="https://arxiv.org/abs/2304.11477">arXiv</a></li>
+    <li>[38] Garrett et al., "PDDLStream: Integrating Symbolic Planners and Blackbox Samplers via Optimistic Adaptive Planning", 2020. <a href="https://arxiv.org/abs/1802.08705">arXiv</a> / <a href="https://github.com/caelan/pddlstream">GitHub</a></li>
+    <li>[39] Liu et al., "LLM3: Large Language Model-based Task and Motion Planning with Motion Failure Reasoning", 2024. <a href="https://arxiv.org/abs/2403.11552">arXiv</a></li>
+    <li>[40] Valmeekam et al., "On the Planning Abilities of Large Language Models - A Critical Investigation", 2023. <a href="https://arxiv.org/abs/2305.15771">arXiv</a></li>
+    <li>[41] ROS 2 Navigation2 官方文档. <a href="https://docs.nav2.org/">链接</a></li>
+    <li>[42] MoveIt 2 官方文档. <a href="https://moveit.picknik.ai/main/index.html">链接</a></li>
+    <li>[43] Open Motion Planning Library (OMPL) 官方文档. <a href="https://ompl.kavrakilab.org/">链接</a></li>
+    <li>[44] BehaviorTree.CPP 官方文档. <a href="https://www.behaviortree.dev/">链接</a></li>
+    <li>[45] Kim et al., "OpenVLA: An Open-Source Vision-Language-Action Model", 2024. <a href="https://arxiv.org/abs/2406.09246">arXiv</a> / <a href="https://github.com/openvla/openvla">GitHub</a></li>
+    <li>[46] Physical Intelligence, "π₀ / π₀.₅ / openpi" 官方模型与代码仓库, 2024-2026. <a href="https://github.com/Physical-Intelligence/openpi">GitHub</a> / <a href="https://arxiv.org/abs/2504.16054">π₀.₅ 论文</a></li>
+    <li>[47] NVIDIA, "Isaac GR00T N1: A Foundation Model for Generalist Humanoid Robots", 2025. <a href="https://arxiv.org/abs/2503.14734">arXiv</a> / <a href="https://github.com/NVIDIA/Isaac-GR00T">GitHub</a></li>
+    <li>[48] OpenHelix Team, "OpenHelix: An Open-source Dual-System VLA Model for Robotic Manipulation", 2025. <a href="https://arxiv.org/abs/2505.03912">arXiv</a> / <a href="https://github.com/OpenHelix-Team/OpenHelix">GitHub</a></li>
+    <li>[49] GFVLA-CBF 官方代码仓库, "Graph-Fused Vision-Language-Action Models for Semantically Safe Dual-Robot Control via Control Barrier Functions", 2026. <a href="https://github.com/gaolongsen/GFVLA_CBF">GitHub</a></li>
+    <li>[50] Facebook Research, HomeRobot 官方代码仓库：Mobile Manipulation Research Tools. <a href="https://github.com/facebookresearch/home-robot">GitHub</a></li>
+    <li>[51] Zhang et al., "Dynamic Open-Vocabulary 3D Scene Graphs for Long-term Language-Guided Mobile Manipulation", RA-L 2025. <a href="https://arxiv.org/abs/2410.11989">arXiv</a> / <a href="https://github.com/BJHYZJ/DovSG">GitHub</a></li>
+    <li>[52] Liu et al., "AutoTAMP: Autonomously Generating Robot Task and Motion Plans", 2023. <a href="https://arxiv.org/abs/2306.06531">arXiv</a> / <a href="https://github.com/yongchao98/AutoTAMP">GitHub</a></li>
+    <li>[53] NVIDIA, Cosmos 3 官方代码与技术报告：Reasoner, Generator and Action Modeling for Physical AI, 2026. <a href="https://github.com/NVIDIA/cosmos">GitHub</a> / <a href="https://research.nvidia.com/labs/cosmos-lab/cosmos3/technical-report.pdf">技术报告</a></li>
+    <li>[54] NVIDIA, "DreamDojo: A Generalist Robot World Model from Large-Scale Human Videos", 2026. <a href="https://arxiv.org/abs/2602.06949">arXiv</a> / <a href="https://github.com/NVIDIA/DreamDojo">GitHub</a></li>
+    <li>[55] Chen et al., "DreamGen: Unlocking Generalization in Robot Learning through Video World Models", 2025. <a href="https://arxiv.org/abs/2505.12705">arXiv</a> / <a href="https://github.com/NVIDIA/GR00T-Dreams">GitHub</a></li>
+    <li>[56] NVIDIA, "PointWorld: Scaling 3D World Models for In-the-Wild Robotic Manipulation", 2026. <a href="https://arxiv.org/abs/2601.03782">arXiv</a> / <a href="https://github.com/NVlabs/PointWorld">GitHub</a></li>
+    <li>[57] "CheckManual: A Benchmark for Manual-Based Robot Manipulation", 2025. <a href="https://arxiv.org/abs/2506.09343">arXiv</a></li>
+    <li>[58] Hugging Face, LeRobot 官方代码仓库：Models, Datasets and Tools for Real-World Robotics. <a href="https://github.com/huggingface/lerobot">GitHub</a></li>
+</ol>
+</section>
+
+</article>
+</body>
+</html>

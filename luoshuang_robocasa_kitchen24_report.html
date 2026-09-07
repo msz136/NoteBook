@@ -1,0 +1,1784 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Luoshuang RoboCasa kitchen24 π0.5 训练评估全流程报告</title>
+    <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            font-size: 16px;
+            line-height: 1.8;
+            color: #18212f;
+            background: #ffffff;
+            padding: 2rem 1rem;
+        }
+        article { max-width: 900px; margin: 0 auto; }
+        h1 {
+            font-size: 2rem;
+            line-height: 1.25;
+            margin-bottom: 0.5rem;
+            border-bottom: 2px solid #26323f;
+            padding-bottom: 0.6rem;
+        }
+        h2 {
+            font-size: 1.48rem;
+            margin-top: 2.6rem;
+            margin-bottom: 1rem;
+            border-left: 4px solid #2563eb;
+            padding-left: 0.75rem;
+        }
+        h3 { font-size: 1.23rem; margin-top: 1.7rem; margin-bottom: 0.75rem; }
+        h4 { font-size: 1.08rem; margin-top: 1.2rem; margin-bottom: 0.45rem; }
+        p, ul, ol { margin-bottom: 1rem; }
+        ul, ol { padding-left: 1.5rem; }
+        li { margin-bottom: 0.25rem; }
+        pre {
+            background: #f8fafc;
+            border: 1px solid #dfe7ef;
+            border-radius: 6px;
+            padding: 1rem;
+            overflow-x: auto;
+            margin: 1rem 0 1.2rem;
+        }
+        code {
+            font-family: "Fira Code", "Consolas", "SFMono-Regular", monospace;
+            background: #f1f5f9;
+            padding: 0.12rem 0.35rem;
+            border-radius: 3px;
+            font-size: 0.9em;
+        }
+        pre code { background: none; padding: 0; border-radius: 0; }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1rem 0 1.5rem;
+            font-size: 0.92rem;
+        }
+        th, td {
+            border: 1px solid #d9e1ea;
+            padding: 0.58rem 0.72rem;
+            text-align: left;
+            vertical-align: top;
+        }
+        th { background: #f7fafc; font-weight: 650; }
+        tr:nth-child(even) { background: #fbfdff; }
+        a { color: #1d4ed8; text-decoration: none; }
+        a:hover { text-decoration: underline; }
+        .meta { color: #5c6775; font-size: 0.92rem; margin-bottom: 1.4rem; }
+        .toc {
+            background: #f8fbff;
+            border: 1px solid #d6e5ff;
+            border-left: 4px solid #2563eb;
+            padding: 1rem 1.2rem;
+            margin: 1.4rem 0 2rem;
+            border-radius: 6px;
+        }
+        .toc h2 {
+            border: none;
+            margin: 0 0 0.7rem;
+            padding: 0;
+            font-size: 1.15rem;
+        }
+        .toc ol { columns: 2; column-gap: 2rem; margin-bottom: 0; }
+        .note {
+            background: #eff6ff;
+            border-left: 4px solid #2563eb;
+            padding: 0.8rem 1rem;
+            margin: 1rem 0;
+            border-radius: 4px;
+        }
+        .warning {
+            background: #fff7ed;
+            border-left: 4px solid #f97316;
+            padding: 0.8rem 1rem;
+            margin: 1rem 0;
+            border-radius: 4px;
+        }
+        .evidence {
+            background: #f7f2ff;
+            border-left: 4px solid #7c3aed;
+            padding: 0.8rem 1rem;
+            margin: 1rem 0;
+            border-radius: 4px;
+        }
+        .metric-grid {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 0.8rem;
+            margin: 1rem 0 1.3rem;
+        }
+        .metric {
+            border: 1px solid #d9e1ea;
+            border-radius: 6px;
+            padding: 0.8rem;
+            background: #fbfdff;
+        }
+        .metric strong { display: block; font-size: 1.22rem; color: #0f172a; }
+        .metric span { display: block; color: #64748b; font-size: 0.88rem; }
+        .svg-wrap {
+            overflow-x: auto;
+            border: 1px solid #d9e1ea;
+            border-radius: 6px;
+            padding: 0.5rem;
+            background: #ffffff;
+            margin: 1rem 0 1.2rem;
+        }
+        .small { font-size: 0.9rem; color: #5c6775; }
+        .nowrap { white-space: nowrap; }
+        @media (max-width: 700px) {
+            body { padding: 1rem 0.5rem; }
+            h1 { font-size: 1.48rem; }
+            table { display: block; overflow-x: auto; font-size: 0.86rem; }
+            .toc ol { columns: 1; }
+            .metric-grid { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+<article>
+    <h1>Luoshuang RoboCasa kitchen24 π0.5 训练评估全流程报告</h1>
+    <p class="meta">报告日期：2026-07-02 | 证据截止：2026-07-02 | 工作区：<code>C:\Users\mousongzhe\pryer\project</code> | 产物：<code>luoshuang_robocasa_kitchen24_report.html</code></p>
+
+    <nav class="toc" aria-label="目录">
+        <h2>目录</h2>
+        <ol>
+            <li><a href="#question">问题</a></li>
+            <li><a href="#scope">范围与证据边界</a></li>
+            <li><a href="#baseline">官方 Baseline</a></li>
+            <li><a href="#concepts">基础知识栈</a></li>
+            <li><a href="#base-io">Base 模型输入输出</a></li>
+            <li><a href="#robocasa-data">RoboCasa 数据适配</a></li>
+            <li><a href="#architecture">模型架构与头部改造</a></li>
+            <li><a href="#losses">训练目标与 Loss</a></li>
+            <li><a href="#pipeline">Pipeline 与伪代码</a></li>
+            <li><a href="#eval-loop">在线评估与 Rollout</a></li>
+            <li><a href="#run-ledger">Run 总账</a></li>
+            <li><a href="#runs">逐 Run 记录</a></li>
+            <li><a href="#curves">训练 Loss 曲线</a></li>
+            <li><a href="#final-result">最终结果分析</a></li>
+            <li><a href="#comparison">方法对比与选择建议</a></li>
+            <li><a href="#recovery">恢复工作清单</a></li>
+            <li><a href="#references">参考文献</a></li>
+        </ol>
+    </nav>
+
+    <section id="question">
+        <h2>问题（Question）</h2>
+        <p>本报告回答的问题是：Luoshuang 的 RoboCasa <code>kitchen24</code> 任务最终 summary 为 <code>297/480 = 0.61875</code>，这个结果与官方 baseline 的关系是什么；本地项目的 base 模型、训练数据、输入输出规范、模型侧头部改造、fine-tune、online rollout 与 eval 环境是怎样恢复出来的；各阶段训练引入了什么改变，评估结果如何，失败与提升的原因是什么。</p>
+        <p>结论先行：本地最终 <code>61.875%</code> 这次完整评估来自 <code>pi05_robocasa</code> 的 <code>40000</code> checkpoint，也就是 PaliGemma π0.5 + RoboCasa LeRobot success-only 数据 + 7D Panda 动作输出的路线。它非常接近 Cosmos Cookbook 中同类 24-task RoboCasa 表的 <code>π0 = 62.5%</code>，但低于官方 Cosmos Policy Predict2 的 <code>67.1%</code> 和 Predict2.5 的 <code>71.1%</code>。本地的 Qwen+Cosmos 与 PaliGemma+Cosmos 是探索线，不是这次 60+ 结果的来源。</p>
+    </section>
+
+    <section id="scope">
+        <h2>报告范围与证据边界</h2>
+        <div class="evidence">
+            <p><strong>本地证据。</strong>核心证据来自 <code>07_openpi_eval_and_deployment_clients</code> 下的远端归档：最终 <code>summary.json</code>、<code>robocasa_pi05_40000_kitchen24_20260629033352_run.log</code>、训练/数据配置 <code>config.py</code>、评估汇总 <code>luoshuang_robocasa_run_summary.csv</code>、训练脚本 <code>train_pytorch_qwen.py</code>、policy server 脚本与部分 policy/policy_config 源码。</p>
+        </div>
+        <table>
+            <thead>
+            <tr>
+                <th>类别</th>
+                <th>证据</th>
+                <th>可确认内容</th>
+                <th>不可过度声称内容</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr>
+                <td>公开上游</td>
+                <td>RoboCasa 论文、OpenPI README、Cosmos Cookbook / Cosmos Policy 模型卡。</td>
+                <td>RoboCasa benchmark 背景、π0/π0.5 base model 定位、官方 24-task RoboCasa baseline。</td>
+                <td>不能把公开 recipe 的完整实现细节自动等同于本地每次训练细节。</td>
+            </tr>
+            <tr>
+                <td>本地最终结果</td>
+                <td><code>summary.json</code> 与 final run log。</td>
+                <td>24 个 kitchen 任务、每任务 20 trials、总计 297/480、配置为 deterministic、seed 7、replan 5、flip images。</td>
+                <td>不能说这是 Cosmos Policy 官方协议的 50 trials/task 完整复现。</td>
+            </tr>
+            <tr>
+                <td>模型/数据配置</td>
+                <td>远端归档 <code>config.py</code>。</td>
+                <td>LeRobot RoboCasa 数据字段、PaliGemma/Qwen/Cosmos 分支配置、7D/29D output action dim、prompt_from_task、normalization 和 transform 顺序。</td>
+                <td><code>openpi.policies.robocasa_policy.py</code> 与 <code>examples/robocasa/main.py</code> 在本地归档中不完整，因此 action 轴顺序和 rollout 逐行实现只能基于配置、脚本、日志与常见 RoboCasa/robosuite 接口推断。</td>
+            </tr>
+            <tr>
+                <td>训练 loss</td>
+                <td>partial stdout / wandb output logs。</td>
+                <td>普通 π0.5 早期到 21300 step 的 partial loss；Qwen+Cosmos 较完整的 action/future frame 分项 loss。</td>
+                <td>最终 <code>pi05_robocasa/40000</code> checkpoint 对应的完整训练曲线未在本地归档中找到，报告只把现有曲线作为片段证据。</td>
+            </tr>
+            </tbody>
+        </table>
+        <div class="warning">
+            <p><strong>证据边界。</strong>报告会明确区分“日志能证明的事实”和“由 pipeline 推断的合理机制”。凡本地没有源码或日志直接支撑的细节，均标为推断或未完全核实。</p>
+        </div>
+    </section>
+
+    <section id="baseline">
+        <h2>官方 Baseline 与本地位置</h2>
+        <p>用户关心的 <code>297/480 = 0.61875</code> 应当和两个层级的官方数字对照，而不是只找一个 baseline：</p>
+        <table>
+            <thead>
+            <tr>
+                <th>来源</th>
+                <th>任务/协议</th>
+                <th>方法或模型</th>
+                <th>Success Rate</th>
+                <th>与本地 61.875% 的关系</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr>
+                <td>RoboCasa 原论文 Figure 11</td>
+                <td>Multi-task atomic full synthetic，论文自身实验设置。</td>
+                <td>多任务 imitation learning baseline</td>
+                <td><code>0.476</code></td>
+                <td>不同协议，只能作为 RoboCasa 原始难度背景。本地 61.875% 高于该值，但不表示完全同协议超越。</td>
+            </tr>
+            <tr>
+                <td>Cosmos Cookbook RoboCasa table</td>
+                <td>24 个 RoboCasa kitchen manipulation tasks。</td>
+                <td>GR00T-N1.5 / UVA / DP-VLA / UWM</td>
+                <td><code>49.6%</code> / <code>50.0%</code> / <code>57.3%</code> / <code>60.8%</code></td>
+                <td>本地 61.875% 高于这些表内方法，但 trials/task 与 seed 需核对。</td>
+            </tr>
+            <tr>
+                <td>Cosmos Cookbook RoboCasa table</td>
+                <td>24 个 RoboCasa kitchen manipulation tasks。</td>
+                <td>π0</td>
+                <td><code>62.5%</code></td>
+                <td>本地低 <code>0.625</code> 个百分点，基本接近 π0 官方对照。</td>
+            </tr>
+            <tr>
+                <td>Cosmos Policy Predict2 model card / paper</td>
+                <td>24 个 RoboCasa kitchen manipulation tasks。</td>
+                <td>Cosmos Policy RoboCasa Predict2 2B</td>
+                <td><code>67.1%</code></td>
+                <td>本地低 <code>5.225</code> 个百分点。</td>
+            </tr>
+            <tr>
+                <td>Cosmos Cookbook Predict2.5 recipe</td>
+                <td>24 个 RoboCasa kitchen manipulation tasks。</td>
+                <td>Cosmos Policy Predict2.5</td>
+                <td><code>71.1%</code></td>
+                <td>本地低 <code>9.225</code> 个百分点。</td>
+            </tr>
+            <tr>
+                <td>本地 Luoshuang final eval</td>
+                <td><code>kitchen24</code>，24 tasks，每任务 20 trials，seed 7，deterministic。</td>
+                <td><code>pi05_robocasa/40000</code></td>
+                <td><code>61.875%</code>，<code>297/480</code></td>
+                <td>最终可复核本地结果。</td>
+            </tr>
+            </tbody>
+        </table>
+        <p>需要特别注意评估口径：NVIDIA Cosmos Policy model card 写明其 RoboCasa success rate 是在 <code>24</code> 个任务上，按每任务 <code>50</code> trials、跨 <code>5</code> 个 evaluation scenes 与 <code>3</code> 个 random seeds 平均得到。本地最终结果是每任务 <code>20</code> trials、seed <code>7</code> 的单次完整 kitchen24 eval，因此适合做工程对照，但若要严格排名，还需要复跑官方 trial/seed 口径。</p>
+        <p>成功率（Success Rate, SR）的定义如下，令 \(s_i\) 表示第 \(i\) 个任务成功次数，\(n_i\) 表示第 \(i\) 个任务总 trial 数：</p>
+        \[
+        \mathrm{SR}=\frac{\sum_{i=1}^{N} s_i}{\sum_{i=1}^{N} n_i}
+        =\frac{297}{480}=0.61875.
+        \]
+        <div class="note">
+            <p>变量解释：\(N=24\) 是 kitchen task 数；每个任务 \(n_i=20\)，所以总 trial 数为 \(480\)。实现映射：该式对应本地 <code>summary.json</code> 中的 <code>overall_successes</code>、<code>overall_trials</code> 与 <code>overall_success_rate</code> 字段。</p>
+        </div>
+    </section>
+
+    <section id="concepts">
+        <h2>基础知识栈</h2>
+        <h3>RoboCasa 与 Kitchen24</h3>
+        <p>RoboCasa 是面向厨房场景的机器人仿真框架，构建在 robosuite / MuJoCo 生态上，提供多样化厨房布局、物体、家具和机器人操作任务。原论文报告了 100 个任务、120 个场景、2500+ 3D 物体与 100K+ 合成轨迹规模，用来研究大规模 imitation learning（模仿学习）和 generalist robots（通用机器人）。</p>
+        <p>本地 <code>kitchen24</code> 是 Cosmos/RoboCasa policy recipe 中常用的 24 个厨房原子操作任务集合，包括 pick-and-place、开关门/抽屉、水龙头/炉灶/微波炉、咖啡机相关操作等。它的难点不只是视觉识别，还包括接触丰富（contact-rich）的末端执行器控制、长 horizon、物体遮挡、不同布局和实例 split。</p>
+
+        <h3>VLA、π0.5 与动作分块</h3>
+        <p>视觉语言动作模型（Vision-Language-Action Model, VLA）把图像、机器人状态和语言指令联合编码，然后直接输出机器人动作。π0.5 是 OpenPI 体系中用于开放世界泛化的 VLA base model，OpenPI 官方说明其 base checkpoints 经过 10k+ 小时机器人数据预训练，可用于 fine-tuning。</p>
+        <p>动作分块（Action Chunking）表示模型不是每个控制步只预测一个动作，而是一次输出 \(H\) 个未来动作：</p>
+        \[
+        A_{t:t+H-1} = \{a_t, a_{t+1}, \ldots, a_{t+H-1}\}, \quad
+        a_t \in \mathbb{R}^{d_a}.
+        \]
+        <div class="note">
+            <p>变量解释：\(H\) 是 action horizon（动作预测长度），本地 <code>pi05_robocasa</code> 配置为 <code>10</code>；\(d_a\) 是内部动作维度，π0.5 内部常用 <code>32</code>，RoboCasa Panda 任务实际控制只取前 <code>7</code> 维。实现映射：<code>Pi0Config(action_horizon=10)</code> 与 <code>RobocasaOutputs(action_dim=7)</code> 共同决定“预测 10 步、执行 7D 动作”。</p>
+        </div>
+
+        <h3>闭环控制与 Online Rollout</h3>
+        <p>离线 loss 只衡量模型在数据集样本上预测动作的误差；online rollout（在线闭环展开）会把预测动作真正送入仿真环境，环境状态再反过来影响下一次观测。这个闭环会放大小的动作偏差、相机预处理偏差和 normalization 错误，因此“loss 降得漂亮”不等于 “success rate 一定高”。</p>
+        <p>本地 Qwen+Cosmos 分支就是典型例子：action/future-frame loss 下降到很低，但 kitchen24 闭环 SR 只有 0% 到约 40%，说明模型可能学到了离线分布上的目标，却没有形成稳定的控制接口。</p>
+    </section>
+
+    <section id="base-io">
+        <h2>Base 模型输入输出规范</h2>
+        <h3>OpenPI π0.5 Base 输入</h3>
+        <p>本地 <code>pi05_robocasa</code> 从 OpenPI <code>pi05_base</code> warm-start：配置中有 <code>weight_loader=gs://openpi-assets/checkpoints/pi05_base/params</code> 与 <code>pytorch_weight_path=$USER_ROOT/models/pytorch/pi05_base_pytorch</code>。其训练和推理输入可以分为四类：</p>
+        <table>
+            <thead>
+            <tr>
+                <th>输入类别</th>
+                <th>本地字段</th>
+                <th>形状/语义</th>
+                <th>处理方式</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr>
+                <td>第三人称图像</td>
+                <td><code>image</code> → <code>observation/image</code> → <code>base_0_rgb</code></td>
+                <td>224 分辨率图像，环境侧也配置 <code>env_img_res=224</code>。</td>
+                <td>进入视觉编码器（PaliGemma 或 Qwen）；Cosmos 分支还把该帧作为 future-frame target 的当前上下文。</td>
+            </tr>
+            <tr>
+                <td>腕部图像</td>
+                <td><code>wrist_image</code> → <code>observation/wrist_image</code> → <code>left_wrist_0_rgb</code></td>
+                <td>眼在手上（eye-in-hand）视角。</td>
+                <td><code>wrist_image_keys=("left_wrist_0_rgb",)</code> 表示腕部相机跳过部分几何增强，避免破坏手眼坐标关系。</td>
+            </tr>
+            <tr>
+                <td>右侧/第二视角</td>
+                <td><code>secondary_image</code> → <code>observation/secondary_image</code></td>
+                <td>配置注释说明 RoboCasa 将 right-side third-person view 放进 <code>right_wrist_0_rgb</code> slot。</td>
+                <td>本地 final 配置 <code>use_right_wrist_rgb=True</code>，但注释又说训练只用 base + left wrist、right view 在数据侧 mask。此处需以归档源码为边界：可确认 slot 存在，mask 细节未完整归档。</td>
+            </tr>
+            <tr>
+                <td>本体状态</td>
+                <td><code>state</code> → <code>observation/state</code></td>
+                <td>配置注释写明为 9D：gripper joints + EEF pose + EEF quaternion。</td>
+                <td>经过 normalization 和 model transform 后 pad 到内部状态/动作统一维度。</td>
+            </tr>
+            <tr>
+                <td>语言任务</td>
+                <td><code>prompt</code></td>
+                <td>来自 LeRobot dataset task。</td>
+                <td><code>prompt_from_task=True</code>，再由 PaliGemma/Qwen tokenizer 编码。</td>
+            </tr>
+            </tbody>
+        </table>
+
+        <h3>Base 模型输出</h3>
+        <p>π0.5 的动作头输出内部 <code>32</code> 维动作 chunk，然后通过数据侧 output transform 变回环境可执行动作。RoboCasa Panda 的本地设置为 <code>output_action_dim=7</code>，所以最终交给仿真控制器的是 7D 动作。</p>
+        <table>
+            <thead>
+            <tr>
+                <th>阶段</th>
+                <th>张量/字段</th>
+                <th>维度</th>
+                <th>含义</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr>
+                <td>模型内部</td>
+                <td><code>actions</code></td>
+                <td>\((B, 10, 32)\)</td>
+                <td>flow matching 采样出的动作块，维度与 π0.5 action expert 对齐。</td>
+            </tr>
+            <tr>
+                <td>反归一化</td>
+                <td><code>Unnormalize(norm_stats)</code></td>
+                <td>\((10, 32)\)</td>
+                <td>使用 checkpoint assets 中的 norm stats 还原到训练数据动作尺度。</td>
+            </tr>
+            <tr>
+                <td>RoboCasa 输出适配</td>
+                <td><code>RobocasaOutputs(action_dim=7)</code></td>
+                <td>\((10, 7)\)</td>
+                <td>只保留 Panda/Cosmos 任务需要的 7D 控制动作。</td>
+            </tr>
+            <tr>
+                <td>环境执行</td>
+                <td>websocket response <code>actions</code></td>
+                <td>action chunk 中按 <code>replan_steps=5</code> 使用前若干步</td>
+                <td>online rollout 将动作送入 robosuite/RoboCasa controller，产生下一步观测。</td>
+            </tr>
+            </tbody>
+        </table>
+        <div class="warning">
+            <p><strong>动作 7D 的语义边界。</strong>RoboCasa/robosuite 中 Panda 常见 7D 末端控制可理解为 \(3\) 维末端位置 delta、\(3\) 维旋转 delta 与 \(1\) 维 gripper。当前本地归档能逐行确认的是“RoboCasa actions already delta”与“输出 7D”；具体轴顺序应继续用未归档的 <code>robocasa_policy.py</code>、conversion script 或 controller wrapper 复核。</p>
+        </div>
+
+        <h3>7D RoboCasa Action → 32D π0.5 Action Space 的具体机理</h3>
+        <p>这一步不是简单为了“凑 shape”，而是为了让 RoboCasa 的 7D Panda action 复用 π0.5 base 已经预训练好的 32D action expert。换句话说，本地项目没有把模型动作头改成 7D，而是把 RoboCasa 数据嵌入到 π0.5 原生的 32D 动作坐标系里，然后在输出侧再投影回环境可执行的 7D。</p>
+        <p>令 \(a_t^{env}\in\mathbb{R}^{7}\) 表示 RoboCasa 环境动作（environment action），\(D=32\) 表示 π0.5 内部动作维度（internal action dimension），定义嵌入矩阵（embedding matrix）\(P\in\mathbb{R}^{32\times7}\)：</p>
+        \[
+        P =
+        \begin{bmatrix}
+        I_7 \\
+        0_{25\times7}
+        \end{bmatrix},
+        \qquad
+        a_t^{32}=P a_t^{env}.
+        \]
+        <div class="note">
+            <p>变量解释：\(I_7\) 是 7 维单位矩阵，\(0_{25\times7}\) 是零矩阵；\(P\) 把真实 7D action 放在 32D 向量的前 7 维，后 25 维是 padding 子空间。实现映射：归档配置直接调用 <code>PadStatesAndActions(model_config.action_dim)</code>；同源 OpenPI 快照中该 transform 对 <code>state</code> 和 <code>actions</code> 的最后一维执行 <code>pad_to_dim(..., model_action_dim)</code>。</p>
+        </div>
+        <p>对一个长度为 \(H=10\) 的 action chunk，这个嵌入逐时间步应用：</p>
+        \[
+        A^{32}_{t:t+H-1}
+        =
+        A^{env}_{t:t+H-1} P^\top
+        \in \mathbb{R}^{H\times32},
+        \quad
+        A^{env}_{t:t+H-1}\in\mathbb{R}^{H\times7}.
+        \]
+        <div class="note">
+            <p>这里 \(A^{env}\) 是 LeRobot loader 从 <code>actions</code> 字段构造出的 RoboCasa action sequence；\(A^{32}\) 是进入 π0.5 flow matching action expert 的训练 target。实现上不一定显式构造 \(P\)，而是用 padding 函数完成同样的线性嵌入。</p>
+        </div>
+        <p>输出侧对应一个选择矩阵（selection matrix）\(S\in\mathbb{R}^{7\times32}\)：</p>
+        \[
+        S =
+        \begin{bmatrix}
+        I_7 &amp; 0_{7\times25}
+        \end{bmatrix},
+        \qquad
+        \hat{a}_t^{env}=S\hat{a}_t^{32}.
+        \]
+        <div class="note">
+            <p>变量解释：\(S\) 只取模型输出 32D action 的前 7 维。实现映射：归档配置中 <code>RobocasaOutputs(action_dim=7)</code> 是直接证据；同源 policy 输出类的注释写明“因为训练前 padded 到模型动作维度，所以 inference 只返回前 N 维”。RoboCasa 本地版本的完整 <code>RobocasaOutputs</code> 未归档，因此具体代码行以配置调用和同源 policy 作为证据边界。</p>
+        </div>
+        <p>训练时的 flow matching 不是在 7D 空间里训练一个新头，而是在 32D 空间中构造 noisy action：</p>
+        \[
+        x_t=\tau\epsilon + (1-\tau)a^{32},
+        \qquad
+        u_t=\epsilon-a^{32},
+        \qquad
+        v_\theta=f_\theta(o,s,c,x_t,\tau)\in\mathbb{R}^{32}.
+        \]
+        <div class="note">
+            <p>变量解释：\(\tau\in[0,1]\) 是 flow matching 时间，\(\epsilon\sim\mathcal{N}(0,I_{32})\)，\(o\) 是图像观测，\(s\) 是 state，\(c\) 是 prompt，\(v_\theta\) 是 action expert 预测的 32D velocity。实现映射：PaliGemma+Cosmos 源码中可见 <code>x_t = time * noise + (1 - time) * actions</code>、<code>u_t = noise - actions</code>、<code>action_out_proj(...)</code> 输出 32D；普通 π0.5 主线采用同类 action expert 机制。</p>
+        </div>
+        <p>普通 <code>pi05_robocasa</code> 配置没有显式设置 <code>action_loss_dim=7</code>，因此按归档证据应理解为在 32D padded target 上训练。由于后 25 维 target 是 padding 常量，模型被约束在 padding 子空间输出接近 padding 值；真正被 RoboCasa 执行的仍只有前 7 维：</p>
+        \[
+        \mathcal{L}_{32D}
+        =
+        \frac{1}{BH32}
+        \sum_{b,h,j\le32}
+        \left(v_{\theta,b,h,j}-u_{b,h,j}\right)^2,
+        \qquad
+        a^{exec}_{b,h}=S\,\mathrm{denorm}\!\left(\hat{a}^{32}_{b,h}\right).
+        \]
+        <div class="note">
+            <p>这条公式解释了为什么“输出头不改成 7D”仍能执行：训练/采样保持 32D，以兼容 π0.5 base；eval 前输出 transform 只截取前 7D。对 Cosmos 探索分支，配置里出现 <code>action_loss_dim=7</code>，源码中有 <code>action_loss = action_loss[..., :action_loss_dim]</code>，因此那些分支会只对前 7 维计算 action loss；这是与最终普通主线不同的头部/目标边界。</p>
+        </div>
+        <pre><code class="language-python">def adapt_robocasa_action_for_pi05(action_7d, *, horizon=10, model_action_dim=32):
+    # action_7d: shape (H, 7), already delta action from RoboCasa.
+    # Evidence: LeRobotRobocasaDataConfig states RoboCasa actions are already delta,
+    # so extra_delta_transform=False avoids a second delta conversion.
+    action_7d = action_7d[:horizon]
+
+    # Build the 32D pi0.5 target. This is equivalent to multiplying by P^T:
+    # A_32 = [A_7, padding]. In same-source OpenPI transforms this is done by
+    # PadStatesAndActions(model_action_dim) / pad_to_dim(..., axis=-1).
+    action_32d = zeros(shape=(horizon, model_action_dim))
+    action_32d[:, :7] = action_7d
+
+    # The padded dimensions are not sent to the robot. They exist so the action
+    # expert keeps the pi0.5 base interface and can reuse 32D pretrained weights.
+    return action_32d
+
+
+def parse_pi05_output_for_robocasa(pred_action_32d, norm_stats):
+    # pred_action_32d: model output chunk in normalized 32D action space.
+    # First undo action normalization using assets/norm_stats.
+    denorm_action_32d = unnormalize(pred_action_32d, norm_stats)
+
+    # RobocasaOutputs(action_dim=7) implements the selection matrix S:
+    # keep only the first seven executable Panda/RoboCasa control dimensions.
+    env_action_chunk = denorm_action_32d[:, :7]
+
+    # The online rollout client executes this 7D chunk for a few steps, then
+    # asks the policy server to replan. Final eval uses replan_steps=5.
+    return env_action_chunk</code></pre>
+    </section>
+
+    <section id="robocasa-data">
+        <h2>RoboCasa 数据适配</h2>
+        <p>本地 RoboCasa 数据使用 LeRobot 格式，配置类 <code>LeRobotRobocasaDataConfig</code> 明确写道：数据由 <code>examples/robocasa/convert_robocasa_cosmos_data_to_lerobot.py</code> 生成，包含三路 camera streams、9D state 和 7D actions。最终主线数据集为 <code>nvidia/robocasa_cosmos_policy_success_only</code>。</p>
+        <table>
+            <thead>
+            <tr>
+                <th>原始 LeRobot 字段</th>
+                <th>repack 后字段</th>
+                <th>模型期望字段</th>
+                <th>说明</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr>
+                <td><code>image</code></td>
+                <td><code>observation/image</code></td>
+                <td><code>base_0_rgb</code></td>
+                <td>主视角图像，训练与 eval 均 resize 到 224。</td>
+            </tr>
+            <tr>
+                <td><code>secondary_image</code></td>
+                <td><code>observation/secondary_image</code></td>
+                <td><code>right_wrist_0_rgb</code> slot</td>
+                <td>右侧第三人称视角被复用进 right wrist slot；是否 mask 取决于 <code>use_right_wrist_rgb</code> 与 policy transform。</td>
+            </tr>
+            <tr>
+                <td><code>wrist_image</code></td>
+                <td><code>observation/wrist_image</code></td>
+                <td><code>left_wrist_0_rgb</code></td>
+                <td>腕部相机图像。</td>
+            </tr>
+            <tr>
+                <td><code>state</code></td>
+                <td><code>observation/state</code></td>
+                <td><code>state</code></td>
+                <td>9D proprioception（本体感知）状态，再被 model transform pad/normalize。</td>
+            </tr>
+            <tr>
+                <td><code>actions</code></td>
+                <td><code>actions</code></td>
+                <td><code>actions</code></td>
+                <td>RoboCasa actions 已是 delta，配置 <code>extra_delta_transform=False</code>。</td>
+            </tr>
+            <tr>
+                <td><code>task</code> / metadata</td>
+                <td><code>prompt</code></td>
+                <td><code>tokenized_prompt</code></td>
+                <td><code>prompt_from_task=True</code>，每个样本携带任务语言条件。</td>
+            </tr>
+            </tbody>
+        </table>
+        <p>数据侧最关键的公式是 action padding 与 truncation。令真实 RoboCasa 动作为 \(a^{raw}_t \in \mathbb{R}^{7}\)，内部动作维度为 \(D=32\)，padding 后动作写为：</p>
+        \[
+        a^{model}_t =
+        \left[
+        a^{raw}_{t,1:7},
+        \underbrace{0,\ldots,0}_{D-7}
+        \right] \in \mathbb{R}^{32}.
+        \]
+        <div class="note">
+            <p>变量解释：\(a^{raw}_t\) 是数据集中的 7D Panda action；\(a^{model}_t\) 是 π0.5 action expert 使用的 32D 表示。实现映射：训练时 model transform 对动作补齐；推理后 <code>RobocasaOutputs(action_dim=7)</code> 反向截取前 7 维给环境。更完整的矩阵表达见上一节 \(P\) 与 \(S\)。</p>
+        </div>
+    </section>
+
+    <section id="architecture">
+        <h2>模型架构、输入头与输出头</h2>
+        <h3>最终 60+ 主线：PaliGemma π0.5 + Action Expert</h3>
+        <pre><code class="language-text">RoboCasa observation
+  images: base_0_rgb, left_wrist_0_rgb, optional right-side slot
+  state: 9D proprioception, padded / normalized
+  prompt: task language
+        |
+        v
+Input transforms
+  RobocasaInputs -> Normalize -> TokenizePrompt -> Pad state/action
+        |
+        v
+PaliGemma VLM prefix + π0.5 action expert
+        |
+        v
+Flow-matching action sampler
+  outputs action chunk with shape (H=10, D=32)
+        |
+        v
+Output transforms
+  Unnormalize -> RobocasaOutputs(action_dim=7)
+        |
+        v
+RoboCasa controller executes 7D actions in closed loop</code></pre>
+        <p>这条主线没有引入 Cosmos world-model head。它的工程重点是把 RoboCasa 数据和 eval 观测适配到 π0.5 已经预训练好的 VLA/action expert 接口，让 7D Panda 动作经过 32D 内部空间训练与采样，再稳定还原给仿真控制器。</p>
+
+        <h3>探索线：Qwen/PaliGemma + Cosmos World Model</h3>
+        <p>Cosmos 探索线在 VLA/action expert 旁边加入世界模型（World Model）分支，使模型同时学习动作监督和未来帧/视频 latent 预测。PaliGemma+Cosmos 源码中能看到 <code>action_in_proj = Linear(32,width)</code> 与 <code>action_out_proj = Linear(width,32)</code>，并把 <code>future_frame_loss</code> 加进总 loss。</p>
+        <table>
+            <thead>
+            <tr>
+                <th>Head</th>
+                <th>Input</th>
+                <th>Output</th>
+                <th>Loss/Eval</th>
+                <th>证据</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr>
+                <td>视觉/语言输入头</td>
+                <td>多路图像与 task prompt。</td>
+                <td>PaliGemma 或 Qwen prefix embeddings。</td>
+                <td>间接通过动作 loss 与未来帧 loss 训练。</td>
+                <td><code>config.py</code> 中 <code>vl_backbone</code>、tokenizer、<code>wrist_image_keys</code>。</td>
+            </tr>
+            <tr>
+                <td>状态输入头</td>
+                <td>9D state，经 normalize/pad。</td>
+                <td>action expert 条件。</td>
+                <td>影响动作 denoising。</td>
+                <td><code>LeRobotRobocasaDataConfig</code> 注释与 model transform。</td>
+            </tr>
+            <tr>
+                <td>动作输入投影</td>
+                <td>32D noisy action \(x_t\)。</td>
+                <td>action expert hidden width。</td>
+                <td>flow matching。</td>
+                <td><code>action_in_proj = Linear(32,width)</code>。</td>
+            </tr>
+            <tr>
+                <td>动作输出头</td>
+                <td>action expert suffix hidden states。</td>
+                <td>32D velocity / denoised action update。</td>
+                <td><code>action_expert_loss</code>。</td>
+                <td><code>action_out_proj = Linear(width,32)</code>。</td>
+            </tr>
+            <tr>
+                <td>Cosmos future-frame head</td>
+                <td>当前图像、prompt、未来帧 sequence mask。</td>
+                <td>future video latent loss 与 context embeddings。</td>
+                <td><code>future_frame_loss</code> 加权进入 <code>total_loss</code>。</td>
+                <td><code>PI0PytorchPaliGemmaCosmos</code>。</td>
+            </tr>
+            </tbody>
+        </table>
+        <div class="warning">
+            <p><strong>关键澄清。</strong>最终 <code>297/480</code> 不是 PaliGemma+Cosmos 的结果。PaliGemma+Cosmos 的 <code>20000</code> eval log 只显示评估开始与 <code>PnPCounterToCab</code> 部分 episode，没有完整 summary。报告把它列为后续探索线，不把它归因到 60+。</p>
+        </div>
+    </section>
+
+    <section id="losses">
+        <h2>训练目标、Loss 与数学表达</h2>
+        <h3>π0.5 Flow Matching 动作目标</h3>
+        <p>π0.5 的连续动作头可用 flow matching（流匹配）理解。令 \(a\) 表示数据集中的目标动作 chunk，\(\epsilon \sim \mathcal{N}(0,I)\) 表示高斯噪声，\(t \in [0,1]\) 表示噪声时间：</p>
+        \[
+        x_t = t\epsilon + (1-t)a,\qquad
+        u_t = \epsilon - a.
+        \]
+        <div class="note">
+            <p>变量解释：\(x_t\) 是在真实动作 \(a\) 与噪声 \(\epsilon\) 之间插值得到的 noisy action；\(u_t\) 是模型应学习的速度场（velocity field）。实现映射：本地 PaliGemma+Cosmos 源码中出现 <code>x_t = t * noise + (1 - t) * actions</code> 与 <code>u_t = noise - actions</code>，普通 π0.5 action expert 采用同类目标。</p>
+        </div>
+        <p>动作 loss 是模型预测速度 \(v_\theta(x_t, o, c, t)\) 与目标速度 \(u_t\) 的均方误差：</p>
+        \[
+        \mathcal{L}_{action}
+        =
+        \frac{1}{BHD_a}
+        \sum_{b=1}^{B}\sum_{h=1}^{H}\sum_{j=1}^{D_a}
+        \left\|
+        v_\theta(x_{t,b,h,j}, o_b, c_b, t_b) - u_{t,b,h,j}
+        \right\|_2^2.
+        \]
+        <div class="note">
+            <p>变量解释：\(B\) 是 batch size，本地通常为 256；\(H=10\) 是 action horizon；\(D_a=32\) 是内部动作维度，或在 <code>action_loss_dim</code> 打开时只计算前若干维。实现映射：训练脚本记录 <code>action_expert_loss</code>，Cosmos 分支源码中若 <code>action_loss_dim</code> 非空，会对 loss 的最后一维切片。</p>
+        </div>
+
+        <h3>Cosmos 分支总 Loss</h3>
+        <p>当启用 world-model backbone 时，总目标增加未来帧 latent 监督：</p>
+        \[
+        \mathcal{L}_{total}
+        =
+        \mathcal{L}_{action}
+        +
+        \lambda_{video}\mathcal{L}_{future},
+        \qquad
+        \mathcal{L}_{future}
+        =
+        \mathrm{MSE}\left(z^{pred}_{t+1:t+K}, z^{target}_{t+1:t+K}\right).
+        \]
+        <div class="note">
+            <p>变量解释：\(\lambda_{video}\) 是 <code>cosmos_video_loss_weight</code>；\(z^{pred}\) 和 \(z^{target}\) 是 Cosmos video expert 的预测/目标未来帧 latent；\(K=4\) 对应 <code>cosmos_num_future_frames=4</code>。实现映射：PaliGemma+Cosmos 源码把 <code>future_frame_loss</code> 加到 <code>total_loss</code>；Qwen+Cosmos 日志同时输出 <code>loss</code>、<code>action_expert_loss</code> 与 <code>future_frame_loss</code>。</p>
+        </div>
+
+        <h3>离线 Loss 与闭环 SR 的关系</h3>
+        <p>离线动作 MSE 可写作数据分布上的期望：</p>
+        \[
+        \mathbb{E}_{(o,c,a)\sim \mathcal{D}_{train}}
+        \left[
+        \mathcal{L}_{action}(o,c,a)
+        \right],
+        \]
+        <p>而 online rollout 的成功率来自模型诱导出的状态分布 \(\mathcal{D}_{\pi_\theta}\)：</p>
+        \[
+        \mathrm{SR}(\pi_\theta)
+        =
+        \mathbb{E}_{\tau \sim p(\tau \mid \pi_\theta, \mathcal{E})}
+        \left[
+        \mathbf{1}\{\tau \text{ satisfies task success predicate}\}
+        \right].
+        \]
+        <div class="note">
+            <p>变量解释：\(\mathcal{D}_{train}\) 是离线示教数据分布；\(\mathcal{D}_{\pi_\theta}\) 是模型在环境中自己执行后产生的状态分布；\(\tau\) 是一条 rollout 轨迹。实现映射：Qwen+Cosmos loss 低但 SR 低，说明离线目标与闭环任务成功之间存在 distribution shift（分布偏移）、动作接口或视觉/状态适配问题。</p>
+        </div>
+    </section>
+
+    <section id="pipeline">
+        <h2>Pipeline 与伪代码</h2>
+        <h3>数据构造与训练 Batch</h3>
+        <pre><code class="language-python">def build_robocasa_batch(lerobot_sample, config):
+    # 1. Repack LeRobot keys into the observation keys expected by OpenPI.
+    obs = {
+        "observation/image": lerobot_sample["image"],
+        "observation/state": lerobot_sample["state"],
+        "actions": lerobot_sample["actions"],
+        "prompt": lerobot_sample["task_prompt"],
+    }
+
+    # 2. Add optional camera streams according to use_wrist_rgb and use_right_wrist_rgb.
+    if config.use_wrist_rgb:
+        obs["observation/wrist_image"] = lerobot_sample["wrist_image"]
+    if config.use_right_wrist_rgb:
+        obs["observation/secondary_image"] = lerobot_sample["secondary_image"]
+
+    # 3. RoboCasa actions are already delta actions, so no extra delta conversion is applied.
+    #    This matches extra_delta_transform=False in LeRobotRobocasaDataConfig.
+    obs = robocasa_inputs(obs)
+
+    # 4. Normalize state/actions with checkpoint assets, then pad 7D actions to the 32D model space.
+    obs = normalize(obs)
+    obs = model_transforms_inputs(obs)
+    return obs</code></pre>
+
+        <h3>π0.5 / Cosmos 训练 Step</h3>
+        <pre><code class="language-python">def training_step(batch, model, optimizer):
+    # 1. Read normalized observation and padded action chunks.
+    observation = Observation.from_dict(batch)
+    actions = batch["actions"]  # Shape: batch, horizon, 32
+
+    # 2. Sample flow-matching noise and interpolation time.
+    noise = sample_normal_like(actions)
+    t = sample_uniform(batch_size=actions.shape[0])
+    x_t = t * noise + (1 - t) * actions
+    target_velocity = noise - actions
+
+    # 3. Predict action velocity conditioned on image, state and prompt.
+    pred_velocity = model.denoise_step(observation, x_t, t)
+    action_loss = mse(pred_velocity, target_velocity)
+
+    # 4. Cosmos branches optionally add future-frame supervision.
+    if model.use_wm_backbone:
+        future_loss = model.cosmos_video_loss(observation)
+        total_loss = action_loss + model.cosmos_video_loss_weight * future_loss
+    else:
+        total_loss = action_loss
+
+    # 5. Backpropagation and checkpoint/logging follow train_pytorch_qwen.py.
+    total_loss.backward()
+    optimizer.step()
+    optimizer.zero_grad()
+    return total_loss</code></pre>
+
+        <h3>Policy Server 推理</h3>
+        <pre><code class="language-python">def policy_infer(obs):
+    # 1. Copy raw env observation and run input transforms.
+    inputs = input_transform(obs)
+
+    # 2. Convert transformed dict into OpenPI Observation object.
+    observation = Observation.from_dict(inputs)
+
+    # 3. Sample a 10-step action chunk from the trained model.
+    model_actions_32d = model.sample_actions(device, observation)
+
+    # 4. Convert tensor to numpy, then apply output transforms.
+    outputs = {
+        "state": inputs["state"],
+        "actions": model_actions_32d,
+    }
+    outputs = output_transform(outputs)
+
+    # 5. The websocket server returns outputs["actions"], now in RoboCasa 7D action space.
+    outputs["policy_timing"] = {"infer_ms": measured_model_latency}
+    return outputs</code></pre>
+    </section>
+
+    <section id="eval-loop">
+        <h2>在线评估与 Rollout</h2>
+        <h3>环境搭建</h3>
+        <p>本地 eval 分为 policy server 与 RoboCasa env client 两个进程。policy server 使用 <code>scripts/serve_policy.py --port PORT policy:checkpoint --policy.config CONFIG --policy.dir DIR</code> 启动；RoboCasa env client 使用 <code>examples/robocasa/.venv</code>、<code>MUJOCO_GL=egl</code>、<code>PYOPENGL_PLATFORM=egl</code>、<code>task_set=kitchen24</code>、<code>num_trials_per_task=20</code>、<code>replan_steps=5</code> 与 <code>flip_images=True</code>。</p>
+        <table>
+            <thead>
+            <tr>
+                <th>配置项</th>
+                <th>最终 eval 值</th>
+                <th>作用</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr><td>host / port</td><td><code>127.0.0.1:8043</code></td><td>RoboCasa client 通过 websocket 请求 policy server。</td></tr>
+            <tr><td>resize / env image res</td><td><code>224</code></td><td>对齐 PaliGemma base 输入分辨率。</td></tr>
+            <tr><td>replan steps</td><td><code>5</code></td><td>每 5 个控制步重新调用策略，减少推理频率并利用 action chunk。</td></tr>
+            <tr><td>task set</td><td><code>kitchen24</code></td><td>24 个厨房操作任务。</td></tr>
+            <tr><td>trials/task</td><td><code>20</code></td><td>总计 480 次 episode。</td></tr>
+            <tr><td>object split</td><td><code>B</code></td><td>使用 B split 实例，测试实例泛化。</td></tr>
+            <tr><td>layout/style ids</td><td><code>((1,1),(2,2),(4,4),(6,9),(7,10))</code></td><td>多布局/风格组合。</td></tr>
+            <tr><td>seed / deterministic</td><td><code>7 / true</code></td><td>保证评估可复现。</td></tr>
+            <tr><td>flip images</td><td><code>true</code></td><td>匹配 Cosmos/RoboCasa 环境图像方向。</td></tr>
+            </tbody>
+        </table>
+
+        <h3>Online Rollout 伪代码</h3>
+        <pre><code class="language-python">def evaluate_kitchen24(tasks, trials_per_task, policy_client, env_factory):
+    # Each task is evaluated independently so per-task success rates can be reported.
+    results = {}
+    for task_name in tasks:
+        successes = 0
+        for trial_id in range(trials_per_task):
+            env = env_factory(task_name, seed=7, deterministic=True)
+            obs = env.reset()
+            action_chunk = None
+            chunk_index = 0
+
+            for step in range(500):
+                # Replan every fixed number of simulator steps.
+                if step % 5 == 0 or action_chunk is None:
+                    response = policy_client.infer(obs)
+                    action_chunk = response["actions"]  # Shape: horizon, 7
+                    chunk_index = 0
+
+                # Execute one 7D Panda action and read the next observation.
+                action = action_chunk[chunk_index]
+                obs, reward, done, info = env.step(action)
+                chunk_index += 1
+
+                # RoboCasa task success predicate decides whether the episode succeeded.
+                if info.get("success", False) or done:
+                    successes += int(info.get("success", False))
+                    break
+
+        results[task_name] = successes / trials_per_task
+    return results</code></pre>
+        <div class="warning">
+            <p>这段伪代码是依据 <code>run_robocasa_env.sh</code> 参数、policy server 接口和 run log 行为恢复的机制说明；本地归档缺少完整 <code>examples/robocasa/main.py</code>，因此不把每一行当成源码逐字复现。</p>
+        </div>
+    </section>
+
+    <section id="run-ledger">
+        <h2>Run 总账</h2>
+        <table>
+            <thead>
+            <tr>
+                <th>Run / 阶段</th>
+                <th>模型与数据</th>
+                <th>引入的改进</th>
+                <th>训练/Checkpoint</th>
+                <th>Eval 结果</th>
+                <th>结论</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr>
+                <td><code>baseline_bs_10000</code></td>
+                <td>早期 <code>pi05_robocasa</code> 类路线。</td>
+                <td>打通 RoboCasa env + policy server + checkpoint eval。</td>
+                <td>约 10000 step。</td>
+                <td><code>35/80 = 43.75%</code>，仅 4 tasks。</td>
+                <td>证明闭环 eval 可运行，但任务覆盖太少。</td>
+            </tr>
+            <tr>
+                <td><code>pi05_robocasa</code> partial 30000</td>
+                <td>PaliGemma π0.5 + success-only RoboCasa。</td>
+                <td>使用 prompt_from_task、RoboCasa 7D action、base/wrist camera 适配。</td>
+                <td>30000 step。</td>
+                <td>本地 <code>results.txt</code> 前 14 tasks 合计约 <code>168/280 = 60.0%</code>。</td>
+                <td>部分任务已接近最终水平，但缺少 24-task 完整 summary。</td>
+            </tr>
+            <tr>
+                <td><code>pi05_qwen_vl_cosmos_50000</code></td>
+                <td>Qwen3-VL + Cosmos Predict2.5。</td>
+                <td>改视觉语言 backbone，并加入 future-frame world-model loss。</td>
+                <td>50000 step。</td>
+                <td><code>0/100 = 0%</code>，5 tasks。</td>
+                <td>首次 Cosmos 组合闭环失败，提示接口/分布/训练稳定性问题。</td>
+            </tr>
+            <tr>
+                <td><code>qwen_cosmos4_discrete_bs</code></td>
+                <td>Qwen+Cosmos，4 future frames，discrete state 相关实验。</td>
+                <td>调整 state 表达和 batch 相关配置。</td>
+                <td>30000 / 50000 step。</td>
+                <td><code>91/300 = 30.33%</code>；<code>86/300 = 28.67%</code>，15 tasks。</td>
+                <td>从 0 success 恢复到可执行，但继续训练未带来提升。</td>
+            </tr>
+            <tr>
+                <td><code>qwen_cosmos4_discrete_lr5e5</code></td>
+                <td>Qwen+Cosmos，full kitchen24。</td>
+                <td>学习率/训练稳定性调整，完整 24-task eval。</td>
+                <td>30000 / 50000 step。</td>
+                <td><code>186/480 = 38.75%</code>；<code>191/480 = 39.79%</code>。</td>
+                <td>比上一阶段更稳，但仍明显低于 PaliGemma π0.5 主线。</td>
+            </tr>
+            <tr>
+                <td><code>pi05_robocasa/40000</code></td>
+                <td>PaliGemma π0.5 + RoboCasa success-only。</td>
+                <td>回到与 base checkpoint 更匹配的 PaliGemma π0.5 action expert，使用完整 kitchen24 eval。</td>
+                <td>40000 step checkpoint。</td>
+                <td><code>297/480 = 61.875%</code>。</td>
+                <td>当前最可靠本地结果，接近官方 π0 62.5%。</td>
+            </tr>
+            <tr>
+                <td><code>pi05_robocasa_paligemma_cosmos/20000</code></td>
+                <td>PaliGemma + Cosmos Predict2.5。</td>
+                <td>尝试把 Cosmos world-model 分支与 PaliGemma 主线结合。</td>
+                <td>20000 step eval log。</td>
+                <td>只看到评估开始与 <code>PnPCounterToCab</code> 部分日志，无完整 summary。</td>
+                <td>不能归因到 60+ 结果；属于后续未完成探索线。</td>
+            </tr>
+            </tbody>
+        </table>
+    </section>
+
+    <section id="runs">
+        <h2>逐 Run 详细记录</h2>
+        <p>本节按“可恢复实验记录”的方式展开：每个 run 都尽量写清目标、数据与输入输出、模型/训练配置、评估设置、结果、失败或提升原因，以及下一步应做什么。没有本地直接证据的内容会标注为“未完整归档”或“由证据推断”。</p>
+
+        <h3>跨 Run 差分视角（Delta View）</h3>
+        <p>为了回答“每一次 run 相较上一 run 到底改了什么”，本报告把第 \(r\) 次实验抽象成一个系统状态 \(S_r\)。这个状态不是单个 checkpoint，而是数据格式、模型结构、输入输出头、训练目标和评估闭环的组合：</p>
+        \[
+        S_r = \left(D_r, M_r, H_r, \mathcal{L}_r, E_r, Y_r\right)
+        \]
+        <div class="note">
+            <p>变量解释：\(D_r\) 是数据与 schema（data and schema），\(M_r\) 是 backbone / world model / action expert 等模型结构（model architecture），\(H_r\) 是输入头和输出头（input and output heads），\(\mathcal{L}_r\) 是训练目标（loss objective），\(E_r\) 是 online rollout 评估设置（evaluation harness），\(Y_r\) 是结果与失败模式（outcome）。实现映射：这些量分别对应 <code>config.py</code>、模型源码、transform、训练日志和 <code>results.txt</code>/<code>summary.json</code>。</p>
+        </div>
+        <p>两个相邻 run 的真正差异可以写成：</p>
+        \[
+        \Delta S_r = S_r \ominus S_{r-1}
+        = \left(\Delta D_r, \Delta M_r, \Delta H_r, \Delta \mathcal{L}_r, \Delta E_r, \Delta Y_r\right)
+        \]
+        <div class="note">
+            <p>这里的 \(\ominus\) 不是普通减法，而是结构化 diff：例如从 PaliGemma 换到 Qwen 属于 \(\Delta M_r\)，把 7D RoboCasa action padding 到 32D 属于 \(\Delta H_r\)，把 action-only loss 改成 action + future-frame loss 属于 \(\Delta \mathcal{L}_r\)。</p>
+        </div>
+        <p>成功率（success rate, SR）在一个任务集合 \(\mathcal{T}\) 上定义为：</p>
+        \[
+        \mathrm{SR}(S_r;\mathcal{T})
+        =
+        \frac{\sum_{\tau \in \mathcal{R}(S_r,\mathcal{T})}\mathbf{1}[\tau \text{ success}]}{|\mathcal{R}(S_r,\mathcal{T})|}
+        \]
+        <div class="note">
+            <p>变量解释：\(\mathcal{R}(S_r,\mathcal{T})\) 表示用第 \(r\) 个系统状态在任务集合 \(\mathcal{T}\) 上跑出的 rollout 集合，\(\mathbf{1}[\tau \text{ success}]\) 是 episode 是否成功的指示函数。实现映射：本地最终 run 中 \(|\mathcal{R}|=24\times20=480\)，成功 episode 数为 297，因此 \(\mathrm{SR}=297/480=0.61875\)。</p>
+        </div>
+        <p>当两个 run 的任务覆盖不完全一致时，本报告只把 \(\Delta \mathrm{SR}\) 当作上下文信号；只有评估任务、trial 数、replan 和 split 基本一致时，才把它当作强对比：</p>
+        \[
+        \Delta \mathrm{SR}_r
+        =
+        \mathrm{SR}(S_r;\mathcal{T}_r)
+        -
+        \mathrm{SR}(S_{r-1};\mathcal{T}_{r-1})
+        \quad
+        \text{with comparability flag } \gamma_{r,r-1}
+        \]
+        <div class="note">
+            <p>\(\gamma_{r,r-1}=1\) 表示两个 run 的评估口径可比；\(\gamma_{r,r-1}=0\) 表示只能做方向性分析。例如 Run 5 对 Run 4 是同为 24 tasks、20 trials/task 的强对比；Run 3 对 Run 2 因任务覆盖不同，只能说明 Qwen+Cosmos 早期闭环失败，而不能作为严格 benchmark 差值。</p>
+        </div>
+        <table>
+            <thead><tr><th>转移</th><th>核心改造</th><th>SR 变化</th><th>可比性</th><th>主要认识</th></tr></thead>
+            <tbody>
+            <tr><td>Run 1 → Run 2</td><td>从 eval 链路验证转为 PaliGemma π0.5 + RoboCasa success-only fine-tune。</td><td>43.75%（4 tasks）→ 约 60% partial / 后续 61.875% full。</td><td>\(\gamma=0\)</td><td>最小结构偏移比复杂新模块更稳。</td></tr>
+            <tr><td>Run 2 → Run 3</td><td>PaliGemma action-only → Qwen3-VL + Cosmos future-frame 联合训练。</td><td>约 60% partial → 0/100。</td><td>\(\gamma=0\)</td><td>离线可训练不等于闭环可控；接口对齐成本被显著放大。</td></tr>
+            <tr><td>Run 3 → Run 4</td><td>围绕 Qwen+Cosmos 做 discrete-state、学习率和 eval 覆盖恢复。</td><td>0/100 → 191/480=39.79%。</td><td>\(\gamma=0\)</td><td>输出动作链路恢复，但长 horizon 任务仍不稳定。</td></tr>
+            <tr><td>Run 4 → Run 5</td><td>回到 PaliGemma π0.5 action-only，并用完整 kitchen24 eval 确认。</td><td>39.79% → 61.875%，\(\Delta=+22.085\) 个百分点。</td><td>\(\gamma=1\)</td><td>去掉额外 world-model 竞争后，action 接口与 base prior 更匹配。</td></tr>
+            <tr><td>Run 5 → Run 6</td><td>保留 PaliGemma，再引入 Cosmos，而不是同时切 backbone。</td><td>无完整 SR。</td><td>未闭环</td><td>这是更合理的 Cosmos ablation，但证据还不能支撑结论。</td></tr>
+            </tbody>
+        </table>
+        <pre><code class="language-python">def compare_adjacent_runs(prev, curr):
+    # 1. Treat each run as a structured system state, not just a checkpoint path.
+    #    This prevents mixing data schema changes with model architecture changes.
+    delta = {
+        "data": diff(prev.data_schema, curr.data_schema),
+        "model": diff(prev.model_arch, curr.model_arch),
+        "heads": diff(prev.io_heads, curr.io_heads),
+        "loss": diff(prev.loss_objective, curr.loss_objective),
+        "eval": diff(prev.eval_harness, curr.eval_harness),
+    }
+
+    # 2. Decide whether the success-rate delta is a strict comparison.
+    #    Same task set, same trials per task, same split and similar rollout setup
+    #    are required before we interpret delta_sr as benchmark evidence.
+    comparable = (
+        prev.task_set == curr.task_set
+        and prev.num_tasks == curr.num_tasks
+        and prev.trials_per_task == curr.trials_per_task
+        and prev.replan_steps == curr.replan_steps
+    )
+
+    # 3. Compute the metric delta, but attach the comparability flag.
+    delta_sr = curr.success_rate - prev.success_rate
+
+    # 4. Explain the run by connecting design deltas to observed failures or gains.
+    #    In this report, a gain is not credited to a parameter unless it changes
+    #    data semantics, model behavior, training objective, or rollout behavior.
+    return {
+        "delta": delta,
+        "delta_sr": delta_sr,
+        "comparable": comparable,
+        "interpretation": analyze_failure_modes(prev, curr, delta),
+    }</code></pre>
+
+        <h3>Run 1：早期 Baseline Eval</h3>
+        <h4>目标与参考来源</h4>
+        <p>这个阶段的目标不是冲 benchmark，而是把三段链路首次打通：训练 checkpoint 能被 policy server 加载；RoboCasa eval client 能通过 websocket 请求动作；环境能根据返回的动作执行并生成 <code>results.txt</code>。证据来自 <code>baseline_bs_10000_20260619155218/kitchen24/results.txt</code> 与 run summary CSV。</p>
+        <h4>相较上一 Run 的改造</h4>
+        <p>Run 1 没有上一阶段可比较，它定义的是本任务的最小闭环系统 \(S_1\)：policy server、RoboCasa client、Panda controller、结果写出路径和 7D action 接口。</p>
+        \[
+        S_1 =
+        \left(D_{\mathrm{eval}}, M_{\mathrm{baseline}}, H_{\mathrm{7D}}, \mathcal{L}_{\mathrm{unknown}}, E_{\mathrm{websocket}}, Y_{\mathrm{4tasks}}\right)
+        \]
+        <div class="note">
+            <p>这里 \(\mathcal{L}_{\mathrm{unknown}}\) 表示本 run 的训练 loss 记录没有完整归档；它的价值在 \(E_{\mathrm{websocket}}\)，也就是证明 websocket policy server 返回的 action 能被 RoboCasa 环境消费。</p>
+        </div>
+        <pre><code class="language-python">def run1_closed_loop_smoke_test(policy_server, robocasa_env):
+    # 1. Reset one RoboCasa task and read raw simulator observation.
+    #    The important evidence is that observation extraction does not crash.
+    obs = robocasa_env.reset(task="PnPCounterToCab")
+
+    # 2. Send image/state/prompt to the policy server through the deployment client.
+    #    At this stage the goal is interface validity, not peak success rate.
+    action_chunk = policy_server.infer(obs)
+
+    # 3. Keep only the 7D RoboCasa/Panda action consumed by the controller.
+    #    Shape errors here would fail before any meaningful rollout metric appears.
+    action_7d = action_chunk[0][:7]
+
+    # 4. Step the simulator and record success/failure into results.txt.
+    #    This establishes the evidence path used by later runs.
+    next_obs, reward, done, info = robocasa_env.step(action_7d)
+    write_results_txt(task="PnPCounterToCab", info=info)</code></pre>
+        <p><strong>设计意义。</strong>这一阶段没有新增模型能力，但它建立了之后所有 run 的评估契约：模型必须输出可反归一化、可截取、可执行的 7D action；否则 offline loss 再低也不会转化成 SR。</p>
+        <h4>数据、模型与输入输出</h4>
+        <table>
+            <thead><tr><th>项目</th><th>记录</th><th>解释</th></tr></thead>
+            <tbody>
+            <tr><td>任务覆盖</td><td>4 个 pick-and-place 相关任务。</td><td>只覆盖 <code>PnPCounterToCab</code>、<code>PnPCabToCounter</code>、<code>PnPCounterToSink</code>、<code>PnPSinkToCounter</code>，不能代表完整 kitchen24。</td></tr>
+            <tr><td>模型接口</td><td>π0.5 / RoboCasa 7D action 路线。</td><td>由后续同目录 eval 体系推断为同一 websocket policy 接口；本 run 的完整 config 未在归档中单独保留。</td></tr>
+            <tr><td>输入</td><td>RoboCasa 图像、state、prompt。</td><td>用于验证 env observation 到 policy observation 的键名和图像方向是否能跑通。</td></tr>
+            <tr><td>输出</td><td>7D RoboCasa action。</td><td>用于验证模型输出能被 controller 接收，而不是 shape 或 dtype 错误。</td></tr>
+            </tbody>
+        </table>
+        <h4>评估结果</h4>
+        <table>
+            <thead><tr><th>任务</th><th>成功率</th><th>成功数</th><th>平均长度</th><th>观察</th></tr></thead>
+            <tbody>
+            <tr><td>PnPCounterToCab</td><td>0.4000</td><td>8/20</td><td>432.2</td><td>可完成一部分，但放入柜内精度不足。</td></tr>
+            <tr><td>PnPCabToCounter</td><td>0.2500</td><td>5/20</td><td>464.4</td><td>柜内取物更难，遮挡与抓取初始化更敏感。</td></tr>
+            <tr><td>PnPCounterToSink</td><td>0.4500</td><td>9/20</td><td>568.8</td><td>平均长度高，说明即便成功也常接近 timeout。</td></tr>
+            <tr><td>PnPSinkToCounter</td><td>0.6500</td><td>13/20</td><td>351.0</td><td>从 sink 到 counter 的目标区域较开放，较容易。</td></tr>
+            </tbody>
+        </table>
+        <p><strong>阶段结论。</strong>整体 <code>35/80 = 43.75%</code> 证明闭环 eval 链路可用，但由于只有 4 tasks，不能拿来对照官方 24-task baseline。这个 run 的最大产出是确认“server 返回动作 → RoboCasa 执行动作 → 写出结果”的基础工程链条。</p>
+
+        <h3>Run 2：普通 π0.5 RoboCasa 主线</h3>
+        <h4>目标与工程假设</h4>
+        <p>这一阶段的核心假设是：先不要改 backbone 或加入 world model，而是让 <code>pi05_base</code> 原生的 PaliGemma + action expert 吸收 RoboCasa success-only 数据。旧的 π0.5 base 模型原本消费图像、state、prompt 和连续动作 chunk；RoboCasa 适配的关键是把 LeRobot 数据转成同一组键，并把 7D RoboCasa delta action padding 到 32D 内部动作空间。</p>
+        <h4>相较上一 Run 的改造：Run 1 → Run 2，从闭环验证到最小偏移 fine-tune</h4>
+        <p>Run 2 的核心变化是把 \(S_1\) 中“能跑通的 eval 接口”升级成一个完整训练系统。它没有引入新 backbone，而是保持 π0.5 base 的 PaliGemma/action expert 路线，只在数据和输出侧做 RoboCasa 适配：</p>
+        \[
+        \Delta S_2 =
+        \left(
+        +D_{\mathrm{LeRobot\ RoboCasa}},
+        M_{\mathrm{PaliGemma\ unchanged}},
+        +H_{\mathrm{7D\ to\ 32D}},
+        +\mathcal{L}_{\mathrm{flow\ action}},
+        E_{\mathrm{same\ closed\ loop}}
+        \right)
+        \]
+        <div class="note">
+            <p>实现映射：\(D_{\mathrm{LeRobot\ RoboCasa}}\) 对应 <code>LeRobotRobocasaDataConfig</code>；\(H_{\mathrm{7D\ to\ 32D}}\) 对应 <code>PadStatesAndActions(model_config.action_dim)</code> 与 <code>RobocasaOutputs(action_dim=7)</code>；\(\mathcal{L}_{\mathrm{flow\ action}}\) 对应 π0.5 action expert 的 flow matching 训练目标。</p>
+        </div>
+        <p>7D RoboCasa action 到 32D π0.5 内部动作空间的适配，不是改模型输出层为 7D，而是定义从环境动作空间到 π0.5 内部动作空间的嵌入 \(P\)，并在输出侧用选择矩阵 \(S\) 截回可执行维度：</p>
+        \[
+        P =
+        \begin{bmatrix}
+        I_7\\
+        0_{25\times7}
+        \end{bmatrix},
+        \quad
+        S=
+        \begin{bmatrix}
+        I_7 &amp; 0_{7\times25}
+        \end{bmatrix},
+        \quad
+        A^{32}_{t:t+H-1}
+        =
+        A^{env}_{t:t+H-1}P^\top,
+        \quad
+        \hat{A}^{env}_{t:t+H-1}=S\hat{A}^{32}_{t:t+H-1}.
+        \]
+        <div class="note">
+            <p>变量解释：\(A^{env}\in\mathbb{R}^{H\times7}\) 是 RoboCasa/Panda 控制器使用的动作 chunk，\(A^{32}\in\mathbb{R}^{H\times32}\) 是 π0.5 action expert 内部动作 chunk，\(H=10\) 来自 <code>action_horizon=10</code>。实现映射：<code>PadStatesAndActions(model_config.action_dim)</code> 实现 \(P\) 的效果；<code>RobocasaOutputs(action_dim=7)</code> 实现 \(S\) 的效果。</p>
+        </div>
+        <p>在 flow matching 训练中，动作 expert 仍然学习 32D velocity field；普通 <code>pi05_robocasa</code> 主线没有显式 <code>action_loss_dim=7</code>，因此 padded 维度也参与保持 32D 接口稳定：</p>
+        \[
+        x_\tau=\tau\epsilon+(1-\tau)A^{32},
+        \quad
+        u_\tau=\epsilon-A^{32},
+        \quad
+        \mathcal{L}_{Run2}
+        =
+        \frac{1}{BH32}
+        \sum_{b,h,j}
+        \left(v_{\theta,b,h,j}-u_{\tau,b,h,j}\right)^2.
+        \]
+        <div class="note">
+            <p>变量解释：\(x_\tau\) 是 noisy 32D action，\(u_\tau\) 是目标 velocity，\(v_\theta\) 是 action expert 输出。实现映射：Cosmos 源码中能直接看到 <code>x_t</code>、<code>u_t</code>、<code>action_out_proj</code>；普通 π0.5 主线用同一类 action expert 目标。与之相对，Qwen/PaliGemma+Cosmos 探索配置显式设置 <code>action_loss_dim=7</code>，会只计算前 7 维 action loss。</p>
+        </div>
+        <pre><code class="language-python">def run2_repack_and_pad(lerobot_sample, model_config):
+    # 1. Repack dataset keys into the observation namespace expected by OpenPI.
+    #    This is the data-side bridge from RoboCasa LeRobot format to pi0.5 format.
+    obs = {
+        "observation/image": lerobot_sample["image"],
+        "observation/secondary_image": lerobot_sample["secondary_image"],
+        "observation/wrist_image": lerobot_sample["wrist_image"],
+        "observation/state": lerobot_sample["state"],   # 9D proprioceptive state
+        "prompt": lerobot_sample["prompt"],             # task-derived language command
+    }
+
+    # 2. RoboCasa actions are already delta actions, so no extra DeltaActions transform.
+    #    This avoids applying a second delta conversion that would distort control scale.
+    action_7d = lerobot_sample["actions"]
+
+    # 3. Apply the embedding matrix P without explicitly materializing it:
+    #    A_32 = [A_7, 0, ..., 0]. In luoshuang's archived config this is wired
+    #    through PadStatesAndActions(model_config.action_dim); same-source OpenPI
+    #    shows it pads the final dimension of both state and actions.
+    action_32d = zeros(shape=(model_config.action_horizon, model_config.action_dim))
+    action_32d[:, :7] = action_7d[:model_config.action_horizon]
+
+    # 4. Train the action expert in the 32D pi0.5 action space.
+    #    This keeps the base model's action_in/action_out interface unchanged.
+    #    For the final pi05_robocasa config, no explicit action_loss_dim=7 is
+    #    archived, so the padded 32D target is the conservative interpretation.
+    train_target = action_32d
+
+    # 5. At serving time, RobocasaOutputs(action_dim=7) applies the selection
+    #    matrix S: denormalize the 32D chunk and return only the first 7 dims.
+    return obs, train_target</code></pre>
+        <p><strong>收益与认识。</strong>相较 Run 1，Run 2 的收益不是一个严格同口径的 \(\Delta \mathrm{SR}\)，而是把 4-task smoke test 扩展成可训练、可 serving、可评估的 π0.5 主线。它后续在 40000 checkpoint 达到 <code>297/480=61.875%</code>，说明“保持 base 模型 I/O 形状 + 只做必要 RoboCasa 适配”是最稳的主线设计。</p>
+        <h4>数据准备与版本</h4>
+        <table>
+            <thead><tr><th>项目</th><th>配置/证据</th><th>作用</th></tr></thead>
+            <tbody>
+            <tr><td>数据集</td><td><code>nvidia/robocasa_cosmos_policy_success_only</code></td><td>只使用成功轨迹，减少失败轨迹对 imitation learning 的干扰。</td></tr>
+            <tr><td>转换来源</td><td><code>convert_robocasa_cosmos_data_to_lerobot.py</code></td><td>配置注释说明该脚本生成 LeRobot 格式数据。</td></tr>
+            <tr><td>图像字段</td><td><code>image</code>、<code>secondary_image</code>、<code>wrist_image</code></td><td>主视角、右侧/第二视角、腕部视角。</td></tr>
+            <tr><td>状态字段</td><td>9D <code>state</code></td><td>gripper joints + EEF pose + EEF quaternion。</td></tr>
+            <tr><td>动作字段</td><td>7D <code>actions</code></td><td>RoboCasa actions 已是 delta，因此 <code>extra_delta_transform=False</code>。</td></tr>
+            <tr><td>语言条件</td><td><code>prompt_from_task=True</code></td><td>用 LeRobot task label 生成模型 prompt。</td></tr>
+            </tbody>
+        </table>
+        <h4>模型架构、输入头与输出头</h4>
+        <table>
+            <thead><tr><th>模块</th><th>输入</th><th>输出</th><th>维度/语义</th><th>证据</th></tr></thead>
+            <tbody>
+            <tr><td>PaliGemma VLM</td><td>224 图像 + prompt tokens</td><td>视觉语言 prefix 表示</td><td>用于条件化 action expert。</td><td><code>paligemma_model_name="google/paligemma-3b-pt-224"</code></td></tr>
+            <tr><td>状态输入</td><td>9D state</td><td>normalized / padded state</td><td>进入 action expert 条件。</td><td><code>LeRobotRobocasaDataConfig</code> 注释。</td></tr>
+            <tr><td>动作监督头</td><td>7D raw action padded 到 32D</td><td>32D action chunk</td><td>\((H=10,D=32)\)</td><td><code>action_horizon=10</code>，π0.5 内部 action dim。</td></tr>
+            <tr><td>RoboCasa 输出头</td><td>反归一化后的 32D chunk</td><td>7D env action</td><td><code>RobocasaOutputs(action_dim=7)</code></td><td><code>config.py</code> data transforms。</td></tr>
+            </tbody>
+        </table>
+        <h4>训练配置与过程</h4>
+        <table>
+            <thead><tr><th>配置项</th><th>值</th><th>解释</th></tr></thead>
+            <tbody>
+            <tr><td>初始化</td><td><code>gs://openpi-assets/checkpoints/pi05_base/params</code> + local PyTorch weights</td><td>复用 π0.5 base 的 VLM/action expert 能力。</td></tr>
+            <tr><td>batch / workers</td><td><code>batch_size=256</code>，<code>num_workers=8</code></td><td>高吞吐离线 fine-tune。</td></tr>
+            <tr><td>优化器</td><td>AdamW，<code>clip_gradient_norm=1.0</code></td><td>控制大模型 fine-tune 梯度范围。</td></tr>
+            <tr><td>LR schedule</td><td>warmup <code>10000</code>，peak <code>5e-5</code>，decay/end <code>5e-5</code></td><td>配置上近似 warmup 后恒定学习率。</td></tr>
+            <tr><td>训练步数</td><td><code>num_train_steps=50000</code></td><td>本地最终 eval 使用 40000 checkpoint。</td></tr>
+            </tbody>
+        </table>
+        <p>可用 partial log 显示 loss 从 step 0 的约 <code>0.0613</code> 下降到 step 21300 的约 <code>0.0056</code>。这说明离线动作拟合收敛较好；但完整 <code>pi05_robocasa/40000</code> 训练曲线没有在本地归档中找到，因此报告只把它作为片段证据。</p>
+        <h4>30000 与 40000 的评估轨迹</h4>
+        <p>30000 step 的本地 <code>results.txt</code> 只保留了前 14 tasks，合计约 <code>168/280=60.0%</code>，已经接近最终水平。40000 step 的完整 summary 才是本报告的最终结论来源：24 tasks、20 trials/task，<code>297/480=61.875%</code>。</p>
+        <p><strong>阶段结论。</strong>普通 PaliGemma π0.5 主线的优势在于它与 <code>pi05_base</code> 的 tokenizer、视觉 backbone、action expert 与 32D action space 最一致。RoboCasa 只做数据/输出适配，避免引入额外 world-model 分支后的训练目标竞争与推理接口错配。</p>
+
+        <h3>Run 3：Qwen+Cosmos 0 Success</h3>
+        <h4>目标与设计改动</h4>
+        <p>这一 run 是一次设计层面的跃迁：把视觉语言 backbone 从 PaliGemma 切到 Qwen3-VL，同时加入 Cosmos Predict2.5 future-frame world-model 分支。目标是让策略不仅从当前图像和语言中预测动作，还从未来视觉 latent 学到更强的短期动力学表征。</p>
+        <h4>相较上一 Run 的改造：Run 2 → Run 3，同时更换 VLM 与加入世界模型</h4>
+        <p>Run 3 的改动很激进，因为它同时改变了 \(M_r\)、\(H_r\) 和 \(\mathcal{L}_r\)：从 PaliGemma action-only 变成 Qwen3-VL + Cosmos future-frame 多目标训练。这种设计理论上能增强动态理解，但也把 tokenizer、视觉 token、视频 latent、action expert suffix 和推理上下文全部放进同一个对齐问题里。</p>
+        \[
+        \Delta S_3 =
+        \left(
+        D_{\mathrm{same\ RoboCasa}} + D_{\mathrm{future\ frames}},
+        M_{\mathrm{PaliGemma}\rightarrow\mathrm{Qwen+Cosmos}},
+        H_{\mathrm{action}}\oplus H_{\mathrm{video}},
+        \mathcal{L}_{action} + \lambda_{video}\mathcal{L}_{future},
+        E_{\mathrm{partial\ 5tasks}}
+        \right)
+        \]
+        <div class="note">
+            <p>变量解释：\(\oplus\) 表示新增并联头部；\(H_{\mathrm{video}}\) 是 Cosmos future-frame branch；\(\lambda_{video}\) 是 future-frame loss 权重。实现映射：配置中 <code>use_wm_backbone=True</code>、<code>vl_backbone="qwen"</code>、<code>cosmos_num_future_frames=4</code>、<code>future_image_sequence_keys=("image",)</code>。</p>
+        </div>
+        <pre><code class="language-text">Run 3 architecture: Qwen + Cosmos joint objective
+
+RoboCasa image/state/prompt
+        |
+        v
+Qwen3-VL visual-language prefix tokens
+        |
+        +-------------------------------+
+        |                               |
+        v                               v
+Action expert suffix              Cosmos video expert
+state + noisy 32D action + time   current image + prompt + future frames
+        |                               |
+        v                               v
+predicted flow velocity v_t        future-frame loss and video context
+        |                               |
+        +---------------+---------------+
+                        v
+       total_loss = action_expert_loss + lambda_video * future_frame_loss</code></pre>
+        <p>联合训练目标可以写成：</p>
+        \[
+        x_t = t\epsilon + (1-t)a,\quad
+        u_t = \epsilon-a,\quad
+        \mathcal{L}_3 =
+        \mathbb{E}\left[\left\|v_\theta(x_t,o,s,c,z_{\mathrm{video}})-u_t\right\|_2^2\right]
+        +
+        \lambda_{video}\mathcal{L}_{future}
+        \]
+        <div class="note">
+            <p>变量解释：\(a\) 是 padded 32D action chunk，\(\epsilon\) 是高斯噪声，\(t\) 是 flow matching 时间，\(u_t\) 是目标速度，\(o\) 是图像观测，\(s\) 是 state，\(c\) 是 prompt，\(z_{\mathrm{video}}\) 是 Cosmos 生成的视频上下文。实现映射：PaliGemma+Cosmos 源码中同样可见 <code>x_t = time * noise + (1 - time) * actions</code>、<code>u_t = noise - actions</code> 和 <code>total_loss = action_expert_loss + cosmos_video_loss_weight * future_frame_loss</code>；Qwen+Cosmos 分支沿用同类设计目标。</p>
+        </div>
+        <pre><code class="language-python">def run3_train_with_qwen_cosmos(batch, model, optimizer, lambda_video):
+    # 1. Build the same RoboCasa action target as Run 2.
+    #    This preserves the 7D-to-32D action supervision contract.
+    action_32d = pad_7d_actions_to_32d(batch["actions"])
+
+    # 2. Add future image sequence supervision for Cosmos.
+    #    The current main camera image is now both policy input and video target source.
+    future_frames = batch["future_images"]["image"]
+
+    # 3. Encode image and language with Qwen instead of PaliGemma.
+    #    This is a large architecture delta because tokenization and visual features change.
+    qwen_prefix = model.qwen_vl.encode(batch["images"], batch["prompt"])
+
+    # 4. Compute action flow-matching loss.
+    #    The action expert must predict the velocity from noisy action x_t to clean action a.
+    action_loss = model.action_expert_loss(qwen_prefix, batch["state"], action_32d)
+
+    # 5. Compute future-frame loss and optionally feed video context into the policy.
+    #    This adds a second objective that may help dynamics but may also compete with control.
+    future_frame_loss, video_context = model.cosmos_loss(future_frames, batch["prompt"])
+
+    # 6. Joint objective used for backpropagation.
+    total_loss = action_loss + lambda_video * future_frame_loss
+    total_loss.backward()
+    optimizer.step()
+    optimizer.zero_grad()
+    return {"total_loss": total_loss, "action_loss": action_loss, "future_frame_loss": future_frame_loss}</code></pre>
+        <p><strong>收益、失败与认识。</strong>这个 run 的结果是 <code>0/100</code>，所以它没有带来闭环收益。失败原因更像“系统级接口不对齐”，而不是单纯欠训练：backbone 被替换、world-model 上下文加入、future-frame 目标和动作目标共同优化，任何一处相机 slot、prompt token、action scale 或 attention mask 偏差都会在 online rollout 中被放大。它证明了一个重要负结果：引入更强视觉模型和世界模型并不会自动提高 RoboCasa 控制成功率。</p>
+        <table>
+            <thead><tr><th>改动</th><th>配置</th><th>设计影响</th></tr></thead>
+            <tbody>
+            <tr><td>VLM backbone</td><td><code>vl_backbone="qwen"</code>，<code>Qwen/Qwen3-VL-2B-Instruct</code></td><td>改变 prompt tokenizer、视觉 token 结构和 VLM hidden 表示。</td></tr>
+            <tr><td>World model</td><td><code>use_wm_backbone=True</code>，<code>Cosmos-Predict2.5-2B</code></td><td>加入 future-frame latent supervision。</td></tr>
+            <tr><td>未来帧</td><td><code>cosmos_num_future_frames=4</code>，<code>future_image_sequence_keys=("image",)</code></td><td>主相机图像同时成为策略输入与视频预测目标。</td></tr>
+            <tr><td>训练入口</td><td><code>scripts/train_pytorch_qwen.py</code></td><td>支持 Qwen/Cosmos 选择、DeepSpeed ZeRO-2、分项 loss logging。</td></tr>
+            </tbody>
+        </table>
+        <h4>评估症状</h4>
+        <table>
+            <thead><tr><th>任务</th><th>成功率</th><th>平均长度</th><th>症状解释</th></tr></thead>
+            <tbody>
+            <tr><td>PnPCounterToCab</td><td>0/20</td><td>500.0</td><td>达到默认 horizon 上限，未形成稳定 pick/place。</td></tr>
+            <tr><td>PnPCabToCounter</td><td>0/20</td><td>500.0</td><td>柜内取物失败。</td></tr>
+            <tr><td>PnPCounterToSink</td><td>0/20</td><td>700.0</td><td>该任务 horizon 更长，全部 timeout。</td></tr>
+            <tr><td>PnPSinkToCounter</td><td>0/20</td><td>500.0</td><td>未恢复开放区域 pick-and-place 能力。</td></tr>
+            <tr><td>PnPCounterToMicrowave</td><td>0/20</td><td>600.0</td><td>复杂放置任务完全失败。</td></tr>
+            </tbody>
+        </table>
+        <h4>0 Success 分析</h4>
+        <table>
+            <thead><tr><th>候选原因</th><th>证据</th><th>判断</th><th>后续检查</th></tr></thead>
+            <tbody>
+            <tr><td>Backbone 与 base action expert 不对齐</td><td>Qwen 路线改 tokenizer 和视觉表示，而 <code>pi05_base</code> 原生是 PaliGemma 路线。</td><td>高概率。</td><td>做单任务 overfit 与离线 action replay，确认输出尺度和方向。</td></tr>
+            <tr><td>World-model loss 与 action loss 竞争</td><td>训练脚本记录 <code>future_frame_loss</code> 与 <code>action_expert_loss</code>，总 loss 是二者组合。</td><td>中高概率。</td><td>尝试降低 \(\lambda_{video}\) 或先 action-only warmup。</td></tr>
+            <tr><td>相机 slot / flip / mask 错配</td><td>RoboCasa 把 right-side view 复用到 right-wrist slot；eval 还需要 <code>flip_images=True</code>。</td><td>中概率。</td><td>保存 policy 输入图像网格，人工核对视角、左右和 mask。</td></tr>
+            <tr><td>Action unnormalize 或 7D 截取问题</td><td>所有任务 timeout，符合动作幅度/方向不对时的症状。</td><td>不能排除。</td><td>打印 7D action 分布，与训练集动作分布对齐。</td></tr>
+            </tbody>
+        </table>
+        <p><strong>阶段结论。</strong><code>0/100</code> 不是“模型没学到 loss”，而是闭环接口还没有被证明正确。该 run 把问题从“能否训练”推进到“多模态新架构如何在 RoboCasa 闭环中对齐”。</p>
+
+        <h3>Run 4：Qwen+Cosmos 离散状态与学习率调整</h3>
+        <h4>目标与改进点</h4>
+        <p>这一阶段围绕 0 success 做恢复：继续沿用 Qwen+Cosmos，但尝试 discrete-state 相关配置、batch/学习率设置和 full kitchen24 eval。它的目标是判断问题是否能通过训练稳定性和状态表达修复，而不是彻底回退架构。</p>
+        <h4>相较上一 Run 的改造：Run 3 → Run 4，0 Success 恢复而非彻底换线</h4>
+        <p>Run 4 没有放弃 Qwen+Cosmos，而是把主要变量收缩到 state 表达、学习率与评估覆盖。根据归档配置，discrete-state 版本会让 <code>TokenizePrompt</code> 接收 <code>discrete_state_input=True</code>；本报告把它理解为一种把连续 proprio state 额外文本化或离散化给 VLM 使用的接口改造，但具体模板未完整归档，因此只作结构化推断。</p>
+        \[
+        \Delta S_4 =
+        \left(
+        D_{\mathrm{same}},
+        M_{\mathrm{Qwen+Cosmos}},
+        H_{\mathrm{state}}\rightarrow H_{\mathrm{state+discrete}},
+        \mathcal{L}_{\mathrm{same\ joint}},
+        E_{\mathrm{5tasks}}\rightarrow E_{\mathrm{15/24tasks}}
+        \right)
+        \]
+        <div class="note">
+            <p>实现映射：本地配置显示 <code>pi05_robocasa_qwen_vl_cosmos4_discrete_state...</code> 启用 <code>discrete_state_input=True</code>，并保留 <code>vl_backbone="qwen"</code>、<code>use_wm_backbone=True</code> 与 <code>cosmos_num_future_frames=4</code>。因此 Run 4 是调接口和稳定性，不是切回主线。</p>
+        </div>
+        <p>若把连续状态 \(s\in\mathbb{R}^{9}\) 的离散化/文本化抽象成 \(q_\Delta(\cdot)\)，则输入条件从：</p>
+        \[
+        c_{\mathrm{run3}} = \mathrm{tokenize}(\mathrm{prompt})
+        \quad \rightarrow \quad
+        c_{\mathrm{run4}} = \mathrm{tokenize}(\mathrm{prompt}, q_\Delta(s))
+        \]
+        <div class="note">
+            <p>变量解释：\(q_\Delta(s)\) 表示把连续 proprio state 转成模型更容易消费的离散符号或文本片段。实现边界：本地证据确认 discrete-state flag 进入 prompt tokenizer，但没有完整保存 transform 模板，所以这里是设计意图层面的数学抽象，而不是逐字符源码复述。</p>
+        </div>
+        <pre><code class="language-python">def run4_debug_zero_success(prev_results, train_config, eval_config):
+    # 1. Start from the Run 3 symptom: action/future loss can decrease, but SR is zero.
+    #    Do not assume the model is useless; first test whether the closed-loop interface recovers.
+    assert prev_results.successes == 0
+
+    # 2. Enable the discrete-state path when configured.
+    #    The goal is to expose proprioceptive state in a form the VLM tokenizer can condition on.
+    train_config.model.discrete_state_input = True
+
+    # 3. Keep the Qwen + Cosmos architecture fixed.
+    #    This isolates whether state formatting and optimizer settings can recover behavior.
+    train_config.model.vl_backbone = "qwen"
+    train_config.model.use_wm_backbone = True
+    train_config.model.cosmos_num_future_frames = 4
+
+    # 4. Run action-distribution sanity checks before trusting online rollout.
+    #    Large mean/std mismatches often indicate normalization or output-head mistakes.
+    pred_stats = estimate_policy_action_stats(train_config.checkpoint)
+    data_stats = load_dataset_action_stats(train_config.data.repo_id)
+    compare_action_stats(pred_stats, data_stats)
+
+    # 5. Expand evaluation from the first failed tasks to 15 or 24 tasks.
+    #    This separates global interface failure from task-family-specific weakness.
+    eval_config.task_set = "kitchen24"
+    eval_config.replan_steps = 5
+    return run_online_rollout(eval_config)</code></pre>
+        <p><strong>收益与失败原因。</strong>Run 4 从 <code>0/100</code> 恢复到 <code>191/480=39.79%</code>，说明动作输出不再是完全不可执行，且 close/open/turn 类短 horizon 任务可以学到。但它仍明显低于 Run 5 的 61.875%。失败集中在 PnP 和咖啡任务，说明 Qwen+Cosmos 的闭环误差积累、相机 slot 对齐和多目标 loss 竞争仍未解决。训练更久从 30000 到 50000 只增加 5 个成功 episode，还伴随 <code>TurnOffMicrowave</code> 明显退化，提示这条线存在任务间 trade-off。</p>
+        <h4>15-task 评估：从 0% 到 30% 左右</h4>
+        <table>
+            <thead><tr><th>Run</th><th>覆盖任务</th><th>结果</th><th>强项</th><th>弱项</th><th>分析</th></tr></thead>
+            <tbody>
+            <tr>
+                <td><code>qwen_cosmos4_discrete_bs_30000</code></td>
+                <td>15 tasks</td>
+                <td><code>91/300=30.33%</code></td>
+                <td><code>CloseDrawer=95%</code>、<code>CloseSingleDoor=75%</code>、<code>CloseDoubleDoor=75%</code></td>
+                <td>多数 PnP 任务 0-15%，<code>OpenDoubleDoor=0%</code></td>
+                <td>局部接触/关闭类动作恢复，长 horizon pick-and-place 仍失败。</td>
+            </tr>
+            <tr>
+                <td><code>qwen_cosmos4_discrete_bs_50000</code></td>
+                <td>15 tasks</td>
+                <td><code>86/300=28.67%</code></td>
+                <td><code>CloseDrawer=95%</code>、<code>CloseSingleDoor=75%</code></td>
+                <td><code>PnPCounterToSink=0%</code>、<code>PnPStoveToCounter=0%</code></td>
+                <td>训练更久没有改善，说明瓶颈不是步数不足。</td>
+            </tr>
+            </tbody>
+        </table>
+        <h4>24-task 评估：学习率/稳定性调整后</h4>
+        <table>
+            <thead><tr><th>Run</th><th>结果</th><th>提升项</th><th>退化项</th><th>结论</th></tr></thead>
+            <tbody>
+            <tr>
+                <td><code>qwen_cosmos4_discrete_lr5e5_30000</code></td>
+                <td><code>186/480=38.75%</code></td>
+                <td><code>TurnOnMicrowave=85%</code>、<code>TurnOffMicrowave=90%</code>、<code>TurnSinkSpout=80%</code></td>
+                <td>咖啡 setup/serve 均 10%，PnP 大多 5-30%。</td>
+                <td>状态/训练设置让工具类和开关类任务可用，但长 horizon 仍弱。</td>
+            </tr>
+            <tr>
+                <td><code>qwen_cosmos4_discrete_lr5e5_50000</code></td>
+                <td><code>191/480=39.79%</code></td>
+                <td><code>CloseDrawer=100%</code>、<code>TurnOnMicrowave=90%</code>、<code>TurnSinkSpout=85%</code></td>
+                <td><code>TurnOffMicrowave</code> 从 90% 降到 55%，<code>CoffeeServeMug</code> 降到 5%。</td>
+                <td>总分只升 5 个成功 episode，训练更久带来任务间 trade-off。</td>
+            </tr>
+            </tbody>
+        </table>
+        <h4>本阶段证明了什么</h4>
+        <p>从 <code>0/100</code> 到约 <code>40%</code> 说明动作输出已经能被环境解析，并且短 horizon、局部交互类任务能学到。但它也证明了一个反直觉现象：Qwen+Cosmos offline loss 可以持续下降，online SR 却在约 40% 停住。由此推断，主要瓶颈不是“模型完全没训练好”，而是 closed-loop distribution shift、相机/state/action slot 对齐、world-model loss 和动作控制 loss 的联合优化边界。</p>
+
+        <h3>Run 5：最终 <code>pi05_robocasa/40000</code></h3>
+        <h4>目标与评估边界</h4>
+        <p>这是当前最重要的本地 run。目标是用更稳的 PaliGemma π0.5 主线跑完整 kitchen24 评估，确认是否能达到 60% 以上。证据来自 <code>evaluation_20260702_cycle/evidence/luoshuang_openpi/summary.json</code> 和 <code>robocasa_pi05_40000_kitchen24_20260629033352_run.log</code>。</p>
+        <h4>相较上一 Run 的改造：Run 4 → Run 5，回到 action-only 主线并完成同口径评估</h4>
+        <p>Run 5 是最干净的强对比：Run 4 和 Run 5 都有 24 tasks、20 trials/task、<code>replan_steps=5</code> 的 kitchen24 结果，因此 \(\gamma_{5,4}=1\)。改造不是“继续加模块”，而是移除 Qwen+Cosmos 的额外复杂度，回到 PaliGemma π0.5 action-only。</p>
+        \[
+        \Delta S_5 =
+        \left(
+        D_{\mathrm{same\ success\ only}},
+        M_{\mathrm{Qwen+Cosmos}}\rightarrow M_{\mathrm{PaliGemma}},
+        H_{\mathrm{action+video}}\rightarrow H_{\mathrm{action}},
+        \mathcal{L}_{action}+\lambda_{video}\mathcal{L}_{future}\rightarrow \mathcal{L}_{action},
+        E_{\mathrm{24tasks}}
+        \right)
+        \]
+        <div class="note">
+            <p>实现映射：Run 5 使用 <code>policy config=pi05_robocasa</code>，没有 <code>use_wm_backbone=True</code>，没有 Cosmos future-frame loss；输出仍通过 <code>RobocasaOutputs(action_dim=7)</code> 进入 RoboCasa controller。</p>
+        </div>
+        <p>这次强对比的成功率增益是：</p>
+        \[
+        \Delta \mathrm{SR}_{5,4}
+        =
+        0.61875 - 0.3979
+        =
+        0.22085
+        \approx 22.09\%
+        \]
+        <div class="note">
+            <p>变量解释：0.3979 来自 Run 4 的 Qwen+Cosmos discrete-state 50000 step 完整 24-task 结果；0.61875 来自最终 <code>summary.json</code> 的 <code>297/480</code>。因为两个都是 kitchen24 24 tasks、20 trials/task，这个差值可以作为本地强证据。</p>
+        </div>
+        <pre><code class="language-text">Run 5 architecture: PaliGemma pi0.5 action-only
+
+RoboCasa images + prompt              9D state + noisy 32D action + time
+        |                                          |
+        v                                          v
+PaliGemma visual-language prefix          action expert suffix tokens
+        |                                          |
+        +----------------------+-------------------+
+                               v
+                   flow velocity head v_t in 32D
+                               |
+                               v
+                 denoise to 32D action chunk
+                               |
+                               v
+                RobocasaOutputs slices first 7D
+                               |
+                               v
+                    Panda controller executes action</code></pre>
+        <pre><code class="language-python">def run5_action_only_eval(policy_server, env_suite, summary_writer):
+    # 1. Serve the pi05_robocasa checkpoint.
+    #    This model keeps the PaliGemma pi0.5 action interface and disables Cosmos.
+    policy = policy_server.load(config="pi05_robocasa", checkpoint_step=40000)
+
+    # 2. Use the fixed kitchen24 evaluation harness.
+    #    The final result uses 24 tasks and 20 trials per task, so total trials are 480.
+    eval_cfg = {
+        "task_set": "kitchen24",
+        "trials_per_task": 20,
+        "replan_steps": 5,
+        "resize_size": 224,
+        "flip_images": True,
+        "seed": 7,
+        "deterministic": True,
+    }
+
+    # 3. For each trial, request an action chunk every five environment steps.
+    #    The client executes the first usable 7D actions after output transform.
+    successes = 0
+    total = 0
+    for task in env_suite.kitchen24_tasks():
+        for trial in range(eval_cfg["trials_per_task"]):
+            result = rollout_with_replanning(policy, task, eval_cfg)
+            successes += int(result.success)
+            total += 1
+
+    # 4. Persist summary.json so the result is auditable.
+    #    This is the evidence source for 297/480 = 0.61875.
+    summary_writer.write(successes=successes, total=total, success_rate=successes / total)</code></pre>
+        <p><strong>成功原因分析。</strong>Run 5 的有效性来自“减少不必要的表征迁移”。PaliGemma/action expert 和 π0.5 base checkpoint 原生同源，RoboCasa 只需解决数据键名、图像方向、state/action padding 和 7D 输出截取。与 Run 4 相比，Run 5 去掉了 Qwen tokenizer 迁移、Cosmos future-frame 目标、视频上下文注入和多目标 loss 权衡，因此闭环控制更稳定。它并没有证明 world model 无用，而是证明在当前本地证据下，action-only 主线更符合已有 base prior。</p>
+        <h4>Serving 与 Eval 配置</h4>
+        <table>
+            <thead><tr><th>类别</th><th>值</th><th>解释</th></tr></thead>
+            <tbody>
+            <tr><td>policy config</td><td><code>pi05_robocasa</code></td><td>PaliGemma π0.5 主线，不启用 Cosmos。</td></tr>
+            <tr><td>checkpoint</td><td><code>40000</code></td><td>最终完整 eval 使用的 checkpoint step。</td></tr>
+            <tr><td>server</td><td><code>127.0.0.1:8043</code></td><td>RoboCasa client 通过 websocket 请求动作。</td></tr>
+            <tr><td>图像</td><td><code>resize_size=224</code>，<code>env_img_res=224</code>，<code>flip_images=true</code></td><td>对齐 PaliGemma 输入和 RoboCasa 图像方向。</td></tr>
+            <tr><td>控制</td><td><code>replan_steps=5</code></td><td>每 5 个环境步重新请求一个 action chunk。</td></tr>
+            <tr><td>任务</td><td><code>task_set=kitchen24</code>，24 tasks，每任务 20 trials</td><td>完整本地 kitchen24 评估。</td></tr>
+            <tr><td>泛化设置</td><td><code>obj_instance_split=B</code>，layouts <code>((1,1),(2,2),(4,4),(6,9),(7,10))</code></td><td>对象实例和厨房布局不只是一种固定场景。</td></tr>
+            <tr><td>随机性</td><td><code>seed=7</code>，<code>deterministic=true</code></td><td>保证本地复现口径稳定。</td></tr>
+            </tbody>
+        </table>
+        <h4>完整结果与任务簇分析</h4>
+        <table>
+            <thead><tr><th>任务簇</th><th>代表任务</th><th>结果特征</th><th>原因分析</th></tr></thead>
+            <tbody>
+            <tr><td>关闭/按钮类</td><td><code>CloseDrawer=100%</code>、<code>CoffeePressButton=100%</code>、<code>CloseSingleDoor=85%</code></td><td>最强。</td><td>目标状态明确，动作局部，误差容忍度较高。</td></tr>
+            <tr><td>水龙头/旋转类</td><td><code>TurnOffSinkFaucet=95%</code>、<code>TurnSinkSpout=85%</code>、<code>TurnOnSinkFaucet=80%</code></td><td>稳定。</td><td>视觉目标较固定，成功 predicate 与动作方向容易形成对应。</td></tr>
+            <tr><td>普通 PnP</td><td><code>PnPSinkToCounter=70%</code>、<code>PnPCounterToSink=60%</code>、<code>PnPCounterToStove=55%</code></td><td>中等。</td><td>抓取、搬运、放置三个子阶段都会累积误差。</td></tr>
+            <tr><td>柜内/微波炉 PnP</td><td><code>PnPCabToCounter=25%</code>、<code>PnPCounterToCab=40%</code>、<code>PnPMicrowaveToCounter=40%</code></td><td>偏弱。</td><td>遮挡、空间约束、末端姿态和深度估计更敏感。</td></tr>
+            <tr><td>咖啡多子目标</td><td><code>CoffeeSetupMug=40%</code>、<code>CoffeeServeMug=30%</code></td><td>偏弱。</td><td>任务 horizon 长，子目标间状态切换多，局部动作成功不足以完成全任务。</td></tr>
+            <tr><td>炉灶关闭</td><td><code>TurnOffStove=15%</code></td><td>最低。</td><td>可能受旋钮初始状态、接触方向和细粒度成功判定影响，需要单任务诊断。</td></tr>
+            </tbody>
+        </table>
+        <p><strong>最终结论。</strong><code>DONE | tasks=24 | overall SR=61.88% (297/480)</code>，精确 summary 为 <code>0.61875</code>。这次模型引入的关键不是 Cosmos，而是更干净地复用了 π0.5 base 的 PaliGemma/action expert 路线，并把 RoboCasa 数据和 eval 观测对齐到该路线。其效果是接近官方 π0 62.5%，但尚未达到 Cosmos Predict2/2.5 的官方结果。</p>
+
+        <h3>Run 6：PaliGemma+Cosmos 20000 未完成探索</h3>
+        <h4>目标与设计动机</h4>
+        <p>这是后续更合理的 Cosmos 探索线：不再用 Qwen 替换掉 PaliGemma 主线，而是在 PaliGemma π0.5 的对齐基础上加入 Cosmos Predict2.5 world-model branch。设计动机是保留 <code>pi05_base</code> 的 PaliGemma/action expert 接口优势，同时让 Cosmos 提供未来帧 representation。</p>
+        <h4>相较上一 Run 的改造：Run 5 → Run 6，只加 Cosmos，不再同时切 Backbone</h4>
+        <p>Run 6 的设计比 Run 3 更可控：它保留 Run 5 已证明有效的 PaliGemma/action expert 主线，只在旁路增加 Cosmos video expert。用状态转移表示：</p>
+        \[
+        \Delta S_6 =
+        \left(
+        D_{\mathrm{future\ frames}},
+        M_{\mathrm{PaliGemma}}\rightarrow M_{\mathrm{PaliGemma+Cosmos}},
+        H_{\mathrm{action}}\rightarrow H_{\mathrm{action+video}},
+        \mathcal{L}_{action}\rightarrow \mathcal{L}_{action}+\lambda_{video}\mathcal{L}_{future},
+        E_{\mathrm{incomplete}}
+        \right)
+        \]
+        <div class="note">
+            <p>实现映射：源码 <code>pi0_pytorch_paligemma_cosmos.py</code> 中可见 <code>CosmosVideoExpert</code>、<code>action_in_proj = Linear(32,width)</code>、<code>action_out_proj = Linear(width,32)</code>，以及 <code>future_frame_loss</code> 加入 <code>total_loss</code>。这说明 Run 6 的新增点是 world-model 条件，而不是替换 VLM 主体。</p>
+        </div>
+        <pre><code class="language-text">Run 6 architecture: PaliGemma + Cosmos controlled ablation
+
+RoboCasa image/state/prompt
+        |
+        +--------------------------+
+        |                          |
+        v                          v
+PaliGemma pi0.5 prefix       Cosmos video expert
+        |                    current/future images + prompt
+        |                          |
+        |                          v
+        |                 video context + future loss
+        |                          |
+        +-------------+------------+
+                      v
+        action expert with video-conditioned context
+                      |
+                      v
+          32D action chunk -> first 7D env action</code></pre>
+        <p>Run 6 的推理去噪过程可写成离散 Euler 更新：</p>
+        \[
+        x_{k+1}
+        =
+        x_k
+        -
+        \frac{1}{K}
+        v_\theta(x_k,t_k,o,s,c,z_{\mathrm{video}}),
+        \quad K=10
+        \]
+        <div class="note">
+            <p>变量解释：\(x_k\) 是第 \(k\) 个 denoising step 的 32D action chunk，\(K=10\) 对应源码中的 <code>num_steps=10</code>，\(z_{\mathrm{video}}\) 是 Cosmos inference context。实现映射：源码中 <code>dt = -1.0 / num_steps</code>，然后反复执行 <code>x_t = x_t + dt * v_t</code>。</p>
+        </div>
+        <pre><code class="language-python">def run6_paligemma_cosmos_branch(observation, model, num_steps=10):
+    # 1. Keep the Run 5 perception and action path.
+    #    This preserves the PaliGemma pi0.5 prior that already reached 61.875%.
+    prefix = model.paligemma_encode(observation.images, observation.prompt)
+
+    # 2. Add Cosmos inference context from the current image and prompt.
+    #    Unlike Run 3, the VLM backbone is not replaced by Qwen.
+    video_context = model.cosmos.infer_context(
+        image=observation.images["image"],
+        prompt=observation.prompt,
+        num_future_frames=4,
+    )
+
+    # 3. Start flow-matching inference from Gaussian noise in 32D action space.
+    #    The denoising loop follows the same 32D action contract as Run 5.
+    x = sample_standard_normal(shape=(model.action_horizon, model.action_dim))
+
+    # 4. Euler denoising with video-conditioned action expert.
+    #    Each step predicts a velocity v and moves x toward the clean action chunk.
+    for step in range(num_steps):
+        t = 1.0 - step / num_steps
+        v = model.action_expert(prefix, observation.state, x, t, video_context)
+        x = x - v / num_steps
+
+    # 5. Output transform still slices and denormalizes the first 7D for RoboCasa.
+    return model.robocasa_outputs(x)</code></pre>
+        <p><strong>当前收益与证据边界。</strong>Run 6 的 early rollout 显示 <code>PnPCounterToCab</code> 有成功也有失败，说明它不是 Run 3 那种立刻 0-success 的症状；但没有完整 24-task summary，因此不能和 Run 5 的 61.875% 做收益比较。这个 run 最有价值的认识是：如果要验证 Cosmos 是否真的有益，应当在 Run 5 的稳定 PaliGemma 主线上做 controlled ablation，而不是同时替换 backbone。</p>
+        <h4>配置与头部变化</h4>
+        <table>
+            <thead><tr><th>模块</th><th>配置/实现</th><th>预期作用</th></tr></thead>
+            <tbody>
+            <tr><td>VLM</td><td><code>vl_backbone="paligemma"</code></td><td>保持与普通 π0.5 主线同源。</td></tr>
+            <tr><td>World model</td><td><code>use_wm_backbone=True</code>，<code>Cosmos-Predict2.5-2B</code></td><td>引入 future-frame latent 监督。</td></tr>
+            <tr><td>未来帧</td><td><code>cosmos_num_future_frames=4</code></td><td>学习短期视觉动力学。</td></tr>
+            <tr><td>动作投影</td><td><code>action_in_proj = Linear(32,width)</code>，<code>action_out_proj = Linear(width,32)</code></td><td>将 32D noisy action 映射进 action expert hidden，再输出 32D velocity/action 更新。</td></tr>
+            <tr><td>总 loss</td><td><code>total_loss = action_expert_loss + λ * future_frame_loss</code></td><td>联合动作控制和未来帧预测。</td></tr>
+            </tbody>
+        </table>
+        <h4>当前状态与证据边界</h4>
+        <p>本地只有 <code>robocasa_paligemma_cosmos_20000_kitchen24_20260702034344_run.log</code> 的 early rollout 片段。日志显示 24 tasks eval 已启动，且在 <code>PnPCounterToCab</code> 上既有成功 episode 也有失败 episode；但没有完整 <code>summary.json</code>、没有 24-task 总成功率，也没有足够的 per-task 统计。</p>
+        <div class="warning">
+            <p><strong>不能过度归因。</strong>当前不能说 PaliGemma+Cosmos 产生了 <code>61.875%</code>，也不能说它优于普通 <code>pi05_robocasa</code>。它是一个有潜力、但证据尚未闭环的后续分支。</p>
+        </div>
+        <h4>下一步恢复动作</h4>
+        <ol>
+            <li>先用同一 eval 脚本跑完 <code>pi05_robocasa_paligemma_cosmos/20000</code> 的完整 24-task、20 trials/task summary。</li>
+            <li>保存完整 <code>summary.json</code>、<code>results.txt</code>、run log、serve log 和 checkpoint path。</li>
+            <li>若 20000 结果低于普通 π0.5，先做 action-only ablation 或降低 <code>cosmos_video_loss_weight</code>，不要直接扩大训练。</li>
+            <li>若 20000 接近或超过普通 π0.5，再评估 40000/50000，并按官方 50 trials/task + multi-seed 口径复跑。</li>
+        </ol>
+    </section>
+
+    <section id="curves">
+        <h2>训练 Loss 曲线</h2>
+        <h3>普通 π0.5 partial loss</h3>
+        <p>普通 <code>pi05_robocasa</code> 可用 stdout 片段显示 loss 快速下降。下图是本地归档能恢复的片段点，不是完整 40000 曲线。</p>
+        <div class="svg-wrap">
+            <svg width="820" height="300" viewBox="0 0 820 300" role="img" aria-label="pi05 partial loss curve">
+                <rect x="0" y="0" width="820" height="300" fill="#ffffff"/>
+                <line x1="70" y1="245" x2="780" y2="245" stroke="#94a3b8"/>
+                <line x1="70" y1="30" x2="70" y2="245" stroke="#94a3b8"/>
+                <text x="70" y="275" font-size="12" fill="#475569">step</text>
+                <text x="8" y="38" font-size="12" fill="#475569">loss</text>
+                <polyline fill="none" stroke="#2563eb" stroke-width="3"
+                    points="70,45 103,112 234,188 374,214 444,220 718,235 780,236"/>
+                <circle cx="70" cy="45" r="4" fill="#2563eb"/><text x="76" y="43" font-size="11">0:0.0613</text>
+                <circle cx="103" cy="112" r="4" fill="#2563eb"/><text x="110" y="112" font-size="11">1k:0.0370</text>
+                <circle cx="234" cy="188" r="4" fill="#2563eb"/><text x="240" y="188" font-size="11">5k:0.0161</text>
+                <circle cx="374" cy="214" r="4" fill="#2563eb"/><text x="380" y="214" font-size="11">9.3k:0.0109</text>
+                <circle cx="444" cy="220" r="4" fill="#2563eb"/><text x="450" y="220" font-size="11">11k:0.0095</text>
+                <circle cx="718" cy="235" r="4" fill="#2563eb"/><text x="600" y="232" font-size="11">19.7k:0.0058</text>
+                <circle cx="780" cy="236" r="4" fill="#2563eb"/><text x="674" y="252" font-size="11">21.3k:0.0056</text>
+            </svg>
+        </div>
+        <div class="note">
+            <p>读图方式：横轴是训练 step，纵轴是 total/action loss 片段。loss 单调下降说明离线动作拟合在收敛，但最终闭环能力仍需要 online eval 证明。</p>
+        </div>
+
+        <h3>Qwen+Cosmos 分项 loss</h3>
+        <p>Qwen+Cosmos 日志更完整，显示总 loss、action expert loss 和 future-frame loss 都下降明显：</p>
+        <table>
+            <thead>
+            <tr>
+                <th>Step</th>
+                <th>Total loss</th>
+                <th>Action expert loss</th>
+                <th>Future frame loss</th>
+                <th>说明</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr><td>0</td><td>1.5522</td><td>1.4136</td><td>0.1386</td><td>初始化后误差高。</td></tr>
+            <tr><td>100</td><td>0.8816</td><td>0.8517</td><td>0.0299</td><td>快速下降。</td></tr>
+            <tr><td>500</td><td>0.0612</td><td>0.0537</td><td>0.0075</td><td>动作项成为主要 loss。</td></tr>
+            <tr><td>1000</td><td>0.0412</td><td>0.0348</td><td>0.0064</td><td>继续收敛。</td></tr>
+            <tr><td>5000</td><td>0.0183</td><td>0.0136</td><td>0.0047</td><td>已低于 0.02。</td></tr>
+            <tr><td>10000</td><td>0.0130</td><td>约 0.009 左右</td><td>约 0.004 左右</td><td>片段证据。</td></tr>
+            <tr><td>30000</td><td>0.0060</td><td>约 0.004</td><td>约 0.002</td><td>离线 loss 很低，但 eval 约 38.75%。</td></tr>
+            <tr><td>39900</td><td>0.005656</td><td>0.004043</td><td>0.001613</td><td>训练继续收敛，但没有带来 60+ 闭环结果。</td></tr>
+            </tbody>
+        </table>
+        <div class="svg-wrap">
+            <svg width="820" height="310" viewBox="0 0 820 310" role="img" aria-label="Qwen Cosmos loss curve">
+                <rect width="820" height="310" fill="#ffffff"/>
+                <line x1="70" y1="250" x2="780" y2="250" stroke="#94a3b8"/>
+                <line x1="70" y1="30" x2="70" y2="250" stroke="#94a3b8"/>
+                <text x="70" y="280" font-size="12" fill="#475569">step</text>
+                <text x="8" y="38" font-size="12" fill="#475569">loss</text>
+                <polyline fill="none" stroke="#2563eb" stroke-width="3"
+                    points="70,35 72,125 79,241 88,244 159,247 248,248 603,249 780,249"/>
+                <polyline fill="none" stroke="#16a34a" stroke-width="3"
+                    points="70,55 72,130 79,242 88,245 159,248 248,249 603,249 780,249"/>
+                <polyline fill="none" stroke="#f97316" stroke-width="3"
+                    points="70,231 72,246 79,249 88,249 159,249 248,250 603,250 780,250"/>
+                <text x="595" y="42" font-size="12" fill="#2563eb">total</text>
+                <text x="595" y="60" font-size="12" fill="#16a34a">action</text>
+                <text x="595" y="78" font-size="12" fill="#f97316">future</text>
+                <text x="82" y="115" font-size="11" fill="#475569">0 to 500: sharp drop</text>
+                <text x="555" y="235" font-size="11" fill="#475569">30k to 39.9k: low offline loss</text>
+            </svg>
+        </div>
+        <div class="warning">
+            <p><strong>Loss 曲线解释。</strong>Qwen+Cosmos 的 offline loss 明显低，但 kitchen24 full eval 最高只到 <code>191/480=39.79%</code>。原因可能是 closed-loop distribution shift、state/camera/action slot 对齐、world-model loss 与 action control loss 的优化竞争，以及 Qwen backbone 与 π0.5 base action expert 初始化不如 PaliGemma 主线自然。</p>
+        </div>
+    </section>
+
+    <section id="final-result">
+        <h2>最终结果介绍与原因分析</h2>
+        <div class="metric-grid">
+            <div class="metric"><strong>61.875%</strong><span>overall success rate</span></div>
+            <div class="metric"><strong>297/480</strong><span>successes / trials</span></div>
+            <div class="metric"><strong>24</strong><span>kitchen tasks</span></div>
+            <div class="metric"><strong>20</strong><span>trials per task</span></div>
+        </div>
+        <h3>Per-task 结果</h3>
+        <table>
+            <thead>
+            <tr>
+                <th>任务</th>
+                <th>成功率</th>
+                <th>成功数</th>
+                <th>平均 episode length</th>
+                <th>分析</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr><td>CloseDrawer</td><td>1.00</td><td>20/20</td><td>186.0</td><td>短 horizon、目标状态清晰、接触模式简单。</td></tr>
+            <tr><td>CoffeePressButton</td><td>1.00</td><td>20/20</td><td>107.4</td><td>按钮类任务动作局部、成功判定明确。</td></tr>
+            <tr><td>TurnOffSinkFaucet</td><td>0.95</td><td>19/20</td><td>244.4</td><td>水龙头关操作稳定。</td></tr>
+            <tr><td>CloseSingleDoor / CloseDoubleDoor</td><td>0.85 / 0.85</td><td>17/20 / 17/20</td><td>311.1 / 439.55</td><td>关闭类动作比打开类更容易收敛到成功区域。</td></tr>
+            <tr><td>OpenDrawer / TurnSinkSpout</td><td>0.85 / 0.85</td><td>17/20 / 17/20</td><td>246.55 / 169.4</td><td>局部可见、动作轨迹相对模板化。</td></tr>
+            <tr><td>TurnOnSinkFaucet</td><td>0.80</td><td>16/20</td><td>315.65</td><td>比 TurnOff 更难，但仍较稳。</td></tr>
+            <tr><td>PnPSinkToCounter / OpenSingleDoor</td><td>0.70 / 0.70</td><td>14/20 / 14/20</td><td>379.8 / 341.45</td><td>pick-and-place 与打开类任务开始受姿态和接触误差影响。</td></tr>
+            <tr><td>PnPCounterToSink / PnPStoveToCounter / TurnOnMicrowave</td><td>0.60 / 0.65 / 0.65</td><td>12/20 / 13/20 / 13/20</td><td>570.45 / 352.3 / 339.1</td><td>中等难度，长 horizon 或目标区域约束更强。</td></tr>
+            <tr><td>PnPCounterToCab</td><td>0.40</td><td>8/20</td><td>398.9</td><td>柜内放置涉及遮挡和精确放置，失败率高。</td></tr>
+            <tr><td>PnPCabToCounter</td><td>0.25</td><td>5/20</td><td>470.4</td><td>从柜内取出需要更强的可见性和接触恢复。</td></tr>
+            <tr><td>CoffeeServeMug / CoffeeSetupMug</td><td>0.30 / 0.40</td><td>6/20 / 8/20</td><td>524.15 / 496.45</td><td>咖啡任务长 horizon 且子目标多，容易累积误差。</td></tr>
+            <tr><td>TurnOffStove</td><td>0.15</td><td>3/20</td><td>446.15</td><td>最低任务，可能与旋钮状态识别、接触方向和成功 predicate 精度有关。</td></tr>
+            </tbody>
+        </table>
+
+        <h3>为什么 60+ 模型有效</h3>
+        <p>这次 60+ 模型的有效改进可以概括为三点。第一，数据格式与 OpenPI π0.5 base 的原始输入输出保持最小偏移：仍然是图像、state、prompt 到连续 action chunk 的 VLA 流程。第二，RoboCasa action 已是 delta，避免了额外 delta/absolute 转换引入的尺度错误。第三，最终 eval 使用固定 seed、固定 layout/style、replan 5 和 image flip，使训练和推理格式尽可能一致。</p>
+        <p>相反，Qwen+Cosmos 的探索引入了更多潜在不对齐面：不同 VLM tokenizer、世界模型 future-frame loss、多路视觉 slot 复用、Cosmos context 和 action expert 的联合注意力。这些改动在离线 loss 上可收敛，但在闭环控制上更脆弱。</p>
+    </section>
+
+    <section id="comparison">
+        <h2>方法对比与选择建议</h2>
+        <table>
+            <thead>
+            <tr>
+                <th>路线</th>
+                <th>优点</th>
+                <th>短板</th>
+                <th>建议</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr>
+                <td>PaliGemma π0.5 主线</td>
+                <td>与 base checkpoint 对齐最好；实现面最少；闭环结果最高。</td>
+                <td>没有显式 future-frame world model；长 horizon 咖啡/柜内任务仍弱。</td>
+                <td>作为当前 production baseline，先补齐完整训练曲线和 50 trials/task eval。</td>
+            </tr>
+            <tr>
+                <td>Qwen+Cosmos</td>
+                <td>具备未来帧监督和更强 VLM 潜力；loss 下降明显。</td>
+                <td>闭环 SR 低，显示 action/control 对齐不足。</td>
+                <td>先做单任务 overfit、action replay sanity check、camera/state normalization 对齐，再跑大规模 eval。</td>
+            </tr>
+            <tr>
+                <td>PaliGemma+Cosmos</td>
+                <td>理论上保留 PaliGemma base 对齐，同时引入 Cosmos world model。</td>
+                <td>本地无完整 eval summary。</td>
+                <td>这是最值得继续的探索线，但必须完整评估后再判断。</td>
+            </tr>
+            <tr>
+                <td>官方 Cosmos Policy Predict2/2.5</td>
+                <td>公开数字达到 67.1% / 71.1%，是强 baseline。</td>
+                <td>与本地 OpenPI 改造路径不是同一实现。</td>
+                <td>用于目标对齐和差距分析，不直接替代本地 π0.5 baseline。</td>
+            </tr>
+            </tbody>
+        </table>
+    </section>
+
+    <section id="recovery">
+        <h2>恢复工作所需清单</h2>
+        <ol>
+            <li>固定最终 baseline：以 <code>pi05_robocasa/40000</code>、<code>summary.json</code> 和 final run log 作为 61.875% 的唯一可复核来源。</li>
+            <li>补齐源码归档：保存 <code>openpi.policies.robocasa_policy.py</code>、<code>examples/robocasa/main.py</code>、conversion script 和 controller wrapper，复核 7D action 轴顺序。</li>
+            <li>补齐训练曲线：从 wandb/TensorBoard/stdout 导出 <code>pi05_robocasa</code> 0 到 40000 的完整 total/action loss。</li>
+            <li>复跑官方协议：若要严肃对比 Cosmos Cookbook，建议按官方默认 50 trials/task、相同 seeds、相同 task split 跑完整 kitchen24。</li>
+            <li>为 Qwen/Cosmos 建 sanity checks：单 batch overfit、离线 action unnormalize 回放、随机 episode action magnitude 分布、camera flip/mask 可视化、prompt 与 task name 一致性检查。</li>
+            <li>继续 PaliGemma+Cosmos：先跑完 <code>20000</code> checkpoint 的完整 24-task eval，再决定是否继续 40000/50000。</li>
+        </ol>
+    </section>
+
+    <section id="references">
+        <h2>参考文献（References）</h2>
+        <ol>
+            <li>[1] Soroush Nasiriany et al., "RoboCasa: Large-Scale Simulation of Everyday Tasks for Generalist Robots", 2024. <a href="https://arxiv.org/abs/2406.02523">链接</a></li>
+            <li>[2] NVIDIA Cosmos Cookbook, "Cosmos Policy: Fine-Tuning Video Models for Visuomotor Control". <a href="https://nvidia-cosmos.github.io/cosmos-cookbook/recipes/post_training/predict2/cosmos_policy/post_training.html">链接</a></li>
+            <li>[3] NVIDIA, "Cosmos Policy: Fine-Tuning Video Models for Visuomotor Control", arXiv 2601.16163. <a href="https://arxiv.org/html/2601.16163v1">链接</a></li>
+            <li>[4] Physical Intelligence, OpenPI official repository. <a href="https://github.com/Physical-Intelligence/openpi">链接</a></li>
+            <li>[5] NVIDIA, "Cosmos-Policy-RoboCasa-Predict2-2B" model card. <a href="https://huggingface.co/nvidia/Cosmos-Policy-RoboCasa-Predict2-2B">链接</a></li>
+            <li>[6] Local evidence: <code>C:\Users\mousongzhe\pryer\project\07_openpi_eval_and_deployment_clients\remote_evidence\evaluation_20260702_cycle\evidence\luoshuang_openpi\summary.json</code>.</li>
+            <li>[7] Local evidence: <code>C:\Users\mousongzhe\pryer\project\07_openpi_eval_and_deployment_clients\remote_evidence\evaluation_20260702_cycle\evidence\luoshuang_openpi\robocasa_pi05_40000_kitchen24_20260629033352_run.log</code>.</li>
+            <li>[8] Local evidence: <code>C:\Users\mousongzhe\pryer\project\07_openpi_eval_and_deployment_clients\remote_evidence\evaluation_20260702_cycle\evidence\luoshuang_openpi\config.py</code>.</li>
+            <li>[9] Local evidence: <code>C:\Users\mousongzhe\pryer\project\00_workspace_review\alignment_records\evaluation_alignment\derived\luoshuang_robocasa_run_summary.csv</code>.</li>
+            <li>[10] Local evidence: <code>C:\Users\mousongzhe\pryer\project\07_openpi_eval_and_deployment_clients\remote_evidence\robocasa_openpi_progress\evidence\code\luoshuang_openpi\scripts\train_pytorch_qwen.py</code>.</li>
+            <li>[11] Local evidence: <code>C:\Users\mousongzhe\pryer\project\07_openpi_eval_and_deployment_clients\remote_evidence\robocasa_openpi_progress\evidence\code\luoshuang_openpi\src\openpi\models_pytorch\pi0_pytorch_paligemma_cosmos.py</code>.</li>
+            <li>[12] Local evidence: <code>C:\Users\mousongzhe\pryer\project\07_openpi_eval_and_deployment_clients\remote_evidence\robocasa_openpi_progress\evidence\code\luoshuang_openpi\run_policy_server.sh</code> and <code>run_robocasa_env.sh</code>.</li>
+        </ol>
+    </section>
+</article>
+</body>
+</html>

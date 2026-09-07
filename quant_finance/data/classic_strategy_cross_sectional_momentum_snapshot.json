@@ -1,0 +1,54 @@
+{
+  "snapshot_date_utc": "2026-07-27",
+  "official_factor": {
+    "source": "Kenneth French Data Library",
+    "source_url": "https://mba.tuck.dartmouth.edu/pages/faculty/ken.french/ftp/F-F_Momentum_Factor_CSV.zip",
+    "sha256": "37baf72ae4eace9715e8746413d0122334c63aa4083fd1c3cf2060fa04e4bd28",
+    "file_header": "This file was created using the 202605 CRSP database.",
+    "definition": "Momentum factor from six value-weighted portfolios sorted by size and prior return; high prior-return portfolios minus low prior-return portfolios.",
+    "sample": {"start": "1927-01", "end": "2026-05", "months": 1193},
+    "subperiods": {
+      "1927-01": {"annualized_arithmetic_return": 0.0747922883, "cagr": 0.0615068919, "annualized_volatility": 0.1621050227, "sharpe_rf0": 0.4613816840, "max_drawdown": -0.7853773331, "max_drawdown_trough": "1939-09"},
+      "1970-01": {"annualized_arithmetic_return": 0.0701973412, "cagr": 0.0601692264, "annualized_volatility": 0.1493150654, "sharpe_rf0": 0.4701289923, "max_drawdown": -0.5784912381, "max_drawdown_trough": "2009-09"},
+      "1990-01": {"annualized_arithmetic_return": 0.0570041190, "cagr": 0.0443176649, "annualized_volatility": 0.1604201055, "sharpe_rf0": 0.3553427347, "max_drawdown": -0.5784912381, "max_drawdown_trough": "2009-09"},
+      "2000-01": {"annualized_arithmetic_return": 0.0276643533, "cagr": 0.0114696437, "annualized_volatility": 0.1749466610, "sharpe_rf0": 0.1581302161, "max_drawdown": -0.5784912381, "max_drawdown_trough": "2009-09"},
+      "2010-01": {"annualized_arithmetic_return": 0.0386131980, "cagr": 0.0313474380, "annualized_volatility": 0.1234812407, "sharpe_rf0": 0.3127049724, "max_drawdown": -0.2541559322, "max_drawdown_trough": "2021-03"},
+      "2020-01": {"annualized_arithmetic_return": 0.0492623377, "cagr": 0.0394513615, "annualized_volatility": 0.1437529668, "sharpe_rf0": 0.3426874503, "max_drawdown": -0.2541559322, "max_drawdown_trough": "2021-03"}
+    }
+  },
+  "cross_asset_proxy": {
+    "symbols": ["SPY", "GLD", "SLV", "TLT"],
+    "source": "Yahoo Finance chart API adjusted close",
+    "sample": {"price_start": "2006-05", "signal_return_start": "2007-06", "end": "2026-06", "months": 229, "frequency": "monthly"},
+    "lookback_months": 12,
+    "ranking": "rank trailing 12-month return known at prior month-end; hold top k with equal weights for next month",
+    "cash_return": 0.0,
+    "cost_bps_per_one_way_weight_change": 10,
+    "top_1": {
+      "gross": {"annualized_arithmetic_return": 0.0967650806, "cagr": 0.0664598952, "annualized_volatility": 0.2527603727, "sharpe_rf0": 0.3828332725, "max_drawdown": -0.4330617231, "max_drawdown_trough": "2012-03"},
+      "net_10bps": {"annualized_arithmetic_return": 0.0907388798, "cagr": 0.0600298754, "annualized_volatility": 0.2529350931, "sharpe_rf0": 0.3587437340, "max_drawdown": -0.4354660104, "max_drawdown_trough": "2012-03"},
+      "annual_turnover": 6.0262008734,
+      "rebalance_events": 58
+    },
+    "top_2": {
+      "gross": {"annualized_arithmetic_return": 0.1210590623, "cagr": 0.1084277836, "annualized_volatility": 0.1881435550, "sharpe_rf0": 0.6434398583, "max_drawdown": -0.3303430142, "max_drawdown_trough": "2008-10"},
+      "net_10bps": {"annualized_arithmetic_return": 0.1176529488, "cagr": 0.1047044861, "annualized_volatility": 0.1880668458, "sharpe_rf0": 0.6255911205, "max_drawdown": -0.3310789021, "max_drawdown_trough": "2008-10"},
+      "annual_turnover": 3.4061135371,
+      "rebalance_events": 64
+    },
+    "equal_weight_buy_hold": {
+      "annualized_arithmetic_return": 0.0966897883,
+      "cagr": 0.0903311368,
+      "annualized_volatility": 0.1413592008,
+      "sharpe_rf0": 0.6840006719,
+      "max_drawdown": -0.2676914713,
+      "max_drawdown_trough": "2008-10"
+    }
+  },
+  "evidence_boundary": [
+    "French MOM is a published long-short stock factor, not an individual-stock long-only portfolio.",
+    "The SPY/GLD/SLV/TLT ranking is a small ETF proxy universe; it is not a complete cross-sectional equity or futures universe.",
+    "Results use zero cash return, 10 bps per one-way weight change, no taxes, financing, FX conversion, bid-ask spread or market impact.",
+    "Only a 12-month lookback and top-1/top-2 rules are shown; the comparison is descriptive, not a multiple-testing-corrected discovery."
+  ]
+}

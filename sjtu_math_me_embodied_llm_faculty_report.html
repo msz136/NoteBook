@@ -1,0 +1,588 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>上海交通大学数学科学学院与机械动力学院 LLM/VLM/具身智能相关导师筛选报告</title>
+    <script>
+    window.MathJax = {
+        tex: { inlineMath: [['\\(','\\)']], displayMath: [['\\[','\\]'], ['$$','$$']] }
+    };
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            font-size: 16px;
+            line-height: 1.8;
+            color: #1f2933;
+            background: #ffffff;
+            padding: 2rem 1rem;
+        }
+        article { max-width: 900px; margin: 0 auto; }
+        h1 {
+            font-size: 2rem;
+            line-height: 1.35;
+            margin-bottom: 0.5rem;
+            border-bottom: 3px solid #2563eb;
+            padding-bottom: 0.65rem;
+            color: #111827;
+        }
+        h2 {
+            font-size: 1.45rem;
+            margin-top: 2.4rem;
+            margin-bottom: 1rem;
+            color: #1e3a8a;
+            border-left: 4px solid #2563eb;
+            padding-left: 0.75rem;
+        }
+        h3 { font-size: 1.18rem; margin-top: 1.5rem; margin-bottom: 0.65rem; color: #243b53; }
+        h4 { font-size: 1.05rem; margin-top: 1rem; margin-bottom: 0.45rem; color: #334155; }
+        p, ul, ol { margin-bottom: 1rem; }
+        ul, ol { padding-left: 1.45rem; }
+        li { margin-bottom: 0.35rem; }
+        a { color: #2563eb; text-decoration: none; }
+        a:hover { text-decoration: underline; }
+        code {
+            font-family: "Fira Code", Consolas, monospace;
+            background: #f3f4f6;
+            border-radius: 3px;
+            padding: 0.12rem 0.35rem;
+            font-size: 0.9em;
+        }
+        pre {
+            background: #f8fafc;
+            border: 1px solid #dbe3ea;
+            border-radius: 6px;
+            padding: 1rem;
+            margin-bottom: 1.2rem;
+            overflow-x: auto;
+            line-height: 1.55;
+            font-size: 0.9em;
+        }
+        pre code { background: none; padding: 0; color: #111827; }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 1.5rem;
+            font-size: 0.9rem;
+        }
+        th, td { border: 1px solid #d6dee6; padding: 0.55rem 0.7rem; vertical-align: top; text-align: left; }
+        th { background: #eff6ff; color: #1e40af; font-weight: 650; }
+        tbody tr:nth-child(even) { background: #f9fafb; }
+        .meta { color: #52616b; font-size: 0.94rem; margin-bottom: 1.5rem; }
+        .toc {
+            background: #f8fafc;
+            border: 1px solid #dbe3ea;
+            border-radius: 6px;
+            padding: 1rem 1.2rem;
+            margin-bottom: 1.6rem;
+        }
+        .toc h2 { border: 0; padding: 0; margin: 0 0 0.6rem; font-size: 1.15rem; color: #243b53; }
+        .toc ol { columns: 2; column-gap: 2rem; margin-bottom: 0; }
+        .note {
+            background: #eef7ff;
+            border-left: 4px solid #2563eb;
+            padding: 0.85rem 1rem;
+            border-radius: 4px;
+            margin: 1rem 0;
+        }
+        .warning {
+            background: #fff7ed;
+            border-left: 4px solid #f97316;
+            padding: 0.85rem 1rem;
+            border-radius: 4px;
+            margin: 1rem 0;
+        }
+        .evidence {
+            background: #f8f0ff;
+            border-left: 4px solid #7c3aed;
+            padding: 0.85rem 1rem;
+            border-radius: 4px;
+            margin: 1rem 0;
+        }
+        .tag { display: inline-block; border: 1px solid #bfdbfe; background: #eff6ff; color: #1e40af; border-radius: 4px; padding: 0.05rem 0.35rem; margin: 0.05rem; font-size: 0.82rem; }
+        @media (max-width: 700px) {
+            body { padding: 1rem 0.5rem; }
+            h1 { font-size: 1.5rem; }
+            table { display: block; overflow-x: auto; font-size: 0.84rem; }
+            .toc ol { columns: 1; }
+        }
+    </style>
+</head>
+<body>
+<article>
+<h1>上海交通大学数学科学学院与机械动力学院 LLM/VLM/具身智能相关导师筛选报告</h1>
+<p class="meta">报告日期：2026-07-02 | 证据截止：2026-07-02 | 检索范围：数学科学学院计算数学方向、机械与动力工程学院教师名录中的机器人/智能汽车/前沿交叉/元知机器人/机电控制/智能制造相关条目</p>
+
+<nav class="toc" aria-label="目录">
+    <h2>目录</h2>
+    <ol>
+        <li><a href="#question">问题</a></li>
+        <li><a href="#background">背景与动机</a></li>
+        <li><a href="#scope">证据范围与筛选准则</a></li>
+        <li><a href="#concepts">基础概念与术语</a></li>
+        <li><a href="#shortlist">强相关导师短名单</a></li>
+        <li><a href="#math">数学学院候选</a></li>
+        <li><a href="#me">机械动力学院候选</a></li>
+        <li><a href="#weak">弱相关与排除边界</a></li>
+        <li><a href="#comparison">方法对比与选择建议</a></li>
+        <li><a href="#pipeline">筛选 Pipeline 与伪代码</a></li>
+        <li><a href="#risks">风险与后续建议</a></li>
+        <li><a href="#references">参考文献</a></li>
+    </ol>
+</nav>
+
+<section id="question">
+<h2>问题（Question）</h2>
+<p>目标是查看上海交通大学数学科学学院与机械与动力工程学院的公开师资页面，筛选与大语言模型（Large Language Model, LLM）、视觉语言模型（Vision-Language Model, VLM）、神经网络（Neural Network, NN）、具身智能（Embodied AI）、机器人脑（Robot Brain）、视觉-语言-动作模型（Vision-Language-Action Model, VLA）和世界模型（World Model）相关的导师，并进一步核查研究方向与公开招生信息。</p>
+</section>
+
+<section id="background">
+<h2>背景与动机（Background &amp; Motivation）</h2>
+<p>这类导师筛选容易出现两种误判：一是看到“机器人研究所”就把所有老师都归为 VLA/具身智能；二是看到“优化、微分方程、科学计算”就直接归为 world model。实际判断应以教师个人页明示研究方向为主，把机器人硬件/控制、AI for manufacturing、深度学习理论、VLA/多模态大模型、自动驾驶端到端系统分层处理。</p>
+<div class="note">
+    本次证据来自用户已打开的 Chrome 页面与官网链接：数学学院当前页面是“计算数学 Computational Mathematics”研究方向页；机械动力学院当前页面进入“教师名录”，其页面通过官方接口按研究所列出教师。Windows Computer Use 曾用于确认 Chrome 窗口存在，但截图步骤因无法可靠判定当前浏览器 URL 而被安全策略停止；后续网页核查采用 Chrome 只读页面读取和官网请求。
+</div>
+</section>
+
+<section id="scope">
+<h2>证据范围与筛选准则</h2>
+<h3>实际查看范围</h3>
+<ul>
+    <li>数学科学学院：以官方“计算数学 Computational Mathematics”研究方向页列出的 33 位教师为主，并打开个人主页或教师详情页核查研究兴趣与导师状态。</li>
+    <li>机械与动力工程学院：从官方教师名录中优先查看“机器人研究所”“元知机器人研究院”“前沿交叉研究中心”“智能汽车研究所”“机电控制与物流装备研究所”“智能制造与信息工程研究所”“重大装备设计与控制工程研究所”等相关类目。</li>
+    <li>明确跳过或只作边界记录：工程热物理、热能、制冷、燃料电池、核能、碳中和、纯基础制造/材料/光热方向，除非教师页出现大模型、具身、VLA、机器人学习或 NN 证据。</li>
+</ul>
+
+<h3>分级公式</h3>
+<p>令 \(p\) 表示教师个人页，\(K_s\) 表示强相关关键词集合（如 VLA、具身智能、大模型、机器人智能体、强化/模仿学习），\(K_w\) 表示弱相关关键词集合（如优化、微分方程、科学机器学习、数字孪生）。本报告采用如下人工校验后的相关性评分：</p>
+\[
+R(p)=3\sum_{k\in K_s}\mathbf{1}[k\in p]+\sum_{k\in K_w}\mathbf{1}[k\in p]+\mathbf{1}[\text{公开招生信息}]
+\]
+<p>变量解释：\(R(p)\) 不是自动排名，而是用于提醒人工复核的筛选分数；\(\mathbf{1}[\cdot]\) 是指示函数。实现映射：先从官方页面抽取研究方向、招生、个人主页、指导学生等字段，再按关键词召回，最后人工剔除“智能制造但非具身/非学习”的误命中。</p>
+
+<div class="warning">
+    未发现数学科学学院计算数学页面中有人明确把“VLA、具身智能、机器人闭环世界模型”列为直接研究方向；数学学院候选更适合作为 LLM/NN 理论、优化、ODE/PDE、科学机器学习支撑。机械动力学院则有多名教师个人页明确出现“具身智能”“VLA”“大模型”“机器人智能体”等关键词。
+</div>
+</section>
+
+<section id="concepts">
+<h2>基础概念与术语</h2>
+<ul>
+    <li>具身智能（Embodied AI）：模型不只处理静态文本/图像，而是在环境中感知、决策、执行并接收反馈。</li>
+    <li>视觉-语言-动作模型（VLA）：把视觉观测 \(o_t\)、语言任务 \(c\) 和动作 \(a_t\) 统一建模，典型目标是学习 \(p_\theta(a_{t:t+H}\mid o_{\le t}, c)\)。</li>
+    <li>世界模型（World Model）：学习环境动力学或未来观测分布，例如 \(p_\theta(o_{t+1:t+H}\mid o_{\le t}, a_{t:t+H-1}, c)\)，可用于预测、规划和仿真。</li>
+    <li>弱相关数学方向：ODE/PDE、动力系统、高维优化、科学机器学习可以支撑 world model 或 VLA 的理论/训练，但若教师页未出现机器人、VLA、世界模型或多模态闭环，本报告不把它们列为直接导师方向。</li>
+</ul>
+</section>
+
+<section id="shortlist">
+<h2>强相关导师短名单</h2>
+<p>如果目标是直接寻找 VLA、机器人脑、具身智能、大模型驱动机器人或自动驾驶端到端方向，优先级最高的是下表。招生信息仅记录个人页公开内容；未明示名额的条目标注为“未找到公开名额”。</p>
+
+<table>
+<thead>
+<tr>
+    <th>导师</th>
+    <th>院系/研究所</th>
+    <th>相关方向</th>
+    <th>招生情况</th>
+    <th>判断</th>
+    <th>证据</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+    <td>袁成刚</td>
+    <td>机械动力学院 / 机电控制与物流装备研究所</td>
+    <td><span class="tag">具身智能机器人</span><span class="tag">多模态端到端大模型</span><span class="tag">深度强化学习</span><span class="tag">智能体运维大模型</span></td>
+    <td>个人页写明每年可招收博士、硕士研究生。</td>
+    <td>本次最贴近“robot-brain / VLA / embodied large model”的导师之一。</td>
+    <td><a href="https://me.sjtu.edu.cn/teacher_directory2/yuanchenggang.html">教师页</a></td>
+</tr>
+<tr>
+    <td>胡川</td>
+    <td>机械动力学院 / 智能汽车研究所</td>
+    <td><span class="tag">端到端自动驾驶</span><span class="tag">VLM/VLA 大模型应用</span><span class="tag">环境感知与决策</span><span class="tag">人机共驾</span></td>
+    <td>个人页写明长期招收硕博、博士后和本科实习生；2027 级保研仍有若干硕士名额和 1 个博士名额。</td>
+    <td>VLA/世界模型可落到自动驾驶闭环与无人车辆场景，强相关。</td>
+    <td><a href="https://me.sjtu.edu.cn/teacher_directory1/huchuan.html">教师页</a></td>
+</tr>
+<tr>
+    <td>覃程锦</td>
+    <td>机械动力学院 / 机电控制与物流装备研究所</td>
+    <td><span class="tag">具身智能与大模型</span><span class="tag">计算机视觉</span><span class="tag">机器人</span><span class="tag">智能运维大模型</span></td>
+    <td>个人页写明每年 1 个博士和 2 个硕士招生名额，并欢迎硕博与博士后联系。</td>
+    <td>兼具工业机器人场景和大模型/具身智能表述，强相关。</td>
+    <td><a href="https://me.sjtu.edu.cn/teacher_directory1/qinchengjin.html">教师页</a></td>
+</tr>
+<tr>
+    <td>任杰骥</td>
+    <td>机械动力学院 / 机器人研究所</td>
+    <td><span class="tag">触觉传感</span><span class="tag">遥操作</span><span class="tag">具身智能</span><span class="tag">灵巧操作</span><span class="tag">ForceVLA / SkillVLA</span></td>
+    <td>个人页未找到明确年度名额；列出多项 VLA/视触觉/双臂操作研究成果。</td>
+    <td>如果关注触觉数据、灵巧手、VLA action 接口，非常值得优先联系。</td>
+    <td><a href="https://me.sjtu.edu.cn/teacher_directory2/renjieji.html">教师页</a></td>
+</tr>
+<tr>
+    <td>于洋</td>
+    <td>机械动力学院 / 元知机器人研究院</td>
+    <td><span class="tag">机器人智能体</span><span class="tag">AI for Robotics</span><span class="tag">灵巧操作</span><span class="tag">神经接口</span></td>
+    <td>个人页写明 2026 年入学硕士 1-2 名开放申请中，2027 年入学硕士 2 名开放申请中。</td>
+    <td>偏生机电机器人、神经接口与灵巧操作，是 robot-brain / AI for Robotics 强相关。</td>
+    <td><a href="https://me.sjtu.edu.cn/teacher_directory2/yuyang.html">教师页</a></td>
+</tr>
+<tr>
+    <td>郭伟超</td>
+    <td>机械动力学院 / 元知机器人研究院</td>
+    <td><span class="tag">多模态感知</span><span class="tag">双向神经接口</span><span class="tag">灵巧手</span><span class="tag">机器人智能体上肢</span></td>
+    <td>个人页未找到具体年度招生名额。</td>
+    <td>方向接近具身智能、神经接口与仿生上肢，但公开招生信息不足。</td>
+    <td><a href="https://me.sjtu.edu.cn/teacher_directory2/guoweichao.html">教师页</a></td>
+</tr>
+<tr>
+    <td>张宁斌</td>
+    <td>机械动力学院 / 机器人研究所</td>
+    <td><span class="tag">仿人灵巧手</span><span class="tag">触觉反馈</span><span class="tag">具身智能</span><span class="tag">真机强化/模仿学习</span></td>
+    <td>个人页欢迎硕/博士研究生和本科实习生联系；未见具体年度名额。</td>
+    <td>非常贴近机器人操作、触觉与真机学习，适合 VLA action/hand manipulation 方向。</td>
+    <td><a href="https://me.sjtu.edu.cn/teacher_directory1/zhangningbin.html">教师页</a></td>
+</tr>
+<tr>
+    <td>孙宇昕</td>
+    <td>机械动力学院 / 元知机器人研究院</td>
+    <td><span class="tag">大模型与深度学习应用</span><span class="tag">机器人与智能制造系统</span><span class="tag">复杂机电建模与控制</span></td>
+    <td>个人页写明 2027 级硕士/博士开放申请中。</td>
+    <td>更偏机器人智能制造与大模型应用，强相关但未直接写 VLA。</td>
+    <td><a href="https://me.sjtu.edu.cn/teacher_directory1/sunyuxin.html">教师页</a></td>
+</tr>
+</tbody>
+</table>
+</section>
+
+<section id="math">
+<h2>数学学院候选</h2>
+<p>数学学院的高价值候选主要在 LLM/NN 理论、深度学习理论、科学机器学习、优化与微分方程。它们对 world model/VLA 的训练理论和动力学建模有支撑价值，但不是直接机器人实验室。</p>
+<table>
+<thead>
+<tr>
+    <th>导师</th>
+    <th>公开方向</th>
+    <th>招生/导师状态</th>
+    <th>相关性判断</th>
+    <th>证据</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+    <td>刘方辉 Fanghui Liu</td>
+    <td>机器学习数学理论、大模型机理分析、大模型微调与参数高效训练、AI4MLT。</td>
+    <td>个人页写明数学学院与人工智能学院博士生导师；2027 秋入学博士暂时已招满，2026 秋硕士入学后确定导师。</td>
+    <td>数学学院里最强的 LLM/大模型理论候选；偏理论，不是机器人闭环导师。</td>
+    <td><a href="https://ins.sjtu.edu.cn/people/fanghui/">个人主页</a></td>
+</tr>
+<tr>
+    <td>许志钦 Zhiqin Xu</td>
+    <td>深度学习。</td>
+    <td>数学学院教师页显示在 2026 年博士生导师栏目，未找到公开名额。</td>
+    <td>NN/深度学习理论强相关；可作为 world model/VLA 表征学习理论支撑。</td>
+    <td><a href="https://math.sjtu.edu.cn/Default/teachershow/tags/MDAwMDAwMDAwMLKIhpc">教师页</a></td>
+</tr>
+<tr>
+    <td>闵含城 Hancheng Min</td>
+    <td>深度学习理论。</td>
+    <td>数学学院教师页显示在 2026 年博士生导师栏目，未找到公开名额。</td>
+    <td>NN 理论强相关；适合关注泛化、优化、理论基础的方向。</td>
+    <td><a href="https://math.sjtu.edu.cn/Default/teachershow/tags/MDAwMDAwMDAwMLGuhpmGpKF2">教师页</a></td>
+</tr>
+<tr>
+    <td>安静 Jing An</td>
+    <td>机器学习模型理论分析、反应扩散方程。</td>
+    <td>数学学院教师页显示在 2026 年博士生导师栏目，未找到公开名额。</td>
+    <td>机器学习理论 + PDE/反应扩散，属于 world model/生成模型动力学的弱到中相关数理支撑。</td>
+    <td><a href="https://math.sjtu.edu.cn/Default/teachershow/tags/MDAwMDAwMDAwMLGuft6FyqF2">教师页</a></td>
+</tr>
+<tr>
+    <td>罗涛 Tao Luo</td>
+    <td>应用数学、机器学习。</td>
+    <td>数学学院教师页显示在 2026 年博士生导师栏目，未找到公开名额。</td>
+    <td>ML 理论/应用数学相关，但未见 LLM/VLA/机器人证据。</td>
+    <td><a href="https://math.sjtu.edu.cn/Default/teachershow/tags/MDAwMDAwMDAwMLKIet0">教师页</a></td>
+</tr>
+<tr>
+    <td>黄建国 Jianguo Huang</td>
+    <td>有限元、快速算法、科学机器学习。</td>
+    <td>数学学院教师页显示在 2026 年博士生导师栏目，未找到公开名额。</td>
+    <td>科学机器学习与数值算法支撑 world model 物理仿真，但不是直接 VLA。</td>
+    <td><a href="https://math.sjtu.edu.cn/Default/teachershow/tags/MDAwMDAwMDAwMLKIct4">教师页</a></td>
+</tr>
+<tr>
+    <td>王增琦 Zengqi Wang</td>
+    <td>神经网络中的数值代数问题、大规模线性代数、随机矩阵计算。</td>
+    <td>个人页写明欢迎报考硕士、博士研究生。</td>
+    <td>NN 计算基础弱相关；适合偏数值线代/神经网络计算方向。</td>
+    <td><a href="https://math.sjtu.edu.cn/Default/teachershow/tags/MDAwMDAwMDAwMLKeet4">教师页</a></td>
+</tr>
+<tr>
+    <td>范金燕 Jinyan Fan</td>
+    <td>最优化理论与算法。</td>
+    <td>数学学院教师页显示在 2026 年博士生导师栏目，未找到公开名额。</td>
+    <td>高维优化是 VLA/world model 训练的弱相关理论支撑；不是 LLM/VLA 直接方向。</td>
+    <td><a href="https://math.sjtu.edu.cn/Default/teachershow/tags/MDAwMDAwMDAwMLJ4nJQ">教师页</a></td>
+</tr>
+<tr>
+    <td>李磊 Lei Li</td>
+    <td>计算方法、微分方程分析。</td>
+    <td>数学学院教师页显示在 2026 年博士生导师栏目，未找到公开名额。</td>
+    <td>ODE/PDE/动力学建模弱相关，可支撑 world model，但非直接大模型/机器人方向。</td>
+    <td><a href="https://math.sjtu.edu.cn/Default/teachershow/tags/MDAwMDAwMDAwMLKIdts">教师页</a></td>
+</tr>
+</tbody>
+</table>
+</section>
+
+<section id="me">
+<h2>机械动力学院候选</h2>
+<p>机械动力学院中，直接命中具身智能/VLA/大模型/机器人脑的导师明显更多。除短名单外，下面这些导师也值得按具体兴趣进一步筛选。</p>
+
+<h3>中强相关候选</h3>
+<table>
+<thead>
+<tr>
+    <th>导师</th>
+    <th>研究所</th>
+    <th>方向摘要</th>
+    <th>招生情况</th>
+    <th>证据</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+    <td>齐臣坤</td>
+    <td>重大装备设计与控制工程研究所</td>
+    <td>足式机器人、导航规划、定位建图、移动操作、强化学习、模型辨识。</td>
+    <td>欢迎机器人/自动化/计算机/AI 背景学生加入；未见具体年度名额。</td>
+    <td><a href="https://me.sjtu.edu.cn/teacher_directory1/qichenkun.html">教师页</a></td>
+</tr>
+<tr>
+    <td>何俊</td>
+    <td>重大装备设计与控制工程研究所</td>
+    <td>宇航空间机器人、视觉/力觉感知、模拟数据驱动 AI 控制、自主导航与运动规划。</td>
+    <td>个人页欢迎机构学、机器人相关专业学生；未见具体年度名额。</td>
+    <td><a href="https://me.sjtu.edu.cn/teacher_directory1/hejun.html">教师页</a></td>
+</tr>
+<tr>
+    <td>王皓</td>
+    <td>重大装备设计与控制工程研究所</td>
+    <td>机器人学、机器人型智能装备、AI 工业应用、机器人灵巧操作、机器视觉。</td>
+    <td>页面列出学术型/专业硕士研究生招生方向；博士后常年招收。</td>
+    <td><a href="https://me.sjtu.edu.cn/teacher_directory1/wanghao.html">教师页</a></td>
+</tr>
+<tr>
+    <td>胡松涛</td>
+    <td>机电控制与物流装备研究所</td>
+    <td>无人实验技术，机器人、微流控、多模态测量、机器学习、仿真计算与智能体。</td>
+    <td>未找到具体年度名额。</td>
+    <td><a href="https://me.sjtu.edu.cn/teacher_directory1/husongtao.html">教师页</a></td>
+</tr>
+<tr>
+    <td>黄亦翔</td>
+    <td>机电控制与物流装备研究所</td>
+    <td>机器健康与智能运维、数字孪生、大语言模型与知识图谱应用、运维机器人。</td>
+    <td>未找到具体年度名额。</td>
+    <td><a href="https://me.sjtu.edu.cn/teacher_directory2/huangyixiang.html">教师页</a></td>
+</tr>
+<tr>
+    <td>陶建峰</td>
+    <td>机电控制与物流装备研究所</td>
+    <td>重载液压机器人、故障诊断、工业 AI、工业大模型、人形机器人与具身智能。</td>
+    <td>未找到具体年度名额。</td>
+    <td><a href="https://me.sjtu.edu.cn/teacher_directory1/taojianfeng.html">教师页</a></td>
+</tr>
+<tr>
+    <td>吴晓东</td>
+    <td>智能汽车研究所</td>
+    <td>智能驾驶运动规划与控制、具身智能行驶动力学、虚拟仿真和数字孪生。</td>
+    <td>个人页写明招收博士研究生和硕士研究生。</td>
+    <td><a href="https://me.sjtu.edu.cn/teacher_directory1/wuxiaodong.html">教师页</a></td>
+</tr>
+<tr>
+    <td>苏世勇</td>
+    <td>元知机器人研究院</td>
+    <td>生机电一体化机器人、神经交互、感知反馈与人机交互机制。</td>
+    <td>个人页欢迎本科、硕士和博士生交流，并提到 2027 级硕/博名额开放申请中。</td>
+    <td><a href="https://me.sjtu.edu.cn/teacher_directory1/sushiyong.html">教师页</a></td>
+</tr>
+</tbody>
+</table>
+
+<h3>工程/智能制造弱到中相关候选</h3>
+<p>这些导师有 AI、机器学习、深度学习、机器人制造、数字孪生或智能运维证据，但通常不是 VLA/具身闭环模型本体。若目标是工程落地、工业大模型、AI4Manufacturing，可继续跟进；若目标是机器人基础模型或 VLA，应排在短名单之后。</p>
+<table>
+<thead>
+<tr><th>导师</th><th>方向摘要</th><th>招生线索</th><th>证据</th></tr>
+</thead>
+<tbody>
+<tr>
+    <td>李铎</td>
+    <td>AI/机器学习/深度学习赋能先进制造，机器人超精密制造。</td>
+    <td>欢迎研究生、博士后加入团队。</td>
+    <td><a href="https://me.sjtu.edu.cn/teacher_directory1/liduo.html">教师页</a></td>
+</tr>
+<tr>
+    <td>李洲龙</td>
+    <td>机器人智能制造、基于深度学习的智能加工、机器人力控抛光。</td>
+    <td>页面提到 2026 年还有硕士名额。</td>
+    <td><a href="https://me.sjtu.edu.cn/teacher_directory1/lizhoulong.html">教师页</a></td>
+</tr>
+<tr>
+    <td>郑宇</td>
+    <td>数字孪生、智能工厂、工业大模型、时序分析与诊断。</td>
+    <td>招收博士后、博士、硕士研究生。</td>
+    <td><a href="https://me.sjtu.edu.cn/teacher_directory2/zhengyu.html">教师页</a></td>
+</tr>
+<tr>
+    <td>任明俊</td>
+    <td>机器视觉、贝叶斯随机过程、深度学习建模与融合识别。</td>
+    <td>未找到具体年度名额。</td>
+    <td><a href="https://me.sjtu.edu.cn/teacher_directory1/renmingjun.html">教师页</a></td>
+</tr>
+<tr>
+    <td>沈道智</td>
+    <td>人机交互、机器人触觉、机器学习、微纳器件。</td>
+    <td>页面提到 2026 入学硕士名额、2027 硕/博名额。</td>
+    <td><a href="https://me.sjtu.edu.cn/teacher_directory1/shendaozhi.html">教师页</a></td>
+</tr>
+</tbody>
+</table>
+</section>
+
+<section id="weak">
+<h2>弱相关与排除边界</h2>
+<h3>弱相关但可作为理论支撑</h3>
+<ul>
+    <li>数学学院的优化、ODE/PDE、科学机器学习导师可支撑 world model 的训练稳定性、动力学建模和高维优化问题，但公开页面没有显示直接做 VLA/机器人闭环。</li>
+    <li>机械学院的智能制造、超精密制造、工业 AI、大语言模型运维方向可支撑具身系统的工程落地，但多数不是端到端 VLA 或机器人基础模型。</li>
+</ul>
+
+<h3>本次明确降权或排除的方向</h3>
+<ul>
+    <li>热能、工程热物理、制冷、燃料电池、核能、碳中和等研究所：除个别智能汽车/智能网联教师外，未作为重点查看。</li>
+    <li>纯机器人硬件/传统控制：若个人页仅写工业机器人、机构设计、伺服控制、医疗机器人，而没有学习、VLA、大模型、具身智能、强化/模仿学习等证据，仅作为泛机器人背景，不进入强相关短名单。</li>
+    <li>数学学院基础数学、代数、数论、几何、组合等方向：与用户指定方向距离较远，未展开逐页筛选。</li>
+</ul>
+</section>
+
+<section id="comparison">
+<h2>方法对比与选择建议</h2>
+<table>
+<thead>
+<tr><th>目标</th><th>优先导师</th><th>理由</th><th>注意事项</th></tr>
+</thead>
+<tbody>
+<tr>
+    <td>VLA / 机器人基础模型 / 具身大模型</td>
+    <td>袁成刚、胡川、任杰骥、覃程锦、张宁斌</td>
+    <td>个人页直接出现 VLA、大模型、端到端、具身智能、强化/模仿学习、灵巧操作等证据。</td>
+    <td>需邮件确认课题是否真做模型训练、数据集与实机评估，而非仅工程应用。</td>
+</tr>
+<tr>
+    <td>Robot brain / 神经接口 / 灵巧手</td>
+    <td>于洋、郭伟超、苏世勇、张宁斌、任杰骥</td>
+    <td>多模态感知、神经接口、触觉反馈、灵巧操作与机器人智能体证据较强。</td>
+    <td>更偏生机电与神经工程，需确认是否接受纯计算/模型背景学生。</td>
+</tr>
+<tr>
+    <td>自动驾驶端到端 / VLM-VLA 应用</td>
+    <td>胡川、吴晓东、齐臣坤</td>
+    <td>胡川明确写 VLM/VLA 大模型应用；吴晓东与齐臣坤偏规划、控制、RL 和无人系统。</td>
+    <td>自动驾驶 VLA 与机械臂 VLA 的数据/动作空间差异较大。</td>
+</tr>
+<tr>
+    <td>LLM/NN 理论与大模型机理</td>
+    <td>刘方辉、许志钦、闵含城、安静、罗涛</td>
+    <td>数学学院候选中这些页面最明确指向机器学习、深度学习和大模型机理。</td>
+    <td>多数没有机器人实验平台；适合理论、优化、泛化、微调机制路线。</td>
+</tr>
+<tr>
+    <td>World model 数理基础</td>
+    <td>黄建国、安静、李磊、范金燕、王增琦</td>
+    <td>科学机器学习、反应扩散/微分方程、优化和神经网络数值代数可作为动力学建模与训练支撑。</td>
+    <td>属于弱相关；联系时需把自己的 world model 问题转译成 PDE/优化/科学计算问题。</td>
+</tr>
+</tbody>
+</table>
+
+<div class="evidence">
+    综合建议：如果目标是“能做具身 VLA 项目、最好有实机/仿真闭环和大模型语言”，首选机械动力学院短名单；如果目标是“LLM/VLM/NN 理论、泛化、微调、优化或 world model 的数学机制”，数学学院更合适。
+</div>
+</section>
+
+<section id="pipeline">
+<h2>筛选 Pipeline 与伪代码</h2>
+<pre><code class="language-python">def screen_sjtu_faculty(math_page, me_directory):
+    # 1. Read official pages opened in Chrome and collect authoritative links.
+    math_people = parse_math_computational_faculty(math_page)
+    me_people = parse_me_directory_by_institute(
+        me_directory,
+        keep_institutes=[
+            "机器人研究所", "元知机器人研究院", "前沿交叉研究中心",
+            "智能汽车研究所", "机电控制与物流装备研究所",
+            "智能制造与信息工程研究所", "重大装备设计与控制工程研究所",
+        ],
+    )
+
+    # 2. Visit each public teacher page and extract research/admission fields.
+    candidates = []
+    for person in math_people + me_people:
+        page = fetch_official_profile(person.url)
+        fields = extract_fields(page, ["研究方向", "研究兴趣", "招生", "硕士", "博士", "个人主页"])
+
+        # 3. Recall with keywords, then manually demote false positives.
+        score = relevance_score(fields)
+        if score > 0:
+            candidates.append((person, fields, score))
+
+    # 4. Classify evidence: direct VLA/embodied, robotics+AI, math theory, or exclude.
+    return human_verified_tiers(candidates)
+</code></pre>
+</section>
+
+<section id="risks">
+<h2>风险与后续建议</h2>
+<ul>
+    <li>网页招生信息会快速变化，尤其是“2026/2027 名额”这类内容；正式联系前应再次打开个人页确认。</li>
+    <li>“大模型应用”不一定意味着训练 VLA 基座模型，可能只是工业诊断、知识图谱或数字孪生中的 LLM 工具链；邮件中应询问数据、模型、动作空间和评测闭环。</li>
+    <li>数学学院候选大多需要用理论问题切入，如泛化、优化、PDE/ODE、神经网络数值代数，而不是直接询问机器人项目。</li>
+    <li>机械学院导师方向工程属性强，建议准备一页项目说明：已有 VLA/world model 训练经验、仿真平台、实机控制或多模态数据处理经历。</li>
+</ul>
+</section>
+
+<section id="references">
+<h2>参考文献（References）</h2>
+<ol>
+    <li>[1] 上海交通大学数学科学学院，“计算数学 Computational Mathematics”研究方向页. <a href="https://math.sjtu.edu.cn/Default/research/pages/MDAwMDAwMDAwMLKbbqE">链接</a></li>
+    <li>[2] 上海交通大学数学科学学院，“师资队伍 Faculty”页面. <a href="https://math.sjtu.edu.cn/Default/faculty/">链接</a></li>
+    <li>[3] 上海交通大学机械与动力工程学院，“教师名录”页面. <a href="https://me.sjtu.edu.cn/teacher_directory.html">链接</a></li>
+    <li>[4] 刘方辉个人主页，上海交通大学自然科学研究院 / 数学科学学院. <a href="https://ins.sjtu.edu.cn/people/fanghui/">链接</a></li>
+    <li>[5] 许志钦，上海交通大学数学科学学院教师页. <a href="https://math.sjtu.edu.cn/Default/teachershow/tags/MDAwMDAwMDAwMLKIhpc">链接</a></li>
+    <li>[6] 闵含城，上海交通大学数学科学学院教师页. <a href="https://math.sjtu.edu.cn/Default/teachershow/tags/MDAwMDAwMDAwMLGuhpmGpKF2">链接</a></li>
+    <li>[7] 安静，上海交通大学数学科学学院教师页. <a href="https://math.sjtu.edu.cn/Default/teachershow/tags/MDAwMDAwMDAwMLGuft6FyqF2">链接</a></li>
+    <li>[8] 袁成刚，上海交通大学机械与动力工程学院教师页. <a href="https://me.sjtu.edu.cn/teacher_directory2/yuanchenggang.html">链接</a></li>
+    <li>[9] 胡川，上海交通大学机械与动力工程学院教师页. <a href="https://me.sjtu.edu.cn/teacher_directory1/huchuan.html">链接</a></li>
+    <li>[10] 覃程锦，上海交通大学机械与动力工程学院教师页. <a href="https://me.sjtu.edu.cn/teacher_directory1/qinchengjin.html">链接</a></li>
+    <li>[11] 任杰骥，上海交通大学机械与动力工程学院教师页. <a href="https://me.sjtu.edu.cn/teacher_directory2/renjieji.html">链接</a></li>
+    <li>[12] 于洋，上海交通大学机械与动力工程学院教师页. <a href="https://me.sjtu.edu.cn/teacher_directory2/yuyang.html">链接</a></li>
+    <li>[13] 郭伟超，上海交通大学机械与动力工程学院教师页. <a href="https://me.sjtu.edu.cn/teacher_directory2/guoweichao.html">链接</a></li>
+    <li>[14] 张宁斌，上海交通大学机械与动力工程学院教师页. <a href="https://me.sjtu.edu.cn/teacher_directory1/zhangningbin.html">链接</a></li>
+    <li>[15] 孙宇昕，上海交通大学机械与动力工程学院教师页. <a href="https://me.sjtu.edu.cn/teacher_directory1/sunyuxin.html">链接</a></li>
+    <li>[16] 齐臣坤，上海交通大学机械与动力工程学院教师页. <a href="https://me.sjtu.edu.cn/teacher_directory1/qichenkun.html">链接</a></li>
+    <li>[17] 何俊，上海交通大学机械与动力工程学院教师页. <a href="https://me.sjtu.edu.cn/teacher_directory1/hejun.html">链接</a></li>
+    <li>[18] 吴晓东，上海交通大学机械与动力工程学院教师页. <a href="https://me.sjtu.edu.cn/teacher_directory1/wuxiaodong.html">链接</a></li>
+</ol>
+</section>
+</article>
+</body>
+</html>

@@ -1,0 +1,26 @@
+{
+  "verdict": "PASS",
+  "checks": [
+    {
+      "name": "required_fields",
+      "pass": true,
+      "missing": []
+    },
+    {
+      "name": "no_production_without_approval",
+      "pass": true
+    },
+    {
+      "name": "incident_drill_complete",
+      "pass": true
+    },
+    {
+      "name": "rollback_defined",
+      "pass": true
+    },
+    {
+      "name": "independent_roles",
+      "pass": true
+    }
+  ]
+}

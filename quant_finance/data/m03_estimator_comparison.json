@@ -1,0 +1,41 @@
+{
+  "n": 240,
+  "true_beta": [
+    0.7,
+    1.8
+  ],
+  "ols_beta": [
+    0.7674000416866852,
+    1.9509480232491618
+  ],
+  "mle_beta": [
+    0.7674000416866852,
+    1.9509480232491618
+  ],
+  "mle_sigma2": 0.9295632417405978,
+  "gmm_beta": [
+    0.7674000416866843,
+    1.9509480232491603
+  ],
+  "max_ols_mle_abs_diff": 0.0,
+  "max_ols_gmm_abs_diff": 1.5543122344752192e-15,
+  "bootstrap": {
+    "reps": 400,
+    "seed": 20260722,
+    "mean": [
+      0.7686704054754956,
+      1.94908259654996
+    ],
+    "ci_percentile_95": [
+      [
+        0.6456073121461637,
+        0.890146050432942
+      ],
+      [
+        1.740355231317362,
+        2.1302929385385787
+      ]
+    ]
+  },
+  "robust_se_note": "Heteroskedasticity is injected; conventional homoskedastic SE is not treated as reliable."
+}

@@ -1,0 +1,496 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="generator" content="quant_finance ARIS render-html (academic, v1)">
+  <meta name="source-file" content="p2_volatility_forecast_report.md">
+  <meta name="source-sha256" content="7ef6c2b5a4c978b2f2c734b989351a56ffb95afd957701131d08e0cbe58caf32">
+  <title>P2 波动率预测实验：EWMA 与 GARCH 的滚动样本外比较</title>
+  <script>
+    window.MathJax = {
+      tex: {inlineMath: [['\\(', '\\)'], ['$', '$']], displayMath: [['\\[', '\\]'], ['$$', '$$']]},
+      options: {skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']}
+    };
+  </script>
+  <script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+  <style>
+/* ARIS academic v1 — quant_finance canonical inline stylesheet. */
+:root {
+  --paper: #fdfcf7;
+  --paper-soft: #f4f1ea;
+  --ink: #1a1a1a;
+  --muted: #625f58;
+  --blue: #1a4a8c;
+  --blue-soft: #dce7f4;
+  --rust: #b8390e;
+  --rule: #b9b2a6;
+  --serif: "Source Serif Pro", "Source Serif 4", "Crimson Pro", Georgia, "Songti SC", STSong, serif;
+  --mono: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  margin: 0;
+  color: var(--ink);
+  background: var(--paper);
+  font-family: var(--serif);
+  font-size: 16px;
+  line-height: 1.8;
+}
+a { color: var(--blue); text-underline-offset: 0.16em; }
+a:hover { color: var(--rust); }
+
+.page-shell {
+  width: min(1280px, calc(100% - 40px));
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: 260px minmax(0, 1fr);
+  gap: 42px;
+  align-items: start;
+}
+.toc {
+  position: sticky;
+  top: 24px;
+  max-height: calc(100vh - 48px);
+  overflow-y: auto;
+  padding: 28px 18px 24px 0;
+  color: var(--muted);
+}
+.toc-title {
+  margin: 0 0 0.65rem;
+  color: var(--blue);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+.toc ol { margin: 0; padding: 0; list-style: none; }
+.toc li { margin: 0.24rem 0; line-height: 1.35; }
+.toc a { color: inherit; text-decoration: none; }
+.toc a:hover { color: var(--rust); }
+.toc .depth-3 { padding-left: 0.85rem; font-size: 0.92rem; }
+.toc .depth-4 { padding-left: 1.55rem; font-size: 0.86rem; }
+
+main {
+  min-width: 0;
+  margin: 24px 0 64px;
+  padding: 48px clamp(32px, 5vw, 72px) 64px;
+  background: var(--paper-soft);
+  border: 1px solid #ded8cd;
+  box-shadow: 0 16px 44px rgba(55, 47, 36, 0.08);
+}
+article { min-width: 0; }
+.eyebrow {
+  margin: 0 0 0.45rem;
+  color: var(--rust);
+  font-family: var(--serif);
+  font-size: 0.76rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+.subtitle { margin: 0 0 0.5rem; color: var(--muted); font-size: 1.05rem; }
+.meta {
+  margin: 0 0 2.2rem;
+  color: var(--muted);
+  font-size: 0.86rem;
+}
+h1 {
+  margin: 0 0 0.7rem;
+  padding: 0 0 0.8rem;
+  color: var(--ink);
+  border-bottom: 5px double var(--blue);
+  font-size: clamp(2rem, 5vw, 3.1rem);
+  line-height: 1.14;
+  letter-spacing: -0.025em;
+}
+h2 {
+  margin: 3.2rem 0 1.15rem;
+  padding-bottom: 0.42rem;
+  border-bottom: 1px solid var(--rule);
+  color: var(--ink);
+  font-size: 1.62rem;
+  line-height: 1.35;
+}
+h3 { margin: 2.15rem 0 0.8rem; color: var(--blue); font-size: 1.28rem; line-height: 1.4; }
+h4 { margin: 1.55rem 0 0.6rem; color: var(--ink); font-size: 1.06rem; line-height: 1.45; }
+p, ul, ol, blockquote { margin: 0 0 1rem; }
+ul, ol { padding-left: 1.5rem; }
+li + li { margin-top: 0.24rem; }
+strong { color: #111; }
+
+code {
+  font-family: var(--mono);
+  font-size: 0.9em;
+  background: #e9e5dc;
+  border-radius: 3px;
+  padding: 0.1em 0.32em;
+}
+pre {
+  max-width: 100%;
+  margin: 1.2rem 0 1.5rem;
+  padding: 1rem 1.1rem;
+  overflow-x: auto;
+  background: #faf9f5;
+  border: 1px solid #d8d2c7;
+  border-left: 4px solid var(--blue);
+  border-radius: 2px;
+  line-height: 1.55;
+}
+pre code {
+  display: block;
+  min-width: max-content;
+  padding: 0;
+  color: #383a42;
+  background: transparent;
+}
+/* Highlight.js atom-one-light-compatible colors for portable, inline styling. */
+.hljs-comment, .hljs-quote { color: #a0a1a7; font-style: italic; }
+.hljs-keyword, .hljs-selector-tag, .hljs-literal { color: #a626a4; }
+.hljs-string, .hljs-regexp { color: #50a14f; }
+.hljs-number, .hljs-symbol { color: #986801; }
+.hljs-title, .hljs-section, .hljs-function { color: #4078f2; }
+
+.formula {
+  max-width: 100%;
+  margin: 1.25rem 0 1.5rem;
+  padding: 1rem 1.15rem;
+  overflow-x: auto;
+  background: #faf9f5;
+  border: 1px solid #d8d2c7;
+  border-left: 4px solid var(--blue);
+}
+.formula mjx-container { min-width: max-content; }
+
+.table-wrap { max-width: 100%; margin: 1.25rem 0 1.6rem; overflow-x: auto; }
+table { width: 100%; min-width: 640px; border-collapse: collapse; font-size: 0.93rem; line-height: 1.55; }
+th, td { padding: 0.68rem 0.78rem; border: 1px solid #aaa398; text-align: left; vertical-align: top; }
+thead th { color: #fff; background: var(--blue); font-weight: 700; }
+tbody tr:nth-child(even) { background: #ebe6dc; }
+tbody tr:nth-child(odd) { background: #f8f5ee; }
+
+.note, .warning, .evidence, blockquote {
+  margin: 1.2rem 0 1.45rem;
+  padding: 0.85rem 1rem;
+  background: #f8f5ee;
+  border: 1px solid #d2cbc0;
+  border-left: 4px solid var(--blue);
+}
+.warning { border-left-color: var(--rust); background: #fff2e9; }
+.evidence { border-left-color: #6b5b8e; background: #f2eef8; }
+.note > :last-child, .warning > :last-child, .evidence > :last-child, blockquote > :last-child { margin-bottom: 0; }
+.back-to-top { display: inline-block; margin-top: 2rem; font-size: 0.88rem; }
+
+@media (max-width: 900px) {
+  .page-shell { width: min(100% - 24px, 820px); grid-template-columns: 1fr; gap: 0; }
+  .toc { position: static; max-height: none; padding: 20px 8px 4px; columns: 2; column-gap: 1.5rem; }
+  .toc-title { column-span: all; }
+  main { margin-top: 16px; padding: 34px clamp(18px, 5vw, 40px) 48px; }
+  h1 { font-size: clamp(1.8rem, 8vw, 2.55rem); }
+  table { min-width: 600px; }
+  pre, .formula, .table-wrap { overflow-x: auto; }
+}
+
+@media (max-width: 560px) {
+  .toc { columns: 1; }
+  .page-shell { width: calc(100% - 12px); }
+  main { padding-left: 15px; padding-right: 15px; }
+}
+
+@media print {
+  body { background: #fff; }
+  .page-shell { display: block; width: 100%; }
+  .toc, .back-to-top { display: none !important; }
+  main { margin: 0; padding: 0; background: #fff; border: 0; box-shadow: none; }
+  a { color: inherit; text-decoration: none; }
+  pre, .formula, table { break-inside: avoid; }
+}
+
+    .next-chapter { margin: 2.5rem 0 1rem; padding: 1rem 1.2rem; border: 1px solid #b9c9df; border-left: 4px solid #1a4a8c; background: #f4f1ea; display: flex; gap: .75rem; align-items: baseline; justify-content: space-between; }
+    .next-chapter-label { color: #1a4a8c; font-weight: 700; white-space: nowrap; }
+    .next-chapter a { color: #1a4a8c; font-weight: 700; text-decoration: none; }
+    .next-chapter a:hover, .next-chapter a:focus { color: #b8390e; text-decoration: underline; }
+    @media (max-width: 900px) { .next-chapter { display: block; } .next-chapter-label { display: block; margin-bottom: .35rem; } }
+  </style>
+</head>
+<body id="top">
+  <div class="page-shell">
+    <nav class="toc" aria-label="目录">
+      <p class="toc-title">Contents</p>
+      <ol>
+<li class="depth-2"><a href="#question">问题（Question）</a></li>
+<li class="depth-2"><a href="#background">背景与动机（Background &amp; Motivation）</a></li>
+<li class="depth-2"><a href="#concepts">概念与数据契约</a></li>
+<li class="depth-2"><a href="#methods">方法与数学形式（Methods &amp; Mathematical Form）</a></li>
+<li class="depth-2"><a href="#pipeline">Pipeline 与伪代码（Pipeline &amp; Pseudocode）</a></li>
+<li class="depth-2"><a href="#implementation">实现证据与结果（Implementation &amp; Results）</a></li>
+<li class="depth-2"><a href="#comparison">失败案例与稳健性边界</a></li>
+<li class="depth-2"><a href="#exercises">练习与答案边界（Exercises）</a></li>
+<li class="depth-2"><a href="#answer-boundary">答案索引（Answer Boundary）</a></li>
+<li class="depth-2"><a href="#risks">风险与后续建议（Risks &amp; Next）</a></li>
+<li class="depth-2"><a href="#references">参考文献（References）</a></li>
+      </ol>
+    </nav>
+    <main>
+      <article>
+        <header>
+          <p class="eyebrow">Quant Finance · Volatility Forecasting</p>
+          <p class="subtitle">用正值方差预测、QLIKE 与严格时间切分评估条件波动率模型</p>
+          <h1>P2 波动率预测实验：EWMA 与 GARCH 的滚动样本外比较</h1>
+          <p class="meta">发布日期：2026-07-22 · 证据截止：2026-07-22 · 源文件 SHA-256：<code>7ef6c2b5a4c978b2f2c734b989351a56ffb95afd957701131d08e0cbe58caf32</code></p>
+        </header>
+<h2 id="question">问题（Question）</h2>
+<p>历史波动率、EWMA 与 GARCH 如何在样本外预测未来收益平方？为什么均方误差不是唯一选择，QLIKE 如何约束方差预测必须为正？本项目用带波动聚集的合成收益，冻结训练/测试边界并比较两个一阶条件方差模型。</p>
+<h2 id="background">背景与动机（Background &amp; Motivation）</h2>
+<p>Engle 的 ARCH 工作和 Bollerslev 的 GARCH 扩展把条件方差建模为过去冲击与过去方差的函数。[1][2] <code>arch</code> 官方文档提供金融波动率、分布和预测接口；本环境未安装该包，因此本地脚本使用 NumPy 网格拟合 Gaussian quasi-likelihood，明确标为简化实现。[3] 本实验不把合成序列的相对排名推广为真实市场优势。</p>
+<div class="evidence"><strong>证据边界：</strong>模型公式和 QLIKE 目标来自文献/官方文档；本地结果仅支持固定数据生成机制、切分和递推实现。参数网格、样本量和 seed 是教学协议，不是生产模型选择。</div>
+<h2 id="concepts">概念与数据契约</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>概念</th>
+<th>定义</th>
+<th>检查</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>条件方差</td>
+<td><span class="math-inline" data-math-kind="inline">\(Var(r_t\mid\mathcal F_{t-1})\)</span></td>
+<td>预测必须为正</td>
+</tr>
+<tr>
+<td>波动聚集</td>
+<td>大冲击后大波动持续</td>
+<td>观察平方收益的自相关/簇状图</td>
+</tr>
+<tr>
+<td>EWMA</td>
+<td>固定衰减的历史平方收益递推</td>
+<td><span class="math-inline" data-math-kind="inline">\(\lambda\)</span> 在训练前冻结</td>
+</tr>
+<tr>
+<td>GARCH(1,1)</td>
+<td>常数、过去冲击和过去方差的递推</td>
+<td><span class="math-inline" data-math-kind="inline">\(\omega&gt;0,\alpha,\beta\ge0\)</span></td>
+</tr>
+<tr>
+<td>QLIKE</td>
+<td><span class="math-inline" data-math-kind="inline">\(v_t/\hat v_t-\log(v_t/\hat v_t)-1\)</span> 的平均值</td>
+<td>只比较正的方差预测</td>
+</tr>
+<tr>
+<td>样本外</td>
+<td>测试观测从未参与参数拟合</td>
+<td>仅使用时间之前的数据</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="methods">方法与数学形式（Methods &amp; Mathematical Form）</h2>
+<p>EWMA：</p>
+<div class="formula" data-math-kind="display">\[\hat v_{t+1}=\lambda\hat v_t+(1-\lambda)r_t^2,\qquad 0&lt;\lambda&lt;1.\]</div>
+<p>GARCH(1,1)：</p>
+<div class="formula" data-math-kind="display">\[v_t=\omega+\alpha r_{t-1}^2+\beta v_{t-1},
+\qquad \omega&gt;0,\;\alpha,\beta\ge0.\]</div>
+<p>标准有限无条件方差设定通常要求 <span class="math-inline" data-math-kind="inline">\(\alpha+\beta&lt;1\)</span>。本脚本在训练段用小网格最小化 Gaussian quasi-likelihood，再递推测试段的一步方差；测试段收益不回流到参数选择。</p>
+<p>QLIKE 对实现方差 <span class="math-inline" data-math-kind="inline">\(v_t=r_t^2\)</span> 和预测 <span class="math-inline" data-math-kind="inline">\(\hat v_t\)</span> 定义为：</p>
+<div class="formula" data-math-kind="display">\[L_{QLIKE,t}=\frac{v_t}{\hat v_t}-\log\left(\frac{v_t}{\hat v_t}\right)-1.\]</div>
+<p>它对正预测和比例误差敏感；零收益需要数值下限或更合适的 realized-volatility proxy。</p>
+<h2 id="pipeline">Pipeline 与伪代码（Pipeline &amp; Pseudocode）</h2>
+<pre><code class="language-python">returns = load_point_in_time_returns(asof_at)  # 继承 M02/P1 时间契约
+train, test = strict_time_split(returns, initial=360)
+ewma = fit_ewma(train, lambda_=0.94)
+garch = fit_garch_qmle(train, constraints=[omega &gt; 0, alpha &gt;= 0, beta &gt;= 0])
+for r_t in test:
+    forecast_ewma.append(ewma.one_step())
+    forecast_garch.append(garch.one_step())
+    ewma.update(r_t); garch.update(r_t)
+compare_qlike_and_stability(test**2, forecast_ewma, forecast_garch)
+</code></pre>
+<p>实现见 <a href="p2_volatility_forecast.py"><code>p2_volatility_forecast.py</code></a>，结果见 <a href="p2_volatility_forecast_results.json"><code>p2_volatility_forecast_results.json</code></a>。</p>
+<h2 id="implementation">实现证据与结果（Implementation &amp; Results）</h2>
+<pre><code class="language-powershell">python quant_finance/projects/p2_volatility_forecast/p2_volatility_forecast.py
+python quant_finance/projects/p2_volatility_forecast/test_p2_volatility_forecast.py -v
+</code></pre>
+<p>实验生成 520 期带波动聚集的收益，前 360 期用于拟合，后 160 期严格样本外评估。结果 JSON 记录 EWMA 与 GARCH 的 QLIKE、GARCH 参数和正值检查；两次运行输出逐字一致。QLIKE 的相对排名只对该合成机制成立。</p>
+<h2 id="comparison">失败案例与稳健性边界</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>风险</th>
+<th>影响</th>
+<th>处理</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>用收益 MSE 代替 QLIKE</td>
+<td>低估方差尺度错误</td>
+<td>同时报告 QLIKE 与预测分布诊断</td>
+</tr>
+<tr>
+<td>测试集调参</td>
+<td>样本外优势虚高</td>
+<td>冻结训练段、另留验证段</td>
+</tr>
+<tr>
+<td><span class="math-inline" data-math-kind="inline">\(\hat v_t\le0\)</span></td>
+<td>QLIKE 无定义/数值爆炸</td>
+<td>参数约束和正值下限</td>
+</tr>
+<tr>
+<td>波动率代理噪声</td>
+<td>真实方差不可观测</td>
+<td>使用 realized measure 或 QLIKE 边界说明</td>
+</tr>
+<tr>
+<td>结构突变/杠杆效应</td>
+<td>GARCH(1,1) 失配</td>
+<td>EGARCH/GJR、滚动重估与压力期分析</td>
+</tr>
+<tr>
+<td>高频微观结构噪声</td>
+<td>realized variance 偏差</td>
+<td>交易日历、采样频率和清洗契约</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="exercises">练习与答案边界（Exercises）</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>ID</th>
+<th>题目</th>
+<th>达标标准</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>P2-Q01</td>
+<td>写出 EWMA 递推。</td>
+<td>正确说明 lambda 与上一期平方收益权重。</td>
+</tr>
+<tr>
+<td>P2-Q02</td>
+<td>GARCH 参数为何需约束？</td>
+<td>保证方差正且通常有限。</td>
+</tr>
+<tr>
+<td>P2-Q03</td>
+<td>QLIKE 为什么要求正预测？</td>
+<td>比值和对数需要正分母。</td>
+</tr>
+<tr>
+<td>P2-Q04</td>
+<td>严格样本外是什么意思？</td>
+<td>测试观测不参与参数和超参选择。</td>
+</tr>
+<tr>
+<td>P2-Q05</td>
+<td>为什么波动率预测不能随机切分？</td>
+<td>时间依赖和未来泄漏。</td>
+</tr>
+<tr>
+<td>P2-Q06</td>
+<td>EWMA 与 GARCH 的差异？</td>
+<td>固定衰减 vs 估计常数/冲击/持久性。</td>
+</tr>
+<tr>
+<td>P2-Q07</td>
+<td>如何处理杠杆效应？</td>
+<td>考虑 GJR/EGARCH 等非对称模型。</td>
+</tr>
+<tr>
+<td>P2-Q08</td>
+<td>realized variance 是真方差吗？</td>
+<td>是代理，受采样和微观结构影响。</td>
+</tr>
+<tr>
+<td>P2-Q09</td>
+<td>合成实验能证明策略盈利吗？</td>
+<td>不能，只证明实现与协议。</td>
+</tr>
+<tr>
+<td>P2-Q10</td>
+<td>何时需要 block bootstrap？</td>
+<td>残差/收益存在时间依赖时。</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="answer-boundary">答案索引（Answer Boundary）</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>ID</th>
+<th>答案边界</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>P2-Q01</td>
+<td><span class="math-inline" data-math-kind="inline">\(v_{t+1}=\lambda v_t+(1-\lambda)r_t^2\)</span>。</td>
+</tr>
+<tr>
+<td>P2-Q02</td>
+<td><span class="math-inline" data-math-kind="inline">\(\omega&gt;0,\alpha,\beta\ge0\)</span>，通常 alpha+beta&lt;1。</td>
+</tr>
+<tr>
+<td>P2-Q03</td>
+<td>QLIKE 含 <span class="math-inline" data-math-kind="inline">\(v/\hat v\)</span> 与 log 比值。</td>
+</tr>
+<tr>
+<td>P2-Q04</td>
+<td>参数选择只用训练时点之前的信息。</td>
+</tr>
+<tr>
+<td>P2-Q05</td>
+<td>随机切分打破信息集并泄漏未来。</td>
+</tr>
+<tr>
+<td>P2-Q06</td>
+<td>EWMA 无估计常数项，GARCH 估计递推参数。</td>
+</tr>
+<tr>
+<td>P2-Q07</td>
+<td>使用非对称条件方差模型并做样本外比较。</td>
+</tr>
+<tr>
+<td>P2-Q08</td>
+<td>realized measure 是观测代理，不是真实潜在方差。</td>
+</tr>
+<tr>
+<td>P2-Q09</td>
+<td>合成机制不提供市场、成本或容量证据。</td>
+</tr>
+<tr>
+<td>P2-Q10</td>
+<td>按连续块而不是独立行重抽样。</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="risks">风险与后续建议（Risks &amp; Next）</h2>
+<ul>
+<li>当前环境未安装 <code>arch</code>，本项目的 GARCH 是教学用网格 QMLE，不是官方包对照。</li>
+<li>单一 QLIKE 排名不能替代预测区间、尾部风险、参数稳定性和经济价值评估。</li>
+<li>下一 slice G10/M05 将进入面板与因果识别，需把本项目的时间切分和数据可见性继续作为前置条件。</li>
+</ul>
+<h2 id="references">参考文献（References）</h2>
+<ol>
+<li>[1] Robert F. Engle, “Autoregressive Conditional Heteroscedasticity with Estimates of the Variance of United Kingdom Inflation,” <em>Econometrica</em>, 1982. <a href="https://doi.org/10.2307/1912773">链接</a></li>
+<li>[2] Tim Bollerslev, “Generalized Autoregressive Conditional Heteroskedasticity,” <em>Journal of Econometrics</em>, 1986. <a href="https://doi.org/10.1016/0304-4076(86)90063-1">链接</a></li>
+<li>[3] arch documentation, “Volatility Modeling.” <a href="https://arch.readthedocs.io/en/stable/univariate/univariate_volatility_modeling.html">链接</a></li>
+</ol>
+
+        <nav class="next-chapter" aria-label="下一章节">
+          <span class="next-chapter-label">下一章节</span>
+          <a rel="next" href="../p3_factor_pricing/p3_factor_pricing_report.html">P3 公开因子定价复现 →</a>
+        </nav>
+
+        <a class="back-to-top" href="#top">返回页首 ↑</a>
+      </article>
+    </main>
+  </div>
+</body>
+</html>

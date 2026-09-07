@@ -1,0 +1,77 @@
+{
+  "artifact": "modules/01_mathematical_foundations_notes.html",
+  "canonical_source": "modules/01_mathematical_foundations_notes.md",
+  "source_revision": "2cf15d23919221db2398c97fd772db63ee56613aa231edb832f188ec06ee9bf7",
+  "verdict": "WARN",
+  "checks": [
+    {
+      "name": "source_sha",
+      "status": "PASS",
+      "evidence": "expected=2cf15d23919221db2398c97fd772db63ee56613aa231edb832f188ec06ee9bf7; embedded=2cf15d23919221db2398c97fd772db63ee56613aa231edb832f188ec06ee9bf7"
+    },
+    {
+      "name": "single_h1",
+      "status": "PASS",
+      "evidence": "h1_count=1"
+    },
+    {
+      "name": "heading_hierarchy",
+      "status": "PASS",
+      "evidence": "headings=[(1, '量化研究的数学、概率、统计与优化基础'), (2, '问题（Question）'), (2, '背景与动机（Background & Motivation）'), (2, '基础概念与术语'), (3, '对象、维度和三种不确定性'), (3, '学习依赖图'), (2, '线性代数：从数据矩阵到投影'), (3, '向量、矩阵和形状'), (3, '内积、范数和投影'), (3, '协方差矩阵与半正定性'), (3, '特征值、SVD 与条件数'), (2, '微积分：从局部变化到优化'), (3, '梯度、Hessian 与 Taylor 展开'), (3, '链式法则与梯度检查'), (2, '概率：条件信息与极限定理'), (3, '条件期望和迭代期望'), (3, 'LLN 与 CLT'), (3, '协方差不等于独立'), (2, '统计推断：估计量是随机对象'), (3, '偏差、方差与均方误差'), (3, '置信区间与检验'), (3, 'MLE 与对数似然'), (3, 'Bootstrap 的正确边界'), (2, '凸优化：目标、约束与最优性'), (3, '标准形式与凸性'), (3, 'Lagrangian 与 KKT'), (3, '组合二次目标作为接口示例'), (2, 'Pipeline 与伪代码'), (2, '实现证据与数值坏案例'), (3, '不要用显式逆解决最小二乘'), (3, '稳定计算 Bernoulli 对数似然'), (3, '中心差分梯度检查'), (2, '练习：24 题验收'), (3, 'A. 线性代数与数值稳定性'), (3, 'B. 微积分'), (3, 'C. 概率'), (3, 'D. 统计推断'), (3, 'E. 凸优化'), (3, 'F. 实现与审计'), (2, '练习答案与评分边界'), (3, 'A 答案'), (3, 'B 答案'), (3, 'C 答案'), (3, 'D 答案'), (3, 'E 答案'), (3, 'F 答案'), (2, '方法对比与选择建议'), (2, '风险与后续建议'), (2, '参考文献（References）')]"
+    },
+    {
+      "name": "academic_template",
+      "status": "PASS",
+      "evidence": "palette/serif/1280-grid/260-sticky/900-breakpoint markers"
+    },
+    {
+      "name": "mathjax_config",
+      "status": "PASS",
+      "evidence": "MathJax 3 delimiters and skipHtmlTags markers"
+    },
+    {
+      "name": "formula_em_zero",
+      "status": "PASS",
+      "evidence": "formula_em_count=0"
+    },
+    {
+      "name": "latex_subscript_literal",
+      "status": "PASS",
+      "evidence": "source=['_{1-\\\\alpha/2}', '_{\\\\max}', '_{\\\\min}', '_{\\\\theta}', '_{i=1}', '_{prev}']; missing=[]"
+    },
+    {
+      "name": "internal_overflow",
+      "status": "PASS",
+      "evidence": "table/code/formula internal overflow CSS markers"
+    },
+    {
+      "name": "anchors",
+      "status": "PASS",
+      "evidence": "unresolved=[]"
+    },
+    {
+      "name": "local_links",
+      "status": "PASS",
+      "evidence": "unresolved=[]"
+    },
+    {
+      "name": "required_sections",
+      "status": "PASS",
+      "evidence": "required=['question', 'background', 'concepts', 'methods', 'math', 'pipeline', 'implementation', 'comparison', 'risks', 'references']; missing=[]"
+    },
+    {
+      "name": "diagnostic_question_coverage",
+      "status": "PASS",
+      "evidence": "prefix=M01-Q; expected=24; counts={'M01-Q01': 2, 'M01-Q02': 2, 'M01-Q03': 2, 'M01-Q04': 2, 'M01-Q05': 2, 'M01-Q06': 2, 'M01-Q07': 2, 'M01-Q08': 2, 'M01-Q09': 2, 'M01-Q10': 2, 'M01-Q11': 2, 'M01-Q12': 2, 'M01-Q13': 2, 'M01-Q14': 2, 'M01-Q15': 2, 'M01-Q16': 2, 'M01-Q17': 2, 'M01-Q18': 2, 'M01-Q19': 2, 'M01-Q20': 2, 'M01-Q21': 2, 'M01-Q22': 2, 'M01-Q23': 2, 'M01-Q24': 2}"
+    },
+    {
+      "name": "browser_visual_qa",
+      "status": "PENDING",
+      "evidence": "环境安全策略禁止浏览器直接打开本地 file:// HTML；未绕行，待人工桌面与窄屏复核"
+    }
+  ],
+  "open_items": [
+    "browser_visual_qa"
+  ],
+  "next": "完成浏览器视觉 QA 后重新审查"
+}

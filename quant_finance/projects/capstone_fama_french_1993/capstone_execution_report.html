@@ -1,0 +1,540 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="generator" content="quant_finance ARIS render-html (academic, v1)">
+  <meta name="source-file" content="capstone_execution_report.md">
+  <meta name="source-sha256" content="a070103690b6e034daae9db53f7ec82ad9ecb9e7a6b36acc9f9bae06e195648b">
+  <title>Capstone 执行与答辩材料：Fama–French (1993) 部分复现</title>
+  <script>
+    window.MathJax = {
+      tex: {inlineMath: [['\\(', '\\)'], ['$', '$']], displayMath: [['\\[', '\\]'], ['$$', '$$']]},
+      options: {skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']}
+    };
+  </script>
+  <script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+  <style>
+/* ARIS academic v1 — quant_finance canonical inline stylesheet. */
+:root {
+  --paper: #fdfcf7;
+  --paper-soft: #f4f1ea;
+  --ink: #1a1a1a;
+  --muted: #625f58;
+  --blue: #1a4a8c;
+  --blue-soft: #dce7f4;
+  --rust: #b8390e;
+  --rule: #b9b2a6;
+  --serif: "Source Serif Pro", "Source Serif 4", "Crimson Pro", Georgia, "Songti SC", STSong, serif;
+  --mono: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  margin: 0;
+  color: var(--ink);
+  background: var(--paper);
+  font-family: var(--serif);
+  font-size: 16px;
+  line-height: 1.8;
+}
+a { color: var(--blue); text-underline-offset: 0.16em; }
+a:hover { color: var(--rust); }
+
+.page-shell {
+  width: min(1280px, calc(100% - 40px));
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: 260px minmax(0, 1fr);
+  gap: 42px;
+  align-items: start;
+}
+.toc {
+  position: sticky;
+  top: 24px;
+  max-height: calc(100vh - 48px);
+  overflow-y: auto;
+  padding: 28px 18px 24px 0;
+  color: var(--muted);
+}
+.toc-title {
+  margin: 0 0 0.65rem;
+  color: var(--blue);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+.toc ol { margin: 0; padding: 0; list-style: none; }
+.toc li { margin: 0.24rem 0; line-height: 1.35; }
+.toc a { color: inherit; text-decoration: none; }
+.toc a:hover { color: var(--rust); }
+.toc .depth-3 { padding-left: 0.85rem; font-size: 0.92rem; }
+.toc .depth-4 { padding-left: 1.55rem; font-size: 0.86rem; }
+
+main {
+  min-width: 0;
+  margin: 24px 0 64px;
+  padding: 48px clamp(32px, 5vw, 72px) 64px;
+  background: var(--paper-soft);
+  border: 1px solid #ded8cd;
+  box-shadow: 0 16px 44px rgba(55, 47, 36, 0.08);
+}
+article { min-width: 0; }
+.eyebrow {
+  margin: 0 0 0.45rem;
+  color: var(--rust);
+  font-family: var(--serif);
+  font-size: 0.76rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+.subtitle { margin: 0 0 0.5rem; color: var(--muted); font-size: 1.05rem; }
+.meta {
+  margin: 0 0 2.2rem;
+  color: var(--muted);
+  font-size: 0.86rem;
+}
+h1 {
+  margin: 0 0 0.7rem;
+  padding: 0 0 0.8rem;
+  color: var(--ink);
+  border-bottom: 5px double var(--blue);
+  font-size: clamp(2rem, 5vw, 3.1rem);
+  line-height: 1.14;
+  letter-spacing: -0.025em;
+}
+h2 {
+  margin: 3.2rem 0 1.15rem;
+  padding-bottom: 0.42rem;
+  border-bottom: 1px solid var(--rule);
+  color: var(--ink);
+  font-size: 1.62rem;
+  line-height: 1.35;
+}
+h3 { margin: 2.15rem 0 0.8rem; color: var(--blue); font-size: 1.28rem; line-height: 1.4; }
+h4 { margin: 1.55rem 0 0.6rem; color: var(--ink); font-size: 1.06rem; line-height: 1.45; }
+p, ul, ol, blockquote { margin: 0 0 1rem; }
+ul, ol { padding-left: 1.5rem; }
+li + li { margin-top: 0.24rem; }
+strong { color: #111; }
+
+code {
+  font-family: var(--mono);
+  font-size: 0.9em;
+  background: #e9e5dc;
+  border-radius: 3px;
+  padding: 0.1em 0.32em;
+}
+pre {
+  max-width: 100%;
+  margin: 1.2rem 0 1.5rem;
+  padding: 1rem 1.1rem;
+  overflow-x: auto;
+  background: #faf9f5;
+  border: 1px solid #d8d2c7;
+  border-left: 4px solid var(--blue);
+  border-radius: 2px;
+  line-height: 1.55;
+}
+pre code {
+  display: block;
+  min-width: max-content;
+  padding: 0;
+  color: #383a42;
+  background: transparent;
+}
+/* Highlight.js atom-one-light-compatible colors for portable, inline styling. */
+.hljs-comment, .hljs-quote { color: #a0a1a7; font-style: italic; }
+.hljs-keyword, .hljs-selector-tag, .hljs-literal { color: #a626a4; }
+.hljs-string, .hljs-regexp { color: #50a14f; }
+.hljs-number, .hljs-symbol { color: #986801; }
+.hljs-title, .hljs-section, .hljs-function { color: #4078f2; }
+
+.formula {
+  max-width: 100%;
+  margin: 1.25rem 0 1.5rem;
+  padding: 1rem 1.15rem;
+  overflow-x: auto;
+  background: #faf9f5;
+  border: 1px solid #d8d2c7;
+  border-left: 4px solid var(--blue);
+}
+.formula mjx-container { min-width: max-content; }
+
+.table-wrap { max-width: 100%; margin: 1.25rem 0 1.6rem; overflow-x: auto; }
+table { width: 100%; min-width: 640px; border-collapse: collapse; font-size: 0.93rem; line-height: 1.55; }
+th, td { padding: 0.68rem 0.78rem; border: 1px solid #aaa398; text-align: left; vertical-align: top; }
+thead th { color: #fff; background: var(--blue); font-weight: 700; }
+tbody tr:nth-child(even) { background: #ebe6dc; }
+tbody tr:nth-child(odd) { background: #f8f5ee; }
+
+.note, .warning, .evidence, blockquote {
+  margin: 1.2rem 0 1.45rem;
+  padding: 0.85rem 1rem;
+  background: #f8f5ee;
+  border: 1px solid #d2cbc0;
+  border-left: 4px solid var(--blue);
+}
+.warning { border-left-color: var(--rust); background: #fff2e9; }
+.evidence { border-left-color: #6b5b8e; background: #f2eef8; }
+.note > :last-child, .warning > :last-child, .evidence > :last-child, blockquote > :last-child { margin-bottom: 0; }
+.back-to-top { display: inline-block; margin-top: 2rem; font-size: 0.88rem; }
+
+@media (max-width: 900px) {
+  .page-shell { width: min(100% - 24px, 820px); grid-template-columns: 1fr; gap: 0; }
+  .toc { position: static; max-height: none; padding: 20px 8px 4px; columns: 2; column-gap: 1.5rem; }
+  .toc-title { column-span: all; }
+  main { margin-top: 16px; padding: 34px clamp(18px, 5vw, 40px) 48px; }
+  h1 { font-size: clamp(1.8rem, 8vw, 2.55rem); }
+  table { min-width: 600px; }
+  pre, .formula, .table-wrap { overflow-x: auto; }
+}
+
+@media (max-width: 560px) {
+  .toc { columns: 1; }
+  .page-shell { width: calc(100% - 12px); }
+  main { padding-left: 15px; padding-right: 15px; }
+}
+
+@media print {
+  body { background: #fff; }
+  .page-shell { display: block; width: 100%; }
+  .toc, .back-to-top { display: none !important; }
+  main { margin: 0; padding: 0; background: #fff; border: 0; box-shadow: none; }
+  a { color: inherit; text-decoration: none; }
+  pre, .formula, table { break-inside: avoid; }
+}
+
+    .next-chapter { margin: 2.5rem 0 1rem; padding: 1rem 1.2rem; border: 1px solid #b9c9df; border-left: 4px solid #1a4a8c; background: #f4f1ea; display: flex; gap: .75rem; align-items: baseline; justify-content: space-between; }
+    .next-chapter-label { color: #1a4a8c; font-weight: 700; white-space: nowrap; }
+    .next-chapter a { color: #1a4a8c; font-weight: 700; text-decoration: none; }
+    .next-chapter a:hover, .next-chapter a:focus { color: #b8390e; text-decoration: underline; }
+    @media (max-width: 900px) { .next-chapter { display: block; } .next-chapter-label { display: block; margin-bottom: .35rem; } }
+  </style>
+</head>
+<body id="top">
+  <div class="page-shell">
+    <nav class="toc" aria-label="目录">
+      <p class="toc-title">Contents</p>
+      <ol>
+<li class="depth-2"><a href="#question">问题（Question）</a></li>
+<li class="depth-2"><a href="#background">执行状态与证据边界（Background &amp; Motivation）</a></li>
+<li class="depth-2"><a href="#data">数据核验</a></li>
+<li class="depth-2"><a href="#methods">估计结果</a></li>
+<li class="depth-2"><a href="#difference">差异与失败账本</a></li>
+<li class="depth-2"><a href="#pipeline">Pipeline 与伪代码（Pipeline &amp; Pseudocode）</a></li>
+<li class="depth-2"><a href="#exercises">答辩问题与答案边界</a></li>
+<li class="depth-2"><a href="#answer-boundary">答案索引（Answer Boundary）</a></li>
+<li class="depth-2"><a href="#risks">风险与后续建议（Risks &amp; Next）</a></li>
+<li class="depth-2"><a href="#references">参考文献（References）</a></li>
+      </ol>
+    </nav>
+    <main>
+      <article>
+        <header>
+          <p class="eyebrow">Quant Finance · Capstone Execution</p>
+          <p class="subtitle">G24 · 数据哈希与冻结样本通过；论文表格、HAC 与 GRS 保持未运行披露</p>
+          <h1>Capstone 执行与答辩材料：Fama–French (1993) 部分复现</h1>
+          <p class="meta">发布日期：2026-07-22 · 证据截止：2026-07-22 · 源文件 SHA-256：<code>a070103690b6e034daae9db53f7ec82ad9ecb9e7a6b36acc9f9bae06e195648b</code></p>
+        </header>
+<h2 id="question">问题（Question）</h2>
+<p>按 G23 冻结协议重新下载两个 Kenneth French 官方文件，检查 SHA 和 1963-07 至 1991-12 样本，执行 25 个 Size–B/M 组合的三因子时序回归和 Fama–MacBeth 横截面回归，并对未完成的论文表格、HAC 与 GRS 逐项披露。最终状态只能在证据支持的 <code>reproduced</code>、<code>partial_reproduction</code> 或 <code>not_verifiable</code> 中选择。</p>
+<h2 id="background">执行状态与证据边界（Background &amp; Motivation）</h2>
+<p>执行脚本重新访问两个官方 URL，哈希与 G23 协议完全一致；样本为 342 个月、25 个组合。时序 OLS 与 Fama–MacBeth 已运行，<code>statsmodels</code> 不可用，因此 HAC 标准误、GRS 联合检验和论文原表机器映射保持 <code>NOT_RUN</code>。[1][2]</p>
+<div class="evidence"><strong>结论边界：</strong>本 Capstone 状态为 <code>partial_reproduction</code>。这证明数据版本、样本过滤和两类回归路径已执行，不证明论文表格完全重建、数值等价、因果机制或可交易 alpha。</div>
+<h2 id="data">数据核验</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>项目</th>
+<th>执行结果</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>因子 SHA</td>
+<td><code>80b88699a18ac408e2456d25b1004e340f3f7f8d41d5b476a0285bc53c6f0436</code>，match</td>
+</tr>
+<tr>
+<td>组合 SHA</td>
+<td><code>afc2f6c40237d07b99ab84ab9375a08bc301e3801e3ad8d91aa90d5aa9ec6295</code>，match</td>
+</tr>
+<tr>
+<td>样本起点</td>
+<td>1963-07</td>
+</tr>
+<tr>
+<td>样本终点</td>
+<td>1991-12</td>
+</tr>
+<tr>
+<td>月数</td>
+<td>342</td>
+</tr>
+<tr>
+<td>测试资产</td>
+<td>25</td>
+</tr>
+<tr>
+<td>单位</td>
+<td>百分比转小数，减同月 RF</td>
+</tr>
+<tr>
+<td>原始文件</td>
+<td>未提交，仅保留 hash/派生结果</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="methods">估计结果</h2>
+<p>时序模型：</p>
+<div class="formula" data-math-kind="display">\[R_{it}-R_{ft}=\alpha_i+\beta_{Mi}MKT_t+s_iSMB_t+h_iHML_t+\varepsilon_{it}.\]</div>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>指标</th>
+<th style="text-align:right">结果</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>平均绝对 alpha</td>
+<td style="text-align:right">0.0009369（月度小数）</td>
+</tr>
+<tr>
+<td>最大绝对 alpha</td>
+<td style="text-align:right">0.0036881</td>
+</tr>
+<tr>
+<td>平均市场 beta</td>
+<td style="text-align:right">1.0157</td>
+</tr>
+<tr>
+<td>平均 SMB beta</td>
+<td style="text-align:right">0.5584</td>
+</tr>
+<tr>
+<td>平均 HML beta</td>
+<td style="text-align:right">0.2174</td>
+</tr>
+</tbody>
+</table></div>
+<p>Fama–MacBeth 平均 lambda：</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>因子</th>
+<th style="text-align:right">平均 lambda</th>
+<th style="text-align:right">逐月标准差</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>MKT</td>
+<td style="text-align:right">-0.001546</td>
+<td style="text-align:right">0.08175</td>
+</tr>
+<tr>
+<td>SMB</td>
+<td style="text-align:right">0.002003</td>
+<td style="text-align:right">0.02911</td>
+</tr>
+<tr>
+<td>HML</td>
+<td style="text-align:right">0.004254</td>
+<td style="text-align:right">0.02594</td>
+</tr>
+</tbody>
+</table></div>
+<p>逐月 lambda 的标准差不是 HAC 标准误，不能直接作显著性结论。</p>
+<h2 id="difference">差异与失败账本</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>项目</th>
+<th>状态</th>
+<th>原因/下一步</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>原论文表格机器数字化</td>
+<td>NOT_RUN</td>
+<td>未在本 slice 提取论文表格，不能做逐格差异</td>
+</tr>
+<tr>
+<td>GRS 联合定价误差检验</td>
+<td>NOT_RUN</td>
+<td>实现未冻结，环境缺统计包</td>
+</tr>
+<tr>
+<td>HAC 标准误</td>
+<td>NOT_RUN</td>
+<td><code>statsmodels</code> 不可用；只保留 lambda 标准差</td>
+</tr>
+<tr>
+<td>数据 hash/样本过滤</td>
+<td>PASS</td>
+<td>与协议一致，342×25</td>
+</tr>
+<tr>
+<td>时序 OLS</td>
+<td>PASS</td>
+<td>设计矩阵和结果已生成</td>
+</tr>
+<tr>
+<td>Fama–MacBeth</td>
+<td>PASS</td>
+<td>逐月横截面和均值已生成</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="pipeline">Pipeline 与伪代码（Pipeline &amp; Pseudocode）</h2>
+<pre><code class="language-python">factor_bytes, portfolio_bytes = download_and_hash(protocol_urls)
+assert_hashes_match_or_open_new_version()
+factors, portfolios = parse_monthly_blocks()
+sample = align_and_filter(&quot;196307&quot;, &quot;199112&quot;, subtract_rf=True)
+time_series = fit_ff3_ols(sample)
+fmb = fit_monthly_cross_sections(time_series.betas)
+ledger = record_passes_and_NOT_RUN_components()
+status = &quot;partial_reproduction&quot; if ledger.has_unrun_items() else &quot;reproduced&quot;
+</code></pre>
+<p>实现见 <a href="execute_capstone.py"><code>execute_capstone.py</code></a>，机器结果见 <a href="capstone_execution_results.json"><code>capstone_execution_results.json</code></a>，冻结协议见 <a href="capstone_protocol.json"><code>capstone_protocol.json</code></a>。</p>
+<h2 id="exercises">答辩问题与答案边界</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>ID</th>
+<th>问题</th>
+<th>答案边界</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>G24-Q01</td>
+<td>为什么不是 reproduced？</td>
+<td>论文表格、HAC、GRS 未运行。</td>
+</tr>
+<tr>
+<td>G24-Q02</td>
+<td>两个 hash 是否匹配？</td>
+<td>是，与 G23 完全一致。</td>
+</tr>
+<tr>
+<td>G24-Q03</td>
+<td>样本多少？</td>
+<td>342 月、25 组合。</td>
+</tr>
+<tr>
+<td>G24-Q04</td>
+<td>平均绝对 alpha 是多少？</td>
+<td>0.0009369 月度小数。</td>
+</tr>
+<tr>
+<td>G24-Q05</td>
+<td>Fama–MacBeth lambda 能直接显著吗？</td>
+<td>不能，当前只有逐月标准差，HAC NOT_RUN。</td>
+</tr>
+<tr>
+<td>G24-Q06</td>
+<td>为什么不提交 raw？</td>
+<td>公开下载不等于再分发许可。</td>
+</tr>
+<tr>
+<td>G24-Q07</td>
+<td>结果能否证明论文错？</td>
+<td>不能，定义/表格/检验尚未完全对齐。</td>
+</tr>
+<tr>
+<td>G24-Q08</td>
+<td>partial reproduction 含义？</td>
+<td>数据和部分估计执行，关键组件未完成。</td>
+</tr>
+<tr>
+<td>G24-Q09</td>
+<td>下一步优先级？</td>
+<td>HAC、GRS、原表数字化与差异映射。</td>
+</tr>
+<tr>
+<td>G24-Q10</td>
+<td>能否作为投资策略？</td>
+<td>不能，没有样本外、成本、容量和执行证据。</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="answer-boundary">答案索引（Answer Boundary）</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>ID</th>
+<th>答案边界</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>G24-Q01</td>
+<td>三项关键差异账本仍为 NOT_RUN。</td>
+</tr>
+<tr>
+<td>G24-Q02</td>
+<td>factor/portfolio SHA 均 match。</td>
+</tr>
+<tr>
+<td>G24-Q03</td>
+<td>1963-07—1991-12 共 342 月、25 组合。</td>
+</tr>
+<tr>
+<td>G24-Q04</td>
+<td><code>0.0009368909703585307</code>。</td>
+</tr>
+<tr>
+<td>G24-Q05</td>
+<td>不能；标准差不等于 HAC SE。</td>
+</tr>
+<tr>
+<td>G24-Q06</td>
+<td>只存 hash 和派生结果。</td>
+</tr>
+<tr>
+<td>G24-Q07</td>
+<td>未完成定义、检验和表格映射。</td>
+</tr>
+<tr>
+<td>G24-Q08</td>
+<td>可复现子集通过，完整论文复现未完成。</td>
+</tr>
+<tr>
+<td>G24-Q09</td>
+<td>先完成论文表格、HAC、GRS，再补稳健性。</td>
+</tr>
+<tr>
+<td>G24-Q10</td>
+<td>不能，研究证据不等于交易部署。</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="risks">风险与后续建议（Risks &amp; Next）</h2>
+<ul>
+<li>目标论文还涉及债券因子和更完整测试资产，本执行只覆盖协议明确的公开股票组合子集。</li>
+<li>当前环境缺 <code>statsmodels</code>，HAC/GRS 不应通过手写近似冒充已完成。</li>
+<li>Capstone 的可辩护结论是“部分复现”；若后续补齐未运行组件，需新建 revision、重新生成结果和审查，不覆盖本次记录。</li>
+</ul>
+<h2 id="references">参考文献（References）</h2>
+<ol>
+<li>[1] Eugene F. Fama and Kenneth R. French, “Common Risk Factors in the Returns on Stocks and Bonds,” <em>Journal of Financial Economics</em>, 1993. <a href="https://doi.org/10.1016/0304-405X(93)90023-5">链接</a></li>
+<li>[2] Kenneth R. French, “Data Library.” <a href="https://mba.tuck.dartmouth.edu/pages/faculty/ken.french/data_library.html">链接</a></li>
+</ol>
+
+        <nav class="next-chapter" aria-label="下一章节">
+          <span class="next-chapter-label">下一章节</span>
+          <a rel="next" href="../../modules/00_orientation_and_diagnostic_notes.html">M00 领域导航与能力诊断 →</a>
+        </nav>
+
+        <a class="back-to-top" href="#top">返回页首 ↑</a>
+      </article>
+    </main>
+  </div>
+</body>
+</html>

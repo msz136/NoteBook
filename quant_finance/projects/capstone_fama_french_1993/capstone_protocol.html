@@ -1,0 +1,498 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="generator" content="quant_finance ARIS render-html (academic, v1)">
+  <meta name="source-file" content="capstone_protocol.md">
+  <meta name="source-sha256" content="2cb2683e846784e09bcce5a6332143e7492daa42f3c32f276f88a11f901b7a72">
+  <title>Capstone 协议冻结：复现 Fama–French (1993) 共同风险因子</title>
+  <script>
+    window.MathJax = {
+      tex: {inlineMath: [['\\(', '\\)'], ['$', '$']], displayMath: [['\\[', '\\]'], ['$$', '$$']]},
+      options: {skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']}
+    };
+  </script>
+  <script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+  <style>
+/* ARIS academic v1 — quant_finance canonical inline stylesheet. */
+:root {
+  --paper: #fdfcf7;
+  --paper-soft: #f4f1ea;
+  --ink: #1a1a1a;
+  --muted: #625f58;
+  --blue: #1a4a8c;
+  --blue-soft: #dce7f4;
+  --rust: #b8390e;
+  --rule: #b9b2a6;
+  --serif: "Source Serif Pro", "Source Serif 4", "Crimson Pro", Georgia, "Songti SC", STSong, serif;
+  --mono: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  margin: 0;
+  color: var(--ink);
+  background: var(--paper);
+  font-family: var(--serif);
+  font-size: 16px;
+  line-height: 1.8;
+}
+a { color: var(--blue); text-underline-offset: 0.16em; }
+a:hover { color: var(--rust); }
+
+.page-shell {
+  width: min(1280px, calc(100% - 40px));
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: 260px minmax(0, 1fr);
+  gap: 42px;
+  align-items: start;
+}
+.toc {
+  position: sticky;
+  top: 24px;
+  max-height: calc(100vh - 48px);
+  overflow-y: auto;
+  padding: 28px 18px 24px 0;
+  color: var(--muted);
+}
+.toc-title {
+  margin: 0 0 0.65rem;
+  color: var(--blue);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+.toc ol { margin: 0; padding: 0; list-style: none; }
+.toc li { margin: 0.24rem 0; line-height: 1.35; }
+.toc a { color: inherit; text-decoration: none; }
+.toc a:hover { color: var(--rust); }
+.toc .depth-3 { padding-left: 0.85rem; font-size: 0.92rem; }
+.toc .depth-4 { padding-left: 1.55rem; font-size: 0.86rem; }
+
+main {
+  min-width: 0;
+  margin: 24px 0 64px;
+  padding: 48px clamp(32px, 5vw, 72px) 64px;
+  background: var(--paper-soft);
+  border: 1px solid #ded8cd;
+  box-shadow: 0 16px 44px rgba(55, 47, 36, 0.08);
+}
+article { min-width: 0; }
+.eyebrow {
+  margin: 0 0 0.45rem;
+  color: var(--rust);
+  font-family: var(--serif);
+  font-size: 0.76rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+.subtitle { margin: 0 0 0.5rem; color: var(--muted); font-size: 1.05rem; }
+.meta {
+  margin: 0 0 2.2rem;
+  color: var(--muted);
+  font-size: 0.86rem;
+}
+h1 {
+  margin: 0 0 0.7rem;
+  padding: 0 0 0.8rem;
+  color: var(--ink);
+  border-bottom: 5px double var(--blue);
+  font-size: clamp(2rem, 5vw, 3.1rem);
+  line-height: 1.14;
+  letter-spacing: -0.025em;
+}
+h2 {
+  margin: 3.2rem 0 1.15rem;
+  padding-bottom: 0.42rem;
+  border-bottom: 1px solid var(--rule);
+  color: var(--ink);
+  font-size: 1.62rem;
+  line-height: 1.35;
+}
+h3 { margin: 2.15rem 0 0.8rem; color: var(--blue); font-size: 1.28rem; line-height: 1.4; }
+h4 { margin: 1.55rem 0 0.6rem; color: var(--ink); font-size: 1.06rem; line-height: 1.45; }
+p, ul, ol, blockquote { margin: 0 0 1rem; }
+ul, ol { padding-left: 1.5rem; }
+li + li { margin-top: 0.24rem; }
+strong { color: #111; }
+
+code {
+  font-family: var(--mono);
+  font-size: 0.9em;
+  background: #e9e5dc;
+  border-radius: 3px;
+  padding: 0.1em 0.32em;
+}
+pre {
+  max-width: 100%;
+  margin: 1.2rem 0 1.5rem;
+  padding: 1rem 1.1rem;
+  overflow-x: auto;
+  background: #faf9f5;
+  border: 1px solid #d8d2c7;
+  border-left: 4px solid var(--blue);
+  border-radius: 2px;
+  line-height: 1.55;
+}
+pre code {
+  display: block;
+  min-width: max-content;
+  padding: 0;
+  color: #383a42;
+  background: transparent;
+}
+/* Highlight.js atom-one-light-compatible colors for portable, inline styling. */
+.hljs-comment, .hljs-quote { color: #a0a1a7; font-style: italic; }
+.hljs-keyword, .hljs-selector-tag, .hljs-literal { color: #a626a4; }
+.hljs-string, .hljs-regexp { color: #50a14f; }
+.hljs-number, .hljs-symbol { color: #986801; }
+.hljs-title, .hljs-section, .hljs-function { color: #4078f2; }
+
+.formula {
+  max-width: 100%;
+  margin: 1.25rem 0 1.5rem;
+  padding: 1rem 1.15rem;
+  overflow-x: auto;
+  background: #faf9f5;
+  border: 1px solid #d8d2c7;
+  border-left: 4px solid var(--blue);
+}
+.formula mjx-container { min-width: max-content; }
+
+.table-wrap { max-width: 100%; margin: 1.25rem 0 1.6rem; overflow-x: auto; }
+table { width: 100%; min-width: 640px; border-collapse: collapse; font-size: 0.93rem; line-height: 1.55; }
+th, td { padding: 0.68rem 0.78rem; border: 1px solid #aaa398; text-align: left; vertical-align: top; }
+thead th { color: #fff; background: var(--blue); font-weight: 700; }
+tbody tr:nth-child(even) { background: #ebe6dc; }
+tbody tr:nth-child(odd) { background: #f8f5ee; }
+
+.note, .warning, .evidence, blockquote {
+  margin: 1.2rem 0 1.45rem;
+  padding: 0.85rem 1rem;
+  background: #f8f5ee;
+  border: 1px solid #d2cbc0;
+  border-left: 4px solid var(--blue);
+}
+.warning { border-left-color: var(--rust); background: #fff2e9; }
+.evidence { border-left-color: #6b5b8e; background: #f2eef8; }
+.note > :last-child, .warning > :last-child, .evidence > :last-child, blockquote > :last-child { margin-bottom: 0; }
+.back-to-top { display: inline-block; margin-top: 2rem; font-size: 0.88rem; }
+
+@media (max-width: 900px) {
+  .page-shell { width: min(100% - 24px, 820px); grid-template-columns: 1fr; gap: 0; }
+  .toc { position: static; max-height: none; padding: 20px 8px 4px; columns: 2; column-gap: 1.5rem; }
+  .toc-title { column-span: all; }
+  main { margin-top: 16px; padding: 34px clamp(18px, 5vw, 40px) 48px; }
+  h1 { font-size: clamp(1.8rem, 8vw, 2.55rem); }
+  table { min-width: 600px; }
+  pre, .formula, .table-wrap { overflow-x: auto; }
+}
+
+@media (max-width: 560px) {
+  .toc { columns: 1; }
+  .page-shell { width: calc(100% - 12px); }
+  main { padding-left: 15px; padding-right: 15px; }
+}
+
+@media print {
+  body { background: #fff; }
+  .page-shell { display: block; width: 100%; }
+  .toc, .back-to-top { display: none !important; }
+  main { margin: 0; padding: 0; background: #fff; border: 0; box-shadow: none; }
+  a { color: inherit; text-decoration: none; }
+  pre, .formula, table { break-inside: avoid; }
+}
+
+    .next-chapter { margin: 2.5rem 0 1rem; padding: 1rem 1.2rem; border: 1px solid #b9c9df; border-left: 4px solid #1a4a8c; background: #f4f1ea; display: flex; gap: .75rem; align-items: baseline; justify-content: space-between; }
+    .next-chapter-label { color: #1a4a8c; font-weight: 700; white-space: nowrap; }
+    .next-chapter a { color: #1a4a8c; font-weight: 700; text-decoration: none; }
+    .next-chapter a:hover, .next-chapter a:focus { color: #b8390e; text-decoration: underline; }
+    @media (max-width: 900px) { .next-chapter { display: block; } .next-chapter-label { display: block; margin-bottom: .35rem; } }
+  </style>
+</head>
+<body id="top">
+  <div class="page-shell">
+    <nav class="toc" aria-label="目录">
+      <p class="toc-title">Contents</p>
+      <ol>
+<li class="depth-2"><a href="#question">问题（Question）</a></li>
+<li class="depth-2"><a href="#background">目标论文与研究范围（Background &amp; Motivation）</a></li>
+<li class="depth-2"><a href="#data">数据、版本与许可</a></li>
+<li class="depth-2"><a href="#methods">研究问题与估计协议</a></li>
+<li class="depth-2"><a href="#criteria">成功与失败判据</a></li>
+<li class="depth-2"><a href="#pipeline">Pipeline 与伪代码（Pipeline &amp; Pseudocode）</a></li>
+<li class="depth-2"><a href="#checklist">执行前检查清单</a></li>
+<li class="depth-2"><a href="#exercises">练习与答案边界（Exercises）</a></li>
+<li class="depth-2"><a href="#answer-boundary">答案索引（Answer Boundary）</a></li>
+<li class="depth-2"><a href="#risks">风险与后续建议（Risks &amp; Next）</a></li>
+<li class="depth-2"><a href="#references">参考文献（References）</a></li>
+      </ol>
+    </nav>
+    <main>
+      <article>
+        <header>
+          <p class="eyebrow">Quant Finance · Capstone Protocol</p>
+          <p class="subtitle">G23 · 只冻结问题、数据、估计和成功/失败判据；执行留给 G24</p>
+          <h1>Capstone 协议冻结：复现 Fama–French (1993) 共同风险因子</h1>
+          <p class="meta">发布日期：2026-07-22 · 证据截止：2026-07-22 · 源文件 SHA-256：<code>2cb2683e846784e09bcce5a6332143e7492daa42f3c32f276f88a11f901b7a72</code></p>
+        </header>
+<h2 id="question">问题（Question）</h2>
+<p>Capstone 选择 Fama 与 French 的 “Common Risk Factors in the Returns on Stocks and Bonds”（1993）作为目标论文，研究公开 MKT、SMB、HML 因子能否解释冻结测试资产在样本期内的时序收益与横截面平均收益。G23 只冻结协议，不把 P3 的部分回归结果写成复现成功。</p>
+<h2 id="background">目标论文与研究范围（Background &amp; Motivation）</h2>
+<p>目标论文入口为 DOI [1]。公开数据采用 Kenneth French Data Library 的三因子文件和 25 个 Size–B/M 价值加权组合；P3 已在 2026-07-22 下载并记录两个文件 SHA，文件头均显示 <code>202605 CRSP database</code>。[2] 原始文件不提交仓库，执行时重新下载并核验哈希；若文件变化，必须新建数据版本并在差异账本中说明。</p>
+<div class="evidence"><strong>协议边界：</strong>样本目标窗口冻结为 1963-07 至 1991-12、月频、百分比转小数并减 RF。这里冻结的是复现目标和比较方式，不声称该窗口当前数据已执行、论文表格已完全重建或任何结果已成功。</div>
+<h2 id="data">数据、版本与许可</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>项目</th>
+<th>冻结协议</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>因子 URL</td>
+<td><code>F-F_Research_Data_Factors_CSV.zip</code></td>
+</tr>
+<tr>
+<td>组合 URL</td>
+<td><code>25_Portfolios_5x5_CSV.zip</code></td>
+</tr>
+<tr>
+<td>因子 SHA</td>
+<td><code>80b88699a18ac408e2456d25b1004e340f3f7f8d41d5b476a0285bc53c6f0436</code></td>
+</tr>
+<tr>
+<td>组合 SHA</td>
+<td><code>afc2f6c40237d07b99ab84ab9375a08bc301e3801e3ad8d91aa90d5aa9ec6295</code></td>
+</tr>
+<tr>
+<td>文件头</td>
+<td><code>202605 CRSP database</code></td>
+</tr>
+<tr>
+<td>原始再分发</td>
+<td>不提交；只保存 hash、派生表和下载脚本</td>
+</tr>
+<tr>
+<td>单位</td>
+<td>官方百分比除以 100</td>
+</tr>
+<tr>
+<td>超额收益</td>
+<td>组合收益减同月 RF</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="methods">研究问题与估计协议</h2>
+<ol>
+<li>对每个测试组合估计：</li>
+</ol>
+<div class="formula" data-math-kind="display">\[R_{it}-R_{ft}=\alpha_i+\beta_{Mi}MKT_t+s_iSMB_t+h_iHML_t+\varepsilon_{it}.\]</div>
+<ol start="2">
+<li>运行 Fama–MacBeth 两步法：第一步冻结时序 beta 窗口，第二步逐月横截面估 lambda，并报告时间序列均值、标准误与测试资产数量。</li>
+<li>若环境支持，运行 HAC 标准误和联合定价误差检验；若不支持，标记 <code>NOT RUN</code>，不能用平均绝对 alpha 替代。</li>
+<li>比较论文定义、当前公开文件定义、样本数量、系数符号/数量级和所有不一致原因。</li>
+</ol>
+<h2 id="criteria">成功与失败判据</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>类型</th>
+<th>判据</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>数据成功</td>
+<td>URL、SHA、文件头、样本行数、单位和过滤日志可重建</td>
+</tr>
+<tr>
+<td>估计成功</td>
+<td>设计矩阵、缺失、频率和风险自由利率处理通过检查</td>
+</tr>
+<tr>
+<td>论文比较成功</td>
+<td>每个比较表有来源、列映射、单位和差异原因</td>
+</tr>
+<tr>
+<td>复现成功</td>
+<td>主要方向/数量级在预先定义容忍度内且无未披露偏差</td>
+</tr>
+<tr>
+<td>部分复现</td>
+<td>数据可重建但某些表/检验/许可或底层成员不可核验</td>
+</tr>
+<tr>
+<td>无法核验</td>
+<td>关键数据、定义或执行环境不可重建</td>
+</tr>
+<tr>
+<td>绝不通过</td>
+<td>选择性报告、未来数据、未经授权原始数据再分发</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="pipeline">Pipeline 与伪代码（Pipeline &amp; Pseudocode）</h2>
+<pre><code class="language-python">protocol = load_frozen_protocol()
+factor_bytes, portfolio_bytes = download_and_hash(protocol.data.urls)
+assert_hash_or_open_new_data_version(factor_bytes, portfolio_bytes)
+factors, portfolios = parse_monthly_blocks_and_units()
+sample = inner_join_and_filter(protocol.sample.start, protocol.sample.end)
+time_series = fit_ols_and_log_hac(sample)
+cross_section = fit_fama_macbeth(sample, frozen_beta_window)
+comparison = map_outputs_to_paper_tables_and_log_deviations()
+status = classify_reproduced_partial_or_not_verifiable(comparison, failures)
+write_manifest_tables_and_no_raw_redistribution_artifacts()
+</code></pre>
+<h2 id="checklist">执行前检查清单</h2>
+<ul>
+<li>[ ] 重新下载并核验两个 SHA；若变化，创建新版本。</li>
+<li>[ ] 确认 1963-07 至 1991-12 的月度行数与过滤理由。</li>
+<li>[ ] 确认组合是价值加权、Size–B/M 定义与论文测试资产映射。</li>
+<li>[ ] 确认百分比/小数、RF、缺失码、月份对齐和时区无误。</li>
+<li>[ ] 冻结 beta 窗口、HAC/联合检验可用性和比较容忍度。</li>
+<li>[ ] 记录未运行组件和任何数据许可限制。</li>
+</ul>
+<h2 id="exercises">练习与答案边界（Exercises）</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>ID</th>
+<th>题目</th>
+<th>达标标准</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>G23-Q01</td>
+<td>为什么选这篇论文？</td>
+<td>与 P3 公开因子和当前知识栈直接衔接。</td>
+</tr>
+<tr>
+<td>G23-Q02</td>
+<td>G23 和 G24 区别？</td>
+<td>G23 冻结协议，G24 执行和答辩。</td>
+</tr>
+<tr>
+<td>G23-Q03</td>
+<td>两个文件 SHA 是什么？</td>
+<td>能从协议 JSON 读出完整 hash。</td>
+</tr>
+<tr>
+<td>G23-Q04</td>
+<td>目标样本窗口？</td>
+<td>1963-07 至 1991-12，月频。</td>
+</tr>
+<tr>
+<td>G23-Q05</td>
+<td>为什么不提交 raw ZIP？</td>
+<td>再分发许可边界未由下载行为证明。</td>
+</tr>
+<tr>
+<td>G23-Q06</td>
+<td>复现成功标准？</td>
+<td>数据/变换可重建、比较有容忍度、偏差公开。</td>
+</tr>
+<tr>
+<td>G23-Q07</td>
+<td>不能运行 HAC 怎么办？</td>
+<td>标记 NOT RUN，不用 alpha 均值替代。</td>
+</tr>
+<tr>
+<td>G23-Q08</td>
+<td>如何处理 SHA 变化？</td>
+<td>新版本、保留旧记录、记录差异。</td>
+</tr>
+<tr>
+<td>G23-Q09</td>
+<td>哪些结果不能提前写？</td>
+<td>复现成功、论文表格一致或 alpha 结论。</td>
+</tr>
+<tr>
+<td>G23-Q10</td>
+<td>G24 最小交付？</td>
+<td>manifest、派生表、差异账本、状态和答辩题。</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="answer-boundary">答案索引（Answer Boundary）</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>ID</th>
+<th>答案边界</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>G23-Q01</td>
+<td>公开数据可衔接、问题有学术基准、可做时序/横截面两步。</td>
+</tr>
+<tr>
+<td>G23-Q02</td>
+<td>G23 是冻结；G24 是执行、审查、答辩。</td>
+</tr>
+<tr>
+<td>G23-Q03</td>
+<td>因子 <code>80b886...f0436</code>，组合 <code>afc2f6...c6295</code>，协议含完整值。</td>
+</tr>
+<tr>
+<td>G23-Q04</td>
+<td>1963-07 至 1991-12。</td>
+</tr>
+<tr>
+<td>G23-Q05</td>
+<td>公开访问不等于原始文件再分发授权。</td>
+</tr>
+<tr>
+<td>G23-Q06</td>
+<td>数据/变换/比较可重建且不隐藏偏差。</td>
+</tr>
+<tr>
+<td>G23-Q07</td>
+<td><code>NOT RUN</code> 并列出缺失，不伪造检验。</td>
+</tr>
+<tr>
+<td>G23-Q08</td>
+<td>新 revision/hash，不覆盖旧版本。</td>
+</tr>
+<tr>
+<td>G23-Q09</td>
+<td>任何尚未执行或未核验的结果。</td>
+</tr>
+<tr>
+<td>G23-Q10</td>
+<td>manifest、派生结果、差异/失败账本、复现状态、答辩材料。</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="risks">风险与后续建议（Risks &amp; Next）</h2>
+<ul>
+<li>目标论文含债券和更复杂的测试资产定义；本协议先冻结公开股票组合可执行子集，执行时若无法映射必须标记部分复现。</li>
+<li>数据库更新、组合定义变化、论文表格四舍五入和 HAC/GRS 环境差异是主要未知项。</li>
+<li>下一 slice G24 执行该协议；只有执行证据完整后，才能判定 reproduced、partial 或 not-verifiable。</li>
+</ul>
+<h2 id="references">参考文献（References）</h2>
+<ol>
+<li>[1] Eugene F. Fama and Kenneth R. French, “Common Risk Factors in the Returns on Stocks and Bonds,” <em>Journal of Financial Economics</em>, 1993. <a href="https://doi.org/10.1016/0304-405X(93)90023-5">链接</a></li>
+<li>[2] Kenneth R. French, “Data Library.” <a href="https://mba.tuck.dartmouth.edu/pages/faculty/ken.french/data_library.html">链接</a></li>
+<li>[3] Greg Wilson et al., “Good Enough Practices in Scientific Computing,” 2017. <a href="https://doi.org/10.1371/journal.pcbi.1005510">链接</a></li>
+</ol>
+
+        <nav class="next-chapter" aria-label="下一章节">
+          <span class="next-chapter-label">下一章节</span>
+          <a rel="next" href="capstone_execution_report.html">Capstone 执行与答辩 →</a>
+        </nav>
+
+        <a class="back-to-top" href="#top">返回页首 ↑</a>
+      </article>
+    </main>
+  </div>
+</body>
+</html>

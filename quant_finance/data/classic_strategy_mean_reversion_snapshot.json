@@ -1,0 +1,68 @@
+{
+  "snapshot_date_utc": "2026-07-27",
+  "source": "Yahoo Finance chart API adjusted close",
+  "source_type": "secondary_data_proxy",
+  "symbols": ["GLD", "SLV"],
+  "data_window": {"start": "2006-05-02", "end": "2026-07-24", "frequency": "daily"},
+  "model": {
+    "formation_window_days": 252,
+    "hedge_ratio": "rolling OLS of log(GLD) on log(SLV)",
+    "spread": "log(GLD) - rolling_alpha - rolling_beta * log(SLV)",
+    "z_score": "current rolling regression residual divided by in-window residual standard deviation",
+    "entry": "short spread at z >= 2; long spread at z <= -2",
+    "exit": "close when z crosses 0",
+    "execution": "signal and hedge ratio shifted one trading day",
+    "gross_exposure_normalization": "weights divided by 1 + abs(beta)",
+    "cost": "5 bps per absolute weight change",
+    "cash_return": 0.0
+  },
+  "gross_statistics": {
+    "start": "2007-05-03",
+    "end": "2026-07-24",
+    "days": 4837,
+    "annualized_arithmetic_return": -0.0126269416,
+    "cagr": -0.0146982236,
+    "annualized_volatility": 0.0660406855,
+    "sharpe_rf0": -0.1911994320,
+    "max_drawdown": -0.2845617699,
+    "max_drawdown_trough": "2021-03-08",
+    "final_wealth_multiple": 0.7526024524
+  },
+  "net_statistics": {
+    "start": "2007-05-03",
+    "end": "2026-07-24",
+    "days": 4837,
+    "annualized_arithmetic_return": -0.0143609834,
+    "cagr": -0.0164066850,
+    "annualized_volatility": 0.0660601273,
+    "sharpe_rf0": -0.2173926085,
+    "max_drawdown": -0.3072019719,
+    "max_drawdown_trough": "2026-01-14",
+    "final_wealth_multiple": 0.7279454341
+  },
+  "trading_statistics": {
+    "invested_fraction": 0.5048583833,
+    "annual_turnover": 3.4680836760,
+    "position_changes": 58,
+    "episodes": 29,
+    "episode_win_rate": 0.5862068966,
+    "average_episode_return": -0.0095555116,
+    "median_episode_return": 0.0094589226,
+    "worst_episode_return": -0.1945668579,
+    "best_episode_return": 0.0403252530,
+    "average_holding_days": 85.2068965517,
+    "median_holding_days": 74.0
+  },
+  "full_sample_diagnostic_only": {
+    "log_price_ols_beta": 0.9012740391,
+    "residual_ar1_phi": 0.9979904461,
+    "heuristic_half_life_days": 344.5792029890,
+    "warning": "This full-sample diagnostic uses future observations and is not used for trading signals. It is not a formal cointegration test."
+  },
+  "evidence_boundary": [
+    "GLD and SLV are ETF proxies from a secondary provider; they are not spot or futures gold/silver series.",
+    "The rolling rule is one pre-specified illustrative model, not a multiple-testing-corrected strategy search.",
+    "No formal Engle-Granger/Johansen test, borrow fee, financing, tax, spread, market impact, ETF fee beyond provider adjustments, or intraday execution model is included.",
+    "The negative result is retained as local evidence that correlation and a high trade win rate do not guarantee profitable mean reversion."
+  ]
+}

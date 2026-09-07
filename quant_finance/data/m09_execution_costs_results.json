@@ -1,0 +1,39 @@
+{
+  "mid": 100.0,
+  "best_bid": 99.99,
+  "best_ask": 100.01,
+  "quoted_spread_bps": 2.000000000001023,
+  "sweep_results": [
+    {
+      "quantity": 500,
+      "buy_vwap": 100.01,
+      "shortfall_bps": 0.9999999999998899,
+      "sqrt_impact_bps": 2.2135943621178655
+    },
+    {
+      "quantity": 1500,
+      "buy_vwap": 100.012,
+      "shortfall_bps": 1.1999999999989797,
+      "sqrt_impact_bps": 3.8340579025361627
+    },
+    {
+      "quantity": 4000,
+      "buy_vwap": 100.022,
+      "shortfall_bps": 2.20000000000109,
+      "sqrt_impact_bps": 6.260990336999411
+    },
+    {
+      "quantity": 9000,
+      "buy_vwap": 100.04533333333333,
+      "shortfall_bps": 4.533333333334166,
+      "sqrt_impact_bps": 9.391485505499118
+    }
+  ],
+  "capacity": {
+    "gross_alpha_bps": 25,
+    "half_spread_bps": 1,
+    "max_adv_fraction_under_sqrt_model": 0.02938775510204082,
+    "max_daily_quantity": 58775.510204081635
+  },
+  "evidence_boundary": "synthetic displayed book and illustrative impact model; no live fill or market-capacity claim"
+}

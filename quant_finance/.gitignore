@@ -1,0 +1,8 @@
+__pycache__/
+*.py[cod]
+.venv/
+
+# Financial datasets are versioned by manifests/checksums, not committed raw.
+data/raw/
+data/interim/
+data/processed/

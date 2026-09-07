@@ -1,0 +1,12 @@
+{
+  "title": "Replication protocol for Fama and French (1993)",
+  "paper": {"citation": "Fama and French, Common Risk Factors in the Returns on Stocks and Bonds, 1993", "url": "https://doi.org/10.1016/0304-405X(93)90023-5"},
+  "research_question": "Do the public MKT, SMB, HML factors explain time-series returns and cross-sectional average returns of the specified test portfolios over the frozen sample?",
+  "data": {"factor_url": "https://mba.tuck.dartmouth.edu/pages/faculty/ken.french/ftp/F-F_Research_Data_Factors_CSV.zip", "portfolio_url": "https://mba.tuck.dartmouth.edu/pages/faculty/ken.french/ftp/25_Portfolios_5x5_CSV.zip", "factor_sha256": "80b88699a18ac408e2456d25b1004e340f3f7f8d41d5b476a0285bc53c6f0436", "portfolio_sha256": "afc2f6c40237d07b99ab84ab9375a08bc301e3801e3ad8d91aa90d5aa9ec6295", "source_header": "202605 CRSP database", "raw_redistribution": "do_not_commit"},
+  "sample": {"target_start": "1963-07", "target_end": "1991-12", "frequency": "monthly", "unit": "decimal after dividing source percent by 100", "risk_free": "subtract same-month RF"},
+  "estimators": ["asset-by-asset OLS time-series alpha/beta", "Fama-MacBeth two-pass lambda", "HAC standard errors where applicable", "joint pricing-error test if implementation supports it"],
+  "success_criteria": ["all transformations and sample counts are logged", "factor and portfolio rows align without future revisions", "reported coefficient signs/magnitudes are compared to paper tables with citation", "robustness uses a pre-registered adjacent sample or documented mismatch", "all deviations and failures are disclosed"],
+  "failure_criteria": ["source hash or sample cannot be reconstructed", "unit/frequency/portfolio definition mismatch", "test assets or factor definitions cannot be mapped", "results are selectively reported", "raw data license boundary is violated"],
+  "deliverables": ["run manifest and source hashes", "clean derived summary (no raw redistribution)", "time-series and cross-sectional tables", "difference-to-paper ledger", "reproduction status: reproduced/partial/not-verifiable", "oral defense questions and answers"],
+  "status": "protocol_frozen_not_executed"
+}
